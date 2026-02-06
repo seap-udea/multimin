@@ -119,8 +119,8 @@ import pathlib, re, sys
 root = pathlib.Path(".").resolve()
 files = {
     "setup.py": root / "setup.py",
-    "__init__.py": root / "src/multineas/__init__.py",
-    "version.py": root / "src/multineas/version.py",
+    "__init__.py": root / "src/multimin/__init__.py",
+    "version.py": root / "src/multimin/version.py",
 }
 
 def extract(path: pathlib.Path) -> str:
