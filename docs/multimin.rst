@@ -1,7 +1,7 @@
 Multi-dimensional gaussian fit
 ========================================
 
-.. automodule:: multimin.multimin
+.. automodule:: multimin
    :members:
    :undoc-members:
    :show-inheritance:

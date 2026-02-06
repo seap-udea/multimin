@@ -78,9 +78,97 @@ import multimin as mn
 > %matplotlib inline
 > ```
 
-## Examples
+Here is a basic example of how to use `MultiMin` to fit a 3D distribution composed of 2 Multivariate Normals.
 
-Working examples and tutorials will be added as the package develops.
+### 1. Define a true distribution
+
+First, we define a distribution from which we will generate synthetic data. We use a **Composed Multivariate Normal Distribution (CMND)** with 2 Gaussian components (`Ngauss=2`) in 3 dimensions (`Nvars=3`).
+
+```python
+import numpy as np
+import multimin as mn
+
+# Define parameters for 2 Gaussian components
+weights = [0.5, 0.5]
+mus = [[1.0, 0.5, -0.5], [1.0, -0.5, +0.5]]
+sigmas = [[1, 1.2, 2.3], [0.8, 0.2, 3.3]]
+deg = np.pi/180
+angles = [
+    [10*deg, 30*deg, 20*deg],
+    [-20*deg, 0*deg, 30*deg],
+] 
+
+# Calculate covariance matrices from rotation angles
+Sigmas = mn.Stats.calc_covariance_from_rotation(sigmas, angles)
+
+# Create the CMND object
+CMND = mn.ComposedMultiVariateNormal(mus=mus, weights=weights, Sigmas=Sigmas)
+```
+
+### 2. Generate sample data
+
+We generate 5000 random samples from this distribution to serve as our "observed" data.
+
+```python
+np.random.seed(1)
+data = CMND.rvs(5000)
+```
+
+### 3. Visualize the data
+
+We can check the distribution of the generated data using `CornerPlot`.
+
+```python
+import matplotlib.pyplot as plt
+
+# Define properties labels
+properties = dict(
+    x=dict(label=r"$x$", range=None),
+    y=dict(label=r"$y$", range=None),
+    z=dict(label=r"$z$", range=None),
+)
+
+# Plot the corner plot
+G = mn.CornerPlot(properties, figsize=3)
+hargs = dict(bins=30, cmap='Spectral_r')
+sargs = dict(s=1.2, edgecolor='None', color='r')
+hist = G.scatter_plot(data, **sargs)
+```
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/seap-udea/multimin/master/examples/gallery/multimin_quickstart_1.png" alt="Data Scatter Plot" width="600"/>
+</div>
+
+### 4. Initialize the Fitter and Run the Fit
+
+We initialize the `FitCMND` handler with the expected number of Gaussians (2) and variables (3). We then run the fitting procedure.
+
+```python
+# Initialize the fitter
+F = mn.FitCMND(Ngauss=2, Nvars=3)
+
+# Run the fit (using advance=True for better convergence on complex models)
+F.fit_data(data, advance=True)
+```
+
+### 5. Check and Plot Results
+
+Finally, we visualize the fitted distribution compared to the data.
+
+```python
+# Plot the fit result
+G = F.plot_fit(
+    props=["x", "y", "z"],
+    hargs=dict(bins=30, cmap='YlGn'),
+    sargs=dict(s=0.2, edgecolor='None', color='r'),
+    figsize=3
+)
+```
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/seap-udea/multimin/master/examples/gallery/multimin_quickstart_3.png" alt="Fit Result" width="600"/>
+</div>
+
 
 ## Citation
 

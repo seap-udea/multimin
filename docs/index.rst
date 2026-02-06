@@ -14,7 +14,3 @@
    :caption: API Reference
 
    multimin
-   plot
-   population
-   orbit
-   util

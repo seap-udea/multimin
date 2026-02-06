@@ -1,1 +1,2 @@
+multimin_quickstart.ipynb
 multimin_indepth.ipynb

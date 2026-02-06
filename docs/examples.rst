@@ -7,4 +7,3 @@ Tutorials and Examples
    :caption: Examples
 
    examples/multimin_indepth
-   examples/legacy_demo
