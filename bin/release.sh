@@ -17,7 +17,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 SETUP_PY="$ROOT_DIR/setup.py"
-INIT_PY="$ROOT_DIR/src/multimin/__init__.py"
+
 VERSION_PY="$ROOT_DIR/src/multimin/version.py"
 
 BACKUP_DIR=""
@@ -53,7 +53,6 @@ rollback() {
   if [[ -n "${BACKUP_DIR}" && -d "${BACKUP_DIR}" ]]; then
     # Restore modified files
     if [[ -f "${BACKUP_DIR}/setup.py" ]]; then cp -f "${BACKUP_DIR}/setup.py" "$SETUP_PY" || true; fi
-    if [[ -f "${BACKUP_DIR}/__init__.py" ]]; then cp -f "${BACKUP_DIR}/__init__.py" "$INIT_PY" || true; fi
     if [[ -f "${BACKUP_DIR}/version.py" ]]; then cp -f "${BACKUP_DIR}/version.py" "$VERSION_PY" || true; fi
   fi
 
@@ -105,7 +104,7 @@ case "$TYPE" in
 esac
 
 if [[ ! -f "$SETUP_PY" ]]; then die "Missing file: $SETUP_PY"; fi
-if [[ ! -f "$INIT_PY" ]]; then die "Missing file: $INIT_PY"; fi
+
 if [[ ! -f "$VERSION_PY" ]]; then die "Missing file: $VERSION_PY"; fi
 
 # Require a clean repo so rollback is safe.
@@ -119,7 +118,7 @@ import pathlib, re, sys
 root = pathlib.Path(".").resolve()
 files = {
     "setup.py": root / "setup.py",
-    "__init__.py": root / "src/multimin/__init__.py",
+
     "version.py": root / "src/multimin/version.py",
 }
 
@@ -137,17 +136,17 @@ def extract(path: pathlib.Path) -> str:
 
 versions = {k: extract(p) for k, p in files.items()}
 print(versions["setup.py"])
-print(versions["__init__.py"])
+
 print(versions["version.py"])
 PY
 )"
 
 CURRENT_SETUP="$(printf '%s\n' "$CURRENT_VERSIONS" | sed -n '1p')"
-CURRENT_INIT="$(printf '%s\n' "$CURRENT_VERSIONS" | sed -n '2p')"
+
 CURRENT_VERPY="$(printf '%s\n' "$CURRENT_VERSIONS" | sed -n '3p')"
 
-if [[ "$CURRENT_SETUP" != "$CURRENT_INIT" || "$CURRENT_SETUP" != "$CURRENT_VERPY" ]]; then
-  die "Current versions do not match: setup.py=$CURRENT_SETUP, __init__.py=$CURRENT_INIT, version.py=$CURRENT_VERPY. Fix this before releasing."
+if [[ "$CURRENT_SETUP" != "$CURRENT_VERPY" ]]; then
+  die "Current versions do not match: setup.py=$CURRENT_SETUP, version.py=$CURRENT_VERPY. Fix this before releasing."
 fi
 
 if [[ -z "$VERSION_NEW" ]]; then
@@ -168,7 +167,7 @@ log "Releasing MultiMin $VERSION_NEW (current: $CURRENT_SETUP) in '$TYPE' mode..
 
 BACKUP_DIR="$(mktemp -d -t multimin-release.XXXXXX)"
 cp -f "$SETUP_PY" "${BACKUP_DIR}/setup.py"
-cp -f "$INIT_PY" "${BACKUP_DIR}/__init__.py"
+
 cp -f "$VERSION_PY" "${BACKUP_DIR}/version.py"
 
 update_file() {
@@ -195,7 +194,7 @@ PY
 
 log "Updating version in setup.py and package files..."
 update_file "$SETUP_PY" '^(\s*version\s*=\s*)["'\'']([^"'\'']+)["'\''](\s*,?\s*)$' "\\1'${VERSION_NEW}'\\3"
-update_file "$INIT_PY"  '^(\s*__version__\s*=\s*)["'\'']([^"'\'']+)["'\''](\s*)$' "\\1'${VERSION_NEW}'\\3"
+
 update_file "$VERSION_PY" '^(\s*__version__\s*=\s*)["'\'']([^"'\'']+)["'\''](\s*)$' "\\1'${VERSION_NEW}'\\3"
 
 log "Cleaning previous build artifacts..."
