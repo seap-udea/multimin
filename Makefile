@@ -1,0 +1,103 @@
+##################################################################
+# multimin Makefile
+##################################################################
+
+.PHONY: help install install-dev test verify clean build docs push release env
+
+RELMODE=release
+PYTHON ?= python3
+COMMIT_MSG ?= chore: sync tracked changes
+
+help:
+	@echo "MultiMin Development Makefile"
+	@echo ""
+	@echo "Available targets:"
+	@echo "  install      - Install the package"
+	@echo "  install-dev  - Install package in development mode with dev dependencies"
+	@echo "  test         - Run tests with pytest"
+	@echo "  verify       - Verify package installation"
+	@echo "  clean        - Remove build artifacts and cache files"
+	@echo "  build        - Build distribution packages"
+	@echo ""
+	@echo "  docs         - Build documentation (installs docs requirements)"
+	@echo "  push         - Commit (all files) and push current branch"
+	@echo "  release      - Release a new version (usage: make release RELMODE=release VERSION=x.y.z)"
+	@echo "  env          - Create local dev environment (.multimin) and contrib directory"
+	@echo "  readme       - Convert README.ipynb to markdown"
+
+env:
+	@echo "Creating local development environment..."
+	@test -d .multimin || $(PYTHON) -m venv .multimin
+	@echo "Installing dependencies..."
+	@. .multimin/bin/activate && pip install --upgrade pip
+	@. .multimin/bin/activate && pip install -e .
+	@if [ -f requirements-dev.txt ]; then . .multimin/bin/activate && pip install -r requirements-dev.txt; fi
+	@echo "______________________________________________________________________"
+	@echo "Environment setup complete."
+	@echo "To activate the environment, run:"
+	@echo "source .multimin/bin/activate"
+
+# Generate markdown files from notebooks
+readme:
+	python3 bin/convert_readme.py
+	rm -f gallery/README_*
+
+%.md:%.ipynb
+	python3 -m nbconvert $^ --to markdown
+
+install:
+	$(PYTHON) -m pip install .
+
+install-dev:
+	$(PYTHON) -m pip install -e .
+	if [ -f requirements.txt ]; then $(PYTHON) -m pip install -r requirements.txt; fi
+	if [ -f requirements-dev.txt ]; then $(PYTHON) -m pip install -r requirements-dev.txt; fi
+
+test:
+	$(PYTHON) -m pytest src/multimin/tests
+
+verify:
+	@chmod +x bin/verify_installation.py
+	@$(PYTHON) bin/verify_installation.py
+
+clean:
+	rm -rf build/
+	rm -rf dist/
+	rm -rf *.egg-info
+	rm -rf src/*.egg-info
+	rm -rf .pytest_cache/
+	rm -rf .coverage
+	rm -rf htmlcov/
+	find . -type d -name __pycache__ -exec rm -rf {} +
+	find . -type f -name '*.pyc' -delete
+	find . -type f -name '*.pyo' -delete
+	find . -type d -name "multimin_data" -exec rm -rf {} +
+	
+build: clean
+	$(PYTHON) -m build
+
+docs:
+	$(PYTHON) -m pip install -r docs/requirements.txt
+	rm -rf docs/_build
+	@echo "Preparing documentation..."
+	@chmod +x bin/prepare_docs.sh
+	@./bin/prepare_docs.sh
+
+	cd docs && $(PYTHON) -m sphinx.cmd.build -M html "." "_build"
+
+push:
+	@echo "Committing tracked changes (if any)..."
+	@if ! git diff --quiet || ! git diff --cached --quiet || [ -n "$$(git status --porcelain)" ]; then \
+		git add . && \
+		git commit -m "$(COMMIT_MSG)"; \
+	else \
+		echo "Working tree is clean (tracked files); nothing to commit."; \
+	fi
+	@echo "Pushing current branch..."
+	@git push -u origin HEAD
+
+# Example: make release RELMODE=release VERSION=0.2.0.2
+release: clean readme push
+	@test -n "$(VERSION)" || (echo "ERROR: VERSION is required. Example: make release RELMODE=release VERSION=0.2.0" && exit 1)
+	@echo "Releasing a new version..."
+	@bash bin/release.sh $(RELMODE) $(VERSION)

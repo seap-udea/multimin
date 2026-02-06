@@ -1,0 +1,11 @@
+##################################################################
+#                                                                #
+# MultiMin: Multivariate Gaussian fitting                               #
+#            and population                                      #
+#                                                                #
+##################################################################
+# License: GNU Affero General Public License v3 (AGPL-3.0)        #
+##################################################################
+[build-system]
+requires = ['setuptools', 'numpy', 'scipy', 'matplotlib']
+build-backend = "setuptools.build_meta"

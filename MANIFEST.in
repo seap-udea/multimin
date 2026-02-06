@@ -1,0 +1,5 @@
+include README.md
+include LICENSE
+include WHATSNEW.md
+recursive-include src/multimin/data *
+recursive-include tests *.py
