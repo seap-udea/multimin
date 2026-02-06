@@ -1,9 +1,3 @@
-# MultiMin
-
-[![version](https://img.shields.io/pypi/v/multimin?color=blue)](https://pypi.org/project/multimin/)
-[![license](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://github.com/seap-udea/multimin/blob/master/LICENSE)
-[![pythonver](https://img.shields.io/pypi/pyversions/multimin)](https://pypi.org/project/multimin/)
-<!-- [![downloads](https://img.shields.io/pypi/dw/multimin)](https://pypi.org/project/multimin/) -->
 
 <p></p>
 <div align="center">
@@ -12,6 +6,13 @@
   </a>
 </div>
 <p></p>
+
+[![version](https://img.shields.io/pypi/v/multimin?color=blue)](https://pypi.org/project/multimin/)
+[![license](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://github.com/seap-udea/multimin/blob/master/LICENSE)
+[![pythonver](https://img.shields.io/pypi/pyversions/multimin)](https://pypi.org/project/multimin/)
+<!-- [![downloads](https://img.shields.io/pypi/dw/multimin)](https://pypi.org/project/multimin/) -->
+
+## Presenting MultiMin
 
 `MultiMin` is a `Python` package designed to provide numerical tools for **fitting composed multivariate distributions** to data. It is particularly useful for modelling complex multimodal distributions in N-dimensions.
 
