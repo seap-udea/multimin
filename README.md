@@ -12,11 +12,14 @@
 [![pythonver](https://img.shields.io/pypi/pyversions/multimin)](https://pypi.org/project/multimin/)
 <!-- [![downloads](https://img.shields.io/pypi/dw/multimin)](https://pypi.org/project/multimin/) -->
 
-## Presenting MultiMin
+<div align="center">
+</div>
+
+## Introducing `MultiMin`
 
 `MultiMin` is a `Python` package designed to provide numerical tools for **fitting composed multivariate distributions** to data. It is particularly useful for modelling complex multimodal distributions in N-dimensions.
 
-## Features
+These are the main features of `MultiMin`:
 
 - **Multivariate Fitting**: Tools for fitting composed multivariate normal distributions (CMND).
 - **Visualization**: Corner plots and specific visualization utilities.
@@ -117,10 +120,3 @@ We welcome contributions! If you're interested in contributing to MultiMin, plea
 4. Submit a pull request
 
 Please read the [CONTRIBUTING.md](CONTRIBUTING.md) file for more information.
-
-## File attribution
-
-Most of this file was vibe coded by the authors using [Gemini 3 Pro](https://gemini.google.com/pro) in [Antigravity](https://antigravity.google/).
-
-
-MultiMin (C) 2026 - Jorge I. Zuluaga
