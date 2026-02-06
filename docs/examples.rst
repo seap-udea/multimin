@@ -6,4 +6,5 @@ Tutorials and Examples
    :maxdepth: 2
    :caption: Examples
 
+   examples/multimin_quickstart
    examples/multimin_indepth

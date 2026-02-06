@@ -23,7 +23,7 @@ help:
 	@echo "  push         - Commit (all files) and push current branch"
 	@echo "  release      - Release a new version (usage: make release RELMODE=release VERSION=x.y.z)"
 	@echo "  env          - Create local dev environment (.multimin) and contrib directory"
-	@echo "  readme       - Convert README.ipynb to markdown"
+
 
 env:
 	@echo "Creating local development environment..."
@@ -37,10 +37,7 @@ env:
 	@echo "To activate the environment, run:"
 	@echo "source .multimin/bin/activate"
 
-# Generate markdown files from notebooks
-readme:
-	python3 bin/convert_readme.py
-	rm -f gallery/README_*
+
 
 %.md:%.ipynb
 	python3 -m nbconvert $^ --to markdown
@@ -97,7 +94,7 @@ push:
 	@git push -u origin HEAD
 
 # Example: make release RELMODE=release VERSION=0.2.0.2
-release: clean readme push
+release: clean push
 	@test -n "$(VERSION)" || (echo "ERROR: VERSION is required. Example: make release RELMODE=release VERSION=0.2.0" && exit 1)
 	@echo "Releasing a new version..."
 	@bash bin/release.sh $(RELMODE) $(VERSION)
