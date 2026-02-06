@@ -143,7 +143,7 @@ PY
 
 CURRENT_SETUP="$(printf '%s\n' "$CURRENT_VERSIONS" | sed -n '1p')"
 
-CURRENT_VERPY="$(printf '%s\n' "$CURRENT_VERSIONS" | sed -n '3p')"
+CURRENT_VERPY="$(printf '%s\n' "$CURRENT_VERSIONS" | sed -n '2p')"
 
 if [[ "$CURRENT_SETUP" != "$CURRENT_VERPY" ]]; then
   die "Current versions do not match: setup.py=$CURRENT_SETUP, version.py=$CURRENT_VERPY. Fix this before releasing."
