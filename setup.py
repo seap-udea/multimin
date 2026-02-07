@@ -14,8 +14,15 @@ version_file = os.path.join(os.path.dirname(__file__), "src", "multimin", "versi
 with open(version_file, "r") as f:
     exec(f.read())
 
-with open("README.md", "r", encoding="utf-8") as fh:
-    long_description = fh.read()
+try:
+    import pypandoc
+
+    long_description = pypandoc.convert_file("README.md", "rst")
+    long_description_content_type = "text/x-rst"
+except (IOError, ImportError):
+    with open("README.md", "r", encoding="utf-8") as fh:
+        long_description = fh.read()
+    long_description_content_type = "text/markdown"
 
 setup(
     # ######################################################################
@@ -26,7 +33,7 @@ setup(
     author_email="jorge.zuluaga@udea.edu.co",
     description="MultiMin: Multivariate Gaussian fitting",
     long_description=long_description,
-    long_description_content_type="text/markdown",
+    long_description_content_type=long_description_content_type,
     url="https://github.com/seap-udea/multimin",
     keywords="fitting multivariate-normal statistics optimization",
     license="AGPL-3.0-only",
@@ -45,7 +52,7 @@ setup(
         # "License :: OSI Approved :: GNU Affero General Public License v3",
         "Operating System :: OS Independent",
     ],
-    version='0.5.4',
+    version="0.5.5",
     # ######################################################################
     # FILES
     # ######################################################################
