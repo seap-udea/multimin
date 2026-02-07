@@ -38,6 +38,7 @@ from time import time
 from scipy.optimize import minimize
 from matplotlib import pyplot as plt
 from scipy.stats import norm, multivariate_normal as multinorm
+from scipy.stats import truncnorm
 
 import numpy as np
 import spiceypy as spy
@@ -640,11 +641,72 @@ def nmd(X, mu, Sigma):
     return value
 
 
+def tnmd(X, mu, Sigma, a, b, Z=None):
+    """PDF of a truncated (multivariate) normal at X; single evaluation like nmd.
+
+    Uses scipy.stats.truncnorm for 1D (one call). For nD, returns normal PDF in the
+    box [a, b] divided by the normalization constant Z (one multinorm.pdf call;
+    Z must be provided or is computed once when Z is None).
+
+    Parameters
+    ----------
+    X : array-like
+        Point(s). Shape (n,) or (N, n).
+    mu : array-like
+        Mean vector, shape (n,).
+    Sigma : array-like
+        Covariance matrix (n, n). For n=1, scalar variance or 1x1.
+    a, b : array-like or float
+        Truncation bounds (lower, upper). For 1D, scalars; for nD, vectors of length n.
+    Z : float, optional
+        Normalization constant P(a < X < b). For nD, pass to avoid extra computation.
+
+    Returns
+    -------
+    float or ndarray
+        PDF value(s). Zero outside [a, b].
+    """
+    mu = np.atleast_1d(np.asarray(mu, dtype=float))
+    Sig = np.asarray(Sigma, dtype=float)
+    n_dim = 1 if mu.size == 1 and (Sig.size == 1 or (Sig.ndim == 2 and Sig.shape[0] == 1)) else (Sig.shape[0] if Sig.ndim >= 2 else int(mu.size))
+    univariate = n_dim == 1
+    X = np.asarray(X, dtype=float)
+    if univariate:
+        x_flat = np.atleast_1d(X).ravel()
+        mu0 = float(mu.ravel()[0])
+        var = float(Sig.ravel()[0])
+        sigma = np.sqrt(var)
+        a0, b0 = float(a), float(b)
+        a_std = (a0 - mu0) / sigma
+        b_std = (b0 - mu0) / sigma
+        out = truncnorm.pdf(x_flat, a_std, b_std, loc=mu0, scale=sigma)
+        return float(out[0]) if out.size == 1 else out
+    # nD: one multinorm.pdf, then divide by Z
+    X = np.atleast_2d(X)
+    a = np.atleast_1d(np.asarray(a, dtype=float)).ravel()[:n_dim]
+    b = np.atleast_1d(np.asarray(b, dtype=float)).ravel()[:n_dim]
+    in_box = np.all((X >= a) & (X <= b), axis=1)
+    raw = multinorm.pdf(X, mu, Sig)
+    if Z is None:
+        Z = _norm_const_box(mu, Sig, a, b)
+    out = np.where(in_box, np.maximum(raw / Z, 1e-300), 0.0)
+    return float(out[0]) if out.size == 1 else out
+
+
+def _norm_const_box(mu, Sigma, a, b):
+    """P(a < X < b) for X ~ N(mu, Sigma). Used when Z is None in tnmd (nD)."""
+    n = len(mu)
+    if n == 1:
+        sig = np.sqrt(float(np.asarray(Sigma).ravel()[0]))
+        return float(norm.cdf((b[0] - mu[0]) / sig) - norm.cdf((a[0] - mu[0]) / sig))
+    draws = multinorm.rvs(mu, Sigma, size=50000, random_state=42)
+    in_box = np.all((draws >= a) & (draws <= b), axis=1)
+    return max(float(np.mean(in_box)), 1e-300)
+
+
 # =============================================================================
 # VISUALIZATION
 # =============================================================================
-
-
 def multimin_watermark(ax, frac=1 / 6, alpha=0.5):
     """Add a water mark to a 2d or 3d plot.
 
@@ -1740,7 +1802,6 @@ class ComposedMultiVariateNormal(object):
         for k, (w, muvec, Sigma) in enumerate(zip(self.weights, self.mus, self.Sigmas)):
             try:
                 if has_finite_domain and self.nvars == 1:
-                    from scipy.stats import truncnorm
                     lo, hi = self._domain_bounds[0]
                     mu0 = float(muvec.ravel()[0])
                     sig = np.sqrt(float(Sigma.ravel()[0]))
@@ -1796,7 +1857,6 @@ class ComposedMultiVariateNormal(object):
                 Xs[i] = multinorm.rvs(self.mus[n], self.Sigmas[n])
             return Xs
         if self.nvars == 1:
-            from scipy.stats import truncnorm
             lo, hi = self._domain_bounds[0]
             for i in range(Nsam):
                 k = Stats.gen_index(self.weights)
@@ -2152,25 +2212,70 @@ class ComposedMultiVariateNormal(object):
         if type == "latex":
             return self._get_function_latex(print_code=print_code, decimals=decimals)
         # type == "python"
-        lines = ["from multimin import nmd", "", "def cmnd(X):", ""]
+        bounds = getattr(self, "_domain_bounds", None)
+        has_finite_domain = (
+            bounds is not None
+            and any(
+                np.isfinite(bounds[j][0]) or np.isfinite(bounds[j][1])
+                for j in range(self.nvars)
+            )
+        )
+        if has_finite_domain:
+            lines = ["import numpy as np", "from multimin import tnmd", "", "def cmnd(X):", ""]
+            if self.nvars == 1:
+                a0 = round(float(bounds[0][0]), decimals)
+                b0 = round(float(bounds[0][1]), decimals)
+                lines.append("    a = {}".format(a0))
+                lines.append("    b = {}".format(b0))
+            else:
+                a_parts = [
+                    str(round(float(bounds[j][0]), decimals))
+                    if np.isfinite(bounds[j][0])
+                    else "-np.inf"
+                    for j in range(self.nvars)
+                ]
+                b_parts = [
+                    str(round(float(bounds[j][1]), decimals))
+                    if np.isfinite(bounds[j][1])
+                    else "np.inf"
+                    for j in range(self.nvars)
+                ]
+                lines.append("    a = [{}]".format(", ".join(a_parts)))
+                lines.append("    b = [{}]".format(", ".join(b_parts)))
+            lines.append("")
+        else:
+            lines = ["from multimin import nmd", "", "def cmnd(X):", ""]
         univariate = self.nvars == 1
         for n in range(self.ngauss):
             i = n + 1
             w = round(float(self.weights[n]), decimals)
             mu = self.mus[n]
             Sigma = self.Sigmas[n]
+            if has_finite_domain:
+                Zk = self._normalization_constant(n)
+                Zk = round(float(Zk), decimals)
             if univariate:
                 mu_val = round(float(mu.ravel()[0]), decimals)
-                sigma_val = round(float(np.sqrt(Sigma.ravel()[0])), decimals)
-                lines.append("    mu{} = {}".format(i, mu_val))
-                lines.append("    sigma{} = {}".format(i, sigma_val))
-                lines.append("    n{} = nmd(X, mu{}, sigma{})".format(i, i, i))
+                var_val = round(float(Sigma.ravel()[0]), decimals)
+                if has_finite_domain:
+                    lines.append("    mu{} = {}".format(i, mu_val))
+                    lines.append("    sigma{} = {}".format(i, var_val))
+                    lines.append("    n{} = tnmd(X, mu{}, sigma{}, a, b)".format(i, i, i))
+                else:
+                    sigma_val = round(float(np.sqrt(Sigma.ravel()[0])), decimals)
+                    lines.append("    mu{} = {}".format(i, mu_val))
+                    lines.append("    sigma{} = {}".format(i, sigma_val))
+                    lines.append("    n{} = nmd(X, mu{}, sigma{})".format(i, i, i))
             else:
                 mu_str = self._fmt_py_literal(mu, decimals)
                 Sigma_str = self._fmt_py_literal(Sigma, decimals)
                 lines.append("    mu{} = {}".format(i, mu_str))
                 lines.append("    Sigma{} = {}".format(i, Sigma_str))
-                lines.append("    n{} = nmd(X, mu{}, Sigma{})".format(i, i, i))
+                if has_finite_domain:
+                    lines.append("    Z{} = {}".format(i, Zk))
+                    lines.append("    n{} = tnmd(X, mu{}, Sigma{}, a, b, Z=Z{})".format(i, i, i, i))
+                else:
+                    lines.append("    n{} = nmd(X, mu{}, Sigma{})".format(i, i, i))
             lines.append("")
         for n in range(self.ngauss):
             i = n + 1
@@ -2198,38 +2303,92 @@ class ComposedMultiVariateNormal(object):
     def _get_function_latex(self, print_code=True, decimals=6):
         """Build LaTeX string for the CMND PDF with parameters in \\begin{array}."""
         parts = []
+        bounds = getattr(self, "_domain_bounds", None)
+        has_finite_domain = (
+            bounds is not None
+            and any(
+                np.isfinite(bounds[j][0]) or np.isfinite(bounds[j][1])
+                for j in range(self.nvars)
+            )
+        )
         univariate = self.nvars == 1
+
+        if has_finite_domain:
+            # List variables with finite domain and their bounds
+            parts.append("Finite domain. The following variables are truncated (the rest are unbounded):")
+            parts.append("")
+            for j in range(self.nvars):
+                lo, hi = bounds[j][0], bounds[j][1]
+                if np.isfinite(lo) and np.isfinite(hi):
+                    idx = j + 1
+                    parts.append("- Variable $x_{}$ (index {}): domain $[{}, {}]$.".format(idx, idx, round(float(lo), decimals), round(float(hi), decimals)))
+            parts.append("")
+            parts.append("Truncation region: $A_T = \\{\\tilde{U} \\in \\mathbb{R}^k : a_i \\le \\tilde{U}_i \\le b_i \\;\\forall i \\in T\\}$, with $T$ the set of truncated indices.")
+            parts.append("")
+
         if univariate:
-            # Univariate: plain x, \\mu, \\sigma (no bold); use \\sigma not \\Sigma
-            if self.ngauss == 1:
-                parts.append(
-                    "$$f(x) = w_1 \\, "
-                    "\\mathcal{N}(x; \\mu_1, \\sigma_1)$$"
-                )
+            if has_finite_domain:
+                if self.ngauss == 1:
+                    parts.append("$$f(x) = w_1 \\, \\mathcal{TN}(x; \\mu_1, \\sigma_1, a, b)$$")
+                else:
+                    terms = [
+                        "w_{} \\, \\mathcal{{TN}}(x; \\mu_{}, \\sigma_{}, a, b)".format(k, k, k)
+                        for k in range(1, self.ngauss + 1)
+                    ]
+                    parts.append("$$f(x) = " + " + ".join(terms) + "$$")
             else:
-                terms = [
-                    "w_{} \\, \\mathcal{{N}}(x; \\mu_{}, \\sigma_{})".format(k, k, k)
-                    for k in range(1, self.ngauss + 1)
-                ]
-                parts.append("$$f(x) = " + " + ".join(terms) + "$$")
-        else:
-            # Multivariate: \\mathbf{x}, \\boldsymbol{\\mu}, \\mathbf{\\Sigma}
-            if self.ngauss == 1:
-                parts.append(
-                    "$$f(\\mathbf{x}) = w_1 \\, "
-                    "\\mathcal{N}(\\mathbf{x}; \\boldsymbol{\\mu}_1, \\mathbf{\\Sigma}_1)$$"
-                )
-            else:
-                terms = [
-                    "w_{0} \\, \\mathcal{{N}}(\\mathbf{{x}}; \\boldsymbol{{\\mu}}_{0}, \\mathbf{{\\Sigma}}_{0})".format(
-                        k
+                if self.ngauss == 1:
+                    parts.append(
+                        "$$f(x) = w_1 \\, "
+                        "\\mathcal{N}(x; \\mu_1, \\sigma_1)$$"
                     )
-                    for k in range(1, self.ngauss + 1)
-                ]
-                parts.append("$$f(\\mathbf{x}) = " + " + ".join(terms) + "$$")
+                else:
+                    terms = [
+                        "w_{} \\, \\mathcal{{N}}(x; \\mu_{}, \\sigma_{})".format(k, k, k)
+                        for k in range(1, self.ngauss + 1)
+                    ]
+                    parts.append("$$f(x) = " + " + ".join(terms) + "$$")
+        else:
+            if has_finite_domain:
+                if self.ngauss == 1:
+                    parts.append(
+                        "$$f(\\mathbf{x}) = w_1 \\, "
+                        "\\mathcal{TN}_T(\\mathbf{x}; \\boldsymbol{\\mu}_1, \\mathbf{\\Sigma}_1, \\mathbf{a}_T, \\mathbf{b}_T)$$"
+                    )
+                else:
+                    terms = [
+                        "w_{0} \\, \\mathcal{{TN}}_T(\\mathbf{{x}}; \\boldsymbol{{\\mu}}_{0}, \\mathbf{{\\Sigma}}_{0}, \\mathbf{{a}}_T, \\mathbf{{b}}_T)".format(k)
+                        for k in range(1, self.ngauss + 1)
+                    ]
+                    parts.append("$$f(\\mathbf{x}) = " + " + ".join(terms) + "$$")
+            else:
+                if self.ngauss == 1:
+                    parts.append(
+                        "$$f(\\mathbf{x}) = w_1 \\, "
+                        "\\mathcal{N}(\\mathbf{x}; \\boldsymbol{\\mu}_1, \\mathbf{\\Sigma}_1)$$"
+                    )
+                else:
+                    terms = [
+                        "w_{0} \\, \\mathcal{{N}}(\\mathbf{{x}}; \\boldsymbol{{\\mu}}_{0}, \\mathbf{{\\Sigma}}_{0})".format(k)
+                        for k in range(1, self.ngauss + 1)
+                    ]
+                    parts.append("$$f(\\mathbf{x}) = " + " + ".join(terms) + "$$")
         parts.append("")
         parts.append("where")
         parts.append("")
+        if has_finite_domain and not univariate:
+            a_list = [
+                round(float(bounds[j][0]), decimals) if np.isfinite(bounds[j][0]) else "-\\infty"
+                for j in range(self.nvars)
+            ]
+            b_list = [
+                round(float(bounds[j][1]), decimals) if np.isfinite(bounds[j][1]) else "\\infty"
+                for j in range(self.nvars)
+            ]
+            a_str = ", ".join(str(x) for x in a_list)
+            b_str = ", ".join(str(x) for x in b_list)
+            parts.append("Bounds (vectors): $\\mathbf{a}_T = (" + a_str + ")^\\top$, $\\mathbf{b}_T = (" + b_str + ")^\\top$.")
+            parts.append("")
         for n in range(self.ngauss):
             k = n + 1
             w = round(float(self.weights[n]), decimals)
@@ -2237,8 +2396,14 @@ class ComposedMultiVariateNormal(object):
             Sigma = self.Sigmas[n]
             if univariate:
                 mu_val = round(float(mu.ravel()[0]), decimals)
-                sigma_val = round(float(np.sqrt(Sigma.ravel()[0])), decimals)
-                parts.append("$$w_{0} = {1},\\quad \\mu_{0} = {2},\\quad \\sigma_{0} = {3}$$".format(k, w, mu_val, sigma_val))
+                if has_finite_domain:
+                    var_val = round(float(Sigma.ravel()[0]), decimals)
+                    a0 = round(float(bounds[0][0]), decimals)
+                    b0 = round(float(bounds[0][1]), decimals)
+                    parts.append("$$w_{0} = {1},\\quad \\mu_{0} = {2},\\quad \\sigma_{0}^2 = {3},\\quad a = {4},\\quad b = {5}$$".format(k, w, mu_val, var_val, a0, b0))
+                else:
+                    sigma_val = round(float(np.sqrt(Sigma.ravel()[0])), decimals)
+                    parts.append("$$w_{0} = {1},\\quad \\mu_{0} = {2},\\quad \\sigma_{0} = {3}$$".format(k, w, mu_val, sigma_val))
             else:
                 parts.append("$$w_{} = {}$$".format(k, w))
                 mu_arr = self._fmt_latex_array(mu, decimals)
@@ -2246,21 +2411,53 @@ class ComposedMultiVariateNormal(object):
                 parts.append("$$\\boldsymbol{{\\mu}}_{} = \\left( {}\\right)$$".format(k, mu_arr))
                 parts.append("$$\\mathbf{{\\Sigma}}_{} = \\left( {}\\right)$$".format(k, sig_arr))
             parts.append("")
-        # Definition of the normal distribution
-        parts.append("Here the normal distribution is defined as:")
-        parts.append("")
-        if univariate:
+        # Definition of the (truncated) normal distribution
+        if has_finite_domain:
+            parts.append("Truncated normal. The unbounded normal is")
+            parts.append("")
+            if univariate:
+                parts.append(
+                    "$$\\mathcal{N}(x; \\mu, \\sigma) = "
+                    "\\frac{1}{\\sigma\\sqrt{2\\pi}} \\exp\\left(-\\frac{(x-\\mu)^2}{2\\sigma^2}\\right).$$"
+                )
+            else:
+                parts.append(
+                    "$$\\mathcal{N}(\\mathbf{x}; \\boldsymbol{\\mu}, \\mathbf{\\Sigma}) = "
+                    "\\frac{1}{\\sqrt{(2\\pi)^{{k}} \\det \\mathbf{\\Sigma}}} "
+                    "\\exp\\left[-\\frac{1}{2}(\\mathbf{x}-\\boldsymbol{\\mu})^{\\top} "
+                    "\\mathbf{\\Sigma}^{{-1}} (\\mathbf{x}-\\boldsymbol{\\mu})\\right].$$"
+                )
+            parts.append("")
+            parts.append("The truncation region is $A_T = \\{\\tilde{U} \\in \\mathbb{R}^k : a_i \\le \\tilde{U}_i \\le b_i \\;\\forall i \\in T\\}$. The partially truncated normal is")
+            parts.append("")
             parts.append(
-                "$$\\mathcal{N}(x; \\mu, \\sigma) = "
-                "\\frac{1}{\\sigma\\sqrt{2\\pi}} \\exp\\left(-\\frac{(x-\\mu)^2}{2\\sigma^2}\\right)$$"
+                "$$\\mathcal{TN}_T(\\tilde{U}; \\tilde{\\mu}, \\Sigma, \\mathbf{a}_T, \\mathbf{b}_T) = "
+                "\\frac{\\mathcal{N}(\\tilde{U}; \\tilde{\\mu}, \\Sigma) \\, \\mathbf{1}_{A_T}(\\tilde{U})}"
+                "{Z_T(\\tilde{\\mu}, \\Sigma, \\mathbf{a}_T, \\mathbf{b}_T)},$$"
+            )
+            parts.append("")
+            parts.append("where $\\mathbf{1}_{A_T}$ is the indicator of $A_T$ and the normalization constant is")
+            parts.append("")
+            parts.append(
+                "$$Z_T(\\tilde{\\mu}, \\Sigma, \\mathbf{a}_T, \\mathbf{b}_T) = "
+                "\\int_{A_T} \\mathcal{N}(\\tilde{T}; \\tilde{\\mu}, \\Sigma) \\, d\\tilde{T} = "
+                "\\mathbb{P}_{\\tilde{T} \\sim \\mathcal{N}(\\tilde{\\mu},\\Sigma)}(\\tilde{T} \\in A_T).$$"
             )
         else:
-            parts.append(
-                "$$\\mathcal{N}(\\mathbf{x}; \\boldsymbol{\\mu}, \\mathbf{\\Sigma}) = "
-                "\\frac{1}{\\sqrt{(2\\pi)^{{k}} \\det \\mathbf{\\Sigma}}} "
-                "\\exp\\left[-\\frac{1}{2}(\\mathbf{x}-\\boldsymbol{\\mu})^{\\top} "
-                "\\mathbf{\\Sigma}^{{-1}} (\\mathbf{x}-\\boldsymbol{\\mu})\\right]$$"
-            )
+            parts.append("Here the normal distribution is defined as:")
+            parts.append("")
+            if univariate:
+                parts.append(
+                    "$$\\mathcal{N}(x; \\mu, \\sigma) = "
+                    "\\frac{1}{\\sigma\\sqrt{2\\pi}} \\exp\\left(-\\frac{(x-\\mu)^2}{2\\sigma^2}\\right)$$"
+                )
+            else:
+                parts.append(
+                    "$$\\mathcal{N}(\\mathbf{x}; \\boldsymbol{\\mu}, \\mathbf{\\Sigma}) = "
+                    "\\frac{1}{\\sqrt{(2\\pi)^{{k}} \\det \\mathbf{\\Sigma}}} "
+                    "\\exp\\left[-\\frac{1}{2}(\\mathbf{x}-\\boldsymbol{\\mu})^{\\top} "
+                    "\\mathbf{\\Sigma}^{{-1}} (\\mathbf{x}-\\boldsymbol{\\mu})\\right]$$"
+                )
         latex = "\n".join(parts).strip()
         if print_code:
             print(latex)
@@ -2321,8 +2518,12 @@ class ComposedMultiVariateNormal(object):
             mu = self.mus[k]
             row = [float(w)] + [float(mu[i]) for i in range(self.nvars)]
             if sigmas is not None:
-                sig = sigmas[k]
-                row += [float(sig[i]) for i in range(self.nvars)]
+                # For univariate, show variance (Sigma) to match user input Sigmas=[0.01, 0.03]
+                if self.nvars == 1:
+                    row += [float(self.Sigmas[k].ravel()[0])]
+                else:
+                    sig = sigmas[k]
+                    row += [float(sig[i]) for i in range(self.nvars)]
             else:
                 row += [np.nan] * self.nvars
             Noff = self.nvars * (self.nvars - 1) // 2

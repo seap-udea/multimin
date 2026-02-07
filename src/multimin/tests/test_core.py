@@ -275,3 +275,56 @@ def test_cmnd_fitting(cmnd_params):
         atol=0.2,
         err_msg="Fitted weights deviation too large",
     )
+
+
+def test_truncated_1d_fit():
+    """Test FitCMND with domain=[[0, 1]] (1D truncated), inspired by multimin_truncated_tutorial."""
+    np.random.seed(42)
+    # Two Gaussians on [0, 1]: means 0.2 and 0.8, equal weights, small variance
+    CMND_1d = mn.ComposedMultiVariateNormal(
+        mus=[0.2, 0.8],
+        weights=[0.5, 0.5],
+        Sigmas=[0.02, 0.02],
+        domain=[[0, 1]],
+    )
+    data_1d = CMND_1d.rvs(5000)
+    F_1d = mn.FitCMND(ngauss=2, nvars=1, domain=[[0, 1]])
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message="divide by zero encountered in log")
+        F_1d.fit_data(data_1d, advance=True)
+    assert np.all(np.isfinite(F_1d.solution.x)), "Optimizer solution should be finite"
+    assert np.isfinite(F_1d.log_l(data_1d)), "Log likelihood should be finite"
+    # Fitted means should be in [0, 1] and close to 0.2 and 0.8
+    fitted_mus = np.sort(F_1d.cmnd.mus.ravel())
+    assert 0 <= fitted_mus[0] <= 1 and 0 <= fitted_mus[1] <= 1
+    np.testing.assert_allclose(fitted_mus, [0.2, 0.8], atol=0.12)
+    fitted_weights = np.sort(F_1d.cmnd.weights)
+    np.testing.assert_allclose(fitted_weights, [0.5, 0.5], atol=0.12)
+
+
+def test_truncated_3d_fit():
+    """Test FitCMND with domain=[None, [0, 1], None] (3D, one variable truncated), inspired by multimin_truncated_tutorial."""
+    np.random.seed(123)
+    weights = [0.5, 0.5]
+    mus = [[0.0, 0.3, 0.0], [0.0, 0.7, 0.0]]
+    sigmas = [[0.6, 0.15, 0.6], [0.6, 0.15, 0.6]]
+    Sigmas = [np.diag(np.array(s) ** 2) for s in sigmas]
+    CMND_3d = mn.ComposedMultiVariateNormal(
+        mus=mus,
+        weights=weights,
+        Sigmas=Sigmas,
+        domain=[None, [0, 1], None],
+    )
+    data_3d = CMND_3d.rvs(5000)
+    F_3d = mn.FitCMND(ngauss=2, nvars=3, domain=[None, [0, 1], None])
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message="divide by zero encountered in log")
+        F_3d.fit_data(data_3d, advance=True)
+    assert np.all(np.isfinite(F_3d.solution.x)), "Optimizer solution should be finite"
+    assert np.isfinite(F_3d.log_l(data_3d)), "Log likelihood should be finite"
+    # Bounded variable (index 1) means must lie in [0, 1]
+    mus_y = F_3d.cmnd.mus[:, 1]
+    assert np.all((mus_y >= 0) & (mus_y <= 1)), "Fitted means for bounded variable must be in [0, 1]"
+    # Fitted means for y should be close to 0.3 and 0.7 (order may swap)
+    mus_y_sorted = np.sort(mus_y)
+    np.testing.assert_allclose(mus_y_sorted, [0.3, 0.7], atol=0.15)
