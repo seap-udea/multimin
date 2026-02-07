@@ -6,6 +6,9 @@
 
 ## Version History
 
+- **Versions 0.6.x**:
+  - Include univariate distributions.
+
 - **Versions 0.5.x**:
 
   - Official release of `MultiMin`.

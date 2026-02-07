@@ -108,7 +108,7 @@ normality of the data, effectively treating the CMND as a series expansion of th
 
 In `MultiMin`, we use the `scipy.optimize.minimize` function to find the set of parameters that minimize the negative normalized log-likelihood.
 
-## Quick Start
+## Quickstart
 
 Getting started with `MultiMin` is straightforward. Import the package:
 
@@ -180,7 +180,7 @@ hist = G.scatter_plot(data, **sargs)
 ```
 
 <div align="center">
-  <img src=https://raw.githubusercontent.com/seap-udea/multimin/master/examples/gallery/quickstart_data_density_scatter.png" alt="Data Scatter Plot" width="600"/>
+  <img src="https://raw.githubusercontent.com/seap-udea/multimin/master/examples/gallery/quickstart_data_density_scatter.png" alt="Data Scatter Plot" width="600"/>
 </div>
 
 ### 4. Initialize the Fitter and Run the Fit
