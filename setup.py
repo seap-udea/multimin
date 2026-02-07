@@ -21,7 +21,9 @@ try:
     # Fix: remove empty container directives that pandoc generates from div tags
     long_description = long_description.replace(".. container::", "")
     long_description_content_type = "text/x-rst"
-except (IOError, ImportError):
+    print("DEBUG: [setup.py] Converted README to reST via pypandoc.")
+except (IOError, ImportError) as e:
+    print(f"DEBUG: [setup.py] Conversion failed: {e}. Falling back to Markdown.")
     with open("README.md", "r", encoding="utf-8") as fh:
         long_description = fh.read()
     long_description_content_type = "text/markdown"
@@ -54,7 +56,7 @@ setup(
         # "License :: OSI Approved :: GNU Affero General Public License v3",
         "Operating System :: OS Independent",
     ],
-    version='0.5.7',
+    version="0.5.8",
     # ######################################################################
     # FILES
     # ######################################################################
