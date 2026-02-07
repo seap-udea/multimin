@@ -8,6 +8,12 @@ import sys
 
 sys.path.insert(0, os.path.abspath("../src"))
 
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".txt": "markdown",
+    ".md": "markdown",
+}
+
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
@@ -22,13 +28,22 @@ release = __version__
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-    "sphinx_mdinclude",
+    "myst_parser",
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
     "nbsphinx",
     "sphinx_rtd_theme",
     "sphinx.ext.mathjax",
+]
+
+# MyST Parser configuration
+myst_enable_extensions = [
+    "dollarmath",
+    "amsmath",
+    "deflist",
+    "html_image",
+    "colon_fence",
 ]
 
 napoleon_numpy_docstring = True

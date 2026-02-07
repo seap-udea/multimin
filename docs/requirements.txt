@@ -1,7 +1,7 @@
 sphinx
 pydata-sphinx-theme
 sphinx-rtd-theme
-sphinx-mdinclude
+myst-parser
 nbsphinx
 ipykernel
 pypandoc-binary

@@ -24,17 +24,17 @@ def process_notebook(src, dest):
         if not is_footer:
             # Inject Plotly renderer fix for documentation build
             if cell.get("cell_type") == "code":
-                source = "".join(cell.get("source", []))
-                if "fig.show()" in source or "go.Figure" in source:
-                    # Check if not already present (idempotency)
-                    if "pio.renderers.default = 'iframe'" not in source:
-                        # Add import if needed, assuming standard imports might be elsewhere but safe to add
-                        injection = [
-                            "import plotly.io as pio\n",
-                            "pio.renderers.default = 'iframe'\n",
-                            "\n",
-                        ]
-                        cell["source"] = injection + cell.get("source", [])
+                new_source = []
+                for line in cell.get("source", []):
+                    if "fig.show()" in line:
+                        # Replace fig.show() with HTML embedding
+                        # We use include_plotlyjs='cdn' to load lib from CDN (lightweight)
+                        # This bypasses nbsphinx MIME rendering issues and iframe path issues
+                        new_line = "from IPython.display import HTML; display(HTML(fig.to_html(include_plotlyjs='cdn')))\n"
+                        new_source.append(new_line)
+                    else:
+                        new_source.append(line)
+                cell["source"] = new_source
 
             new_cells.append(cell)
 
