@@ -18,6 +18,8 @@ try:
     import pypandoc
 
     long_description = pypandoc.convert_file("README.md", "rst")
+    # Fix: remove empty container directives that pandoc generates from div tags
+    long_description = long_description.replace(".. container::", "")
     long_description_content_type = "text/x-rst"
 except (IOError, ImportError):
     with open("README.md", "r", encoding="utf-8") as fh:
@@ -52,7 +54,7 @@ setup(
         # "License :: OSI Approved :: GNU Affero General Public License v3",
         "Operating System :: OS Independent",
     ],
-    version="0.5.5",
+    version="0.5.6",
     # ######################################################################
     # FILES
     # ######################################################################
