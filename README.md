@@ -84,7 +84,7 @@ The covariance matrix $\Sigma$ elements are defined as $\Sigma_{ij} = \rho_{ij}\
 
 The normalization condition on $p(\tilde U)$ implies that the set of weights $\{w_k\}_M$ are also normalized, i.e., $\sum_i w_i=1$.
 
-## Fitting procedure
+### Fitting procedure
 
 To estimate the parameters of the CMND that best describe a given dataset ,
 we use the **Likelihood Statistics** method.
