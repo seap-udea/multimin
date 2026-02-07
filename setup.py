@@ -1,15 +1,39 @@
 ##################################################################
 #                                                                #
-# MultiMin: Multivariate Gaussian fitting                               #
+# MultiMin: Multivariate Gaussian fitting                        #
 #                                                                #
 ##################################################################
-# License: GNU Affero General Public License v3 (AGPL-3.0)        #
+# License: GNU Affero General Public License v3 (AGPL-3.0)       #
 ##################################################################
 
 from setuptools import setup, find_packages
+import os
 
-with open("README.md", "r", encoding="utf-8") as fh:
-    long_description = fh.read()
+# Prefer RST long_description for PyPI so LaTeX math (via :math: and .. math::) can render
+_readme_path = os.path.join(os.path.dirname(__file__), "README.md")
+long_description_content_type = "text/markdown"
+try:
+    import pypandoc
+    # Convert Markdown to RST; tex_math_dollars makes $...$ and $$...$$ become :math: and .. math::
+    for _fmt in ("markdown+tex_math_dollars", "markdown"):
+        try:
+            long_description = pypandoc.convert_file(
+                _readme_path,
+                "rst",
+                format=_fmt,
+                extra_args=["--wrap=none"],
+            )
+            long_description = long_description.replace(".. container::", "")
+            long_description_content_type = "text/x-rst"
+            break
+        except RuntimeError:
+            continue
+    else:
+        with open(_readme_path, "r", encoding="utf-8") as _fh:
+            long_description = _fh.read()
+except (ImportError, OSError):
+    with open(_readme_path, "r", encoding="utf-8") as _fh:
+        long_description = _fh.read()
 
 setup(
     # ######################################################################
@@ -20,7 +44,7 @@ setup(
     author_email="jorge.zuluaga@udea.edu.co",
     description="MultiMin: Multivariate Gaussian fitting",
     long_description=long_description,
-    long_description_content_type="text/markdown",
+    long_description_content_type=long_description_content_type,
     url="https://github.com/seap-udea/multimin",
     keywords="fitting multivariate-normal statistics optimization",
     license="AGPL-3.0-only",
@@ -39,7 +63,7 @@ setup(
         # "License :: OSI Approved :: GNU Affero General Public License v3",
         "Operating System :: OS Independent",
     ],
-    version='0.5.9',
+    version='0.5.10',
     # ######################################################################
     # FILES
     # ######################################################################
@@ -60,6 +84,7 @@ setup(
         "spiceypy>=5.0.0",
         "pandas>=1.0.0",
         "plotly>=5.0.0",
+        "pypandoc"
     ],
     python_requires=">=3.8",
     # ######################################################################
