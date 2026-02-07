@@ -2,7 +2,7 @@
 <p></p>
 <div align="center">
   <a href="https://multimin.readthedocs.io/">
-  <img src="https://cdn.jsdelivr.net/gh/seap-udea/multimin@master/docs/multimin-logo-white.webp" alt="MultiMin Logo" width="600"/>
+  <img src="https://raw.githubusercontent.com/seap-udea/multimin/master/docs/multimin-logo-white.webp" alt="MultiMin Logo" width="600"/>
   </a>
 </div>
 <p></p>
@@ -180,7 +180,7 @@ hist = G.scatter_plot(data, **sargs)
 ```
 
 <div align="center">
-  <img src="https://cdn.jsdelivr.net/gh/seap-udea/multimin@master/examples/gallery/quickstart_data_density_scatter.png" alt="Data Scatter Plot" width="600"/>
+  <img src="https://raw.githubusercontent.com/seap-udea/multimin/master/examples/gallery/quickstart_data_density_scatter.png" alt="Data Scatter Plot" width="600"/>
 </div>
 
 ### 4. Initialize the Fitter and Run the Fit
@@ -210,7 +210,7 @@ G = F.plot_fit(
 ```
 
 <div align="center">
-  <img src="https://cdn.jsdelivr.net/gh/seap-udea/multimin@master/examples/gallery/quickstart_fit_result_3d.png" alt="Fit Result" width="600"/>
+  <img src="https://raw.githubusercontent.com/seap-udea/multimin/master/examples/gallery/quickstart_fit_result_3d.png" alt="Fit Result" width="600"/>
 </div>
 
 

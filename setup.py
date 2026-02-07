@@ -12,19 +12,27 @@ import os
 # Prepare README.md for include Math in LaTeX format for PyPI
 ##################################################################
 def _strip_unsafe_rst_directives(rst_text: str) -> str:
-    """Remove .. raw:: and .. container:: blocks so PyPI's renderer accepts the RST."""
+    """Remove .. raw:: (except html) and .. container:: blocks so PyPI's renderer accepts the RST.
+    Keep .. raw:: html so images and divs in the README are shown on PyPI."""
     lines = rst_text.splitlines()
     out = []
     i = 0
     while i < len(lines):
         line = lines[i]
         stripped = line.strip()
-        # Skip directive and its body (next indented lines)
-        if stripped.startswith(".. raw::") or stripped == ".. container::":
+        # Skip .. container:: entirely
+        if stripped == ".. container::":
             i += 1
             while i < len(lines) and (lines[i].startswith(" ") or lines[i].strip() == ""):
                 i += 1
             continue
+        # Skip .. raw:: only when not html (keep .. raw:: html for images)
+        if stripped.startswith(".. raw::"):
+            if "html" not in stripped.lower():
+                i += 1
+                while i < len(lines) and (lines[i].startswith(" ") or lines[i].strip() == ""):
+                    i += 1
+                continue
         out.append(line)
         i += 1
     return "\n".join(out).replace("\n\n\n\n", "\n\n")  # collapse excess blank lines
