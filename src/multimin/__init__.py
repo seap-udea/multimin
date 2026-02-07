@@ -17,7 +17,7 @@ distributions (CMND) and other statistical utilities.
 Main Features
 -------------
 - Multivariate fitting (CMND)
-- Visualization tools (Corner plots)
+- Visualization tools (Density plots)
 - Statistical utilities
 
 Usage
@@ -36,6 +36,7 @@ import pickle
 from hashlib import md5
 from time import time
 from scipy.optimize import minimize
+from matplotlib import pyplot as plt
 
 import numpy as np
 import spiceypy as spy
@@ -460,9 +461,10 @@ class Stats(object):
         except:
             raise AssertionError("Array of rhos must be an array of arrays")
 
-        if Nrhos != int(nvars * (nvars - 1) / 2):
+        Noff = int(nvars * (nvars - 1) / 2)
+        if Nrhos != Noff:
             raise AssertionError(
-                f"Size of rhos ({Nrhos}) are incompatible with nvars={nvars}.  It should be nvars(nvars-1)/2={int(nvars * (nvars - 1) / 2)}."
+                f"Size of rhos ({Nrhos}) are incompatible with nvars={nvars}.  It should be nvars(nvars-1)/2={Noff}."
             )
 
         Sigmas = np.array(len(sigmas) * [np.eye(nvars)])
@@ -540,6 +542,9 @@ class Stats(object):
             nvars = len(sigmas[0])
         except:
             raise AssertionError("Sigmas must be an array of arrays")
+        if nvars == 1:
+            # Univariate: covariance is just variance (sigma^2) per component
+            return np.array([[[scale[0] ** 2]] for scale in sigmas])
         Sigmas = []
         for scale, angle in zip(sigmas, angles):
             L = np.identity(nvars) * np.outer(np.ones(nvars), scale)
@@ -653,7 +658,7 @@ def multimin_watermark(ax, frac=1 / 6, alpha=0.5):
     return text
 
 
-class CornerPlot(object):
+class DensityPlot(object):
     """
     Create a grid of plots showing the projection of a N-dimensional data.
 
@@ -703,9 +708,9 @@ class CornerPlot(object):
     set_tick_params(**args)
         Set tick parameters.
     plot_hist(data, colorbar=False, **args)
-        Create a 2d-histograms of data on all panels of the CornerPlot.
+        Create a 2d-histograms of data on all panels of the DensityPlot.
     scatter_plot(data, **args)
-        Scatter plot on all panels of the CornerPlot.
+        Scatter plot on all panels of the DensityPlot.
 
     """
 
@@ -717,11 +722,26 @@ class CornerPlot(object):
 
         # Secondary attributes
         self.N = len(properties)
-        self.M = self.N - 1
+        self.M = max(1, self.N - 1)  # 1 when univariate so we have one panel
+        self._univariate = self.N == 1
 
         # Optional properties
         self.fw = figsize
         self.fs = fontsize
+
+        # Univariate: single 1D panel
+        if self._univariate:
+            from matplotlib import pyplot as plt
+            self.fig, ax = plt.subplots(1, 1, constrained_layout=True, figsize=(self.fw * 1.5, self.fw))
+            self.axs = np.array([[ax]])
+            self.constrained = True
+            self.single = True
+            self.axp = dict()
+            prop0 = self.properties[0]
+            self.axp[prop0] = {prop0: ax}
+            ax.set_xlabel(self.dproperties[prop0]["label"], fontsize=fontsize)
+            self.tight_layout()
+            return
 
         # Create figure and axes: it works
         try:
@@ -824,6 +844,11 @@ class CornerPlot(object):
 
 
         """
+        if getattr(self, "_univariate", False):
+            prop = self.properties[0]
+            if self.dproperties[prop]["range"] is not None:
+                self.axs[0][0].set_xlim(self.dproperties[prop]["range"])
+            return
         for i, propi in enumerate(self.properties):
             for j, propj in enumerate(self.properties):
                 if j <= i:
@@ -904,7 +929,7 @@ class CornerPlot(object):
 
     def plot_hist(self, data, colorbar=False, **args):
         """
-        Create a 2d-histograms of data on all panels of the CornerPlot.
+        Create a 2d-histograms of data on all panels of the DensityPlot.
 
         Parameters
         ----------
@@ -927,7 +952,7 @@ class CornerPlot(object):
         ...     'E': {'label': r"$C$", 'range': None},
         ...     'I': {'label': r"$I$", 'range': None},
         ... }
-        >>> G = mm.CornerPlot(properties, figsize=3)
+        >>> G = mm.DensityPlot(properties, figsize=3)
         >>> hargs = dict(bins=100, cmap='viridis')
         >>> hist = G.plot_hist(udata, **hargs)
 
@@ -935,6 +960,23 @@ class CornerPlot(object):
         """
         opts = dict()
         opts.update(args)
+
+        # Univariate: 1D histogram (same style as plot_sample)
+        if getattr(self, "_univariate", False):
+            ax = self.axs[0][0]
+            hargs_1d = {k: v for k, v in opts.items() if k != "cmap"}
+            if "bins" not in hargs_1d:
+                hargs_1d["bins"] = min(50, max(10, len(data) // 20))
+            if "density" not in hargs_1d:
+                hargs_1d["density"] = True
+            ax.hist(data[:, 0], **hargs_1d)
+            ax.yaxis.set_label_position("left")
+            ax.set_ylabel("density")
+            self.set_ranges()
+            self.set_tick_params()
+            self.tight_layout()
+            multimin_watermark(ax)
+            return []
 
         hist = []
         for i, propi in enumerate(self.properties):
@@ -1004,7 +1046,7 @@ class CornerPlot(object):
 
     def scatter_plot(self, data, **args):
         """
-        Scatter plot on all panels of the CornerPlot.
+        Scatter plot on all panels of the DensityPlot.
 
         Parameters
         ----------
@@ -1025,6 +1067,38 @@ class CornerPlot(object):
 
 
         """
+        # Univariate: fill plot with points (x vs y jitter in [0, y_axis_max])
+        if getattr(self, "_univariate", False):
+            ax = self.axs[0][0]
+            x = data[:, 0]
+            if (
+                ax is None
+                or not hasattr(ax, "has_data")
+                or not ax.has_data()
+                or ax.get_ylim() is None
+                or np.allclose(ax.get_ylim(), (0.0, 1.0))
+            ):
+                y_axis_max = 1.0
+            else:
+                y_axis_max = ax.get_ylim()[1]
+            ax.set_ylim(0, y_axis_max)
+            
+            y_jitter = np.random.uniform(0, y_axis_max, size=len(x))
+            sc = ax.scatter(x, y_jitter, **args)
+            ax.set_yticks([])
+            # Y-label "sample <property name>" on the right (does not affect later plot_hist)
+            prop_name = self.properties[0]
+            existing_ylabel = ax.get_ylabel()
+            if existing_ylabel:
+                ax.set_ylabel(existing_ylabel + " + sample " + self.dproperties[prop_name]["label"], fontsize=self.fs)
+            else:
+                ax.set_ylabel("sample " + self.dproperties[prop_name]["label"], fontsize=self.fs)
+            self.set_ranges()
+            self.set_tick_params()
+            self.tight_layout()
+            multimin_watermark(ax)
+            return [sc]
+
         scatter = []
         for i, propi in enumerate(self.properties):
             for j, propj in enumerate(self.properties):
@@ -1118,6 +1192,8 @@ class ComposedMultiVariateNormal(object):
 
     4. Providing: weights, mus, Sigmas (optional)
        In this case the basic properties of the CMND are set.
+       For univariate (one variable), mus may be a 1-D array of means, e.g. [0, 2],
+       and Sigmas a 1-D array of variances, e.g. [1.0, 0.25].
 
     Examples
     --------
@@ -1174,17 +1250,21 @@ class ComposedMultiVariateNormal(object):
         # Method 4: initialize from explicit arrays
         else:
             # Basic attributes
-            mus = np.array(mus)
-            try:
-                mus[0, 0]
-            except Exception as e:
-                Util.error_msg(e, "Parameter 'mus' must be a matrix, eg. mus=[[0,0]]")
-                raise
-            self.mus = mus
-
-            # Number of variables
-            self.ngauss = len(mus)
-            self.nvars = len(mus[0])
+            mus = np.array(mus, dtype=float)
+            if mus.ndim == 1:
+                # Univariate: mus = [mu1, mu2, ...] -> (ngauss, 1)
+                self.ngauss = len(mus)
+                self.nvars = 1
+                self.mus = mus.reshape(-1, 1)
+            else:
+                try:
+                    mus[0, 0]
+                except Exception as e:
+                    Util.error_msg(e, "Parameter 'mus' must be a vector (1-D) or matrix, e.g. mus=[0,1] or mus=[[0,0]]")
+                    raise
+                self.mus = mus
+                self.ngauss = len(mus)
+                self.nvars = len(mus[0])
 
             # Weights and normalization
             if weights is None:
@@ -1214,11 +1294,17 @@ class ComposedMultiVariateNormal(object):
         Parameters
         ----------
         Sigmas : list or numpy.ndarray
-            Array of covariance matrices.
+            Array of covariance matrices. For univariate (nvars=1), may be a 1-D
+            array of variances, e.g. [1.0, 0.25] for two components.
 
 
         """
-        self.Sigmas = np.array(Sigmas)
+        Sigmas = np.array(Sigmas, dtype=float)
+        if Sigmas.ndim == 1:
+            # Univariate: list of variances -> (ngauss, 1, 1)
+            self.Sigmas = np.array([[[s]] for s in Sigmas])
+        else:
+            self.Sigmas = Sigmas
         self._check_sigmas()
         self._flatten_params()
         self._flatten_stdcorr()
@@ -1470,8 +1556,8 @@ class ComposedMultiVariateNormal(object):
 
         Parameters
         ----------
-        X : numpy.ndarray
-            Point in the Nvar-dimensional space (Nvar).
+        X : float or numpy.ndarray
+            Point in the nvars-dimensional space (scalar when nvars=1, or length nvars).
 
         Returns
         -------
@@ -1482,10 +1568,23 @@ class ComposedMultiVariateNormal(object):
         """
         self._check_params(self.params)
         self._nerror = 0
-        value = 0
+        X = np.atleast_1d(np.asarray(X, dtype=float))
+        if X.ndim == 1:
+            if len(X) != self.nvars:
+                raise ValueError(
+                    f"Point X has length {len(X)} but this CMND has nvars={self.nvars}"
+                )
+        elif X.ndim == 2:
+            if X.shape[1] != self.nvars:
+                raise ValueError(
+                    f"Points X have {X.shape[1]} dimensions but this CMND has nvars={self.nvars}"
+                )
+        else:
+            raise ValueError("X must be a point (length nvars) or array of points (N x nvars)")
 
         from scipy.stats import multivariate_normal as multinorm
 
+        value = np.zeros(X.shape[0] if X.ndim == 2 else 1)
         for w, muvec, Sigma in zip(self.weights, self.mus, self.Sigmas):
             try:
                 value += w * multinorm.pdf(X, muvec, Sigma)
@@ -1496,7 +1595,7 @@ class ComposedMultiVariateNormal(object):
                     )
                     self._nerror += 1
                 value += 0
-        return value
+        return value.item() if value.size == 1 else value
 
     def rvs(self, Nsam=1):
         """
@@ -1593,7 +1692,7 @@ class ComposedMultiVariateNormal(object):
         props=None,
         ranges=None,
         figsize=2,
-        sargs=dict(),
+        sargs=None,
         hargs=None,
     ):
         """
@@ -1618,8 +1717,8 @@ class ComposedMultiVariateNormal(object):
 
         Returns
         -------
-        G : matplotlib.figure.Figure or CornerPlot
-            Graphic handle. If nvars = 2, it is a figure object, otherwise is a CornerPlot instance.
+        G : matplotlib.figure.Figure or DensityPlot
+            Graphic handle. If nvars = 2, it is a figure object, otherwise is a DensityPlot instance.
 
         Examples
         --------
@@ -1652,35 +1751,35 @@ class ComposedMultiVariateNormal(object):
         else:
             self.data = np.copy(data)
 
+        # If not provided, use default scatter plot arguments
+        if hargs is None and sargs is None:
+            sargs = dict(s=0.5, alpha=0.5)
+
         properties = dict()
         for i in range(self.nvars):
-            symbol = string.ascii_letters[i] if props is None else props[i]
+            if props is None or i >= len(props):
+                symbol = string.ascii_letters[i]
+            else:
+                symbol = props[i]
             rang = None if ranges is None else ranges[i]
             properties[symbol] = dict(label=f"${symbol}$", range=rang)
 
-        from matplotlib import pyplot as plt
-
-        if self.nvars > 2:
-            G = CornerPlot(properties, figsize=figsize)
-            if hargs is not None:
-                G.plot_hist(self.data, **hargs)
+        G = DensityPlot(properties, figsize=figsize)
+        if hargs is not None:
+            G.plot_hist(self.data, **hargs)
+        if sargs is not None:
             G.scatter_plot(self.data, **sargs)
-            G.fig.tight_layout()
-            return G
-        else:
-            keys = list(properties.keys())
-            fig = plt.figure(figsize=(5, 5))
-            ax = fig.gca()
-            if hargs is not None:
-                ax.hist2d(self.data[:, 0], self.data[:, 1], **hargs)
-            # Experimental
-            # sns.kdeplot(x=data[:,0],y=data[:,1],shade=True,ax=ax)
-            ax.scatter(self.data[:, 0], self.data[:, 1], **sargs)
-            ax.set_xlabel(properties[keys[0]]["label"])
-            ax.set_ylabel(properties[keys[1]]["label"])
-            multimin_watermark(ax)
-            fig.tight_layout()
-            return fig
+        G.fig.tight_layout()
+        
+        # When the distribution is univariate, add the PDF curve to the plot
+        if self.nvars == 1:
+            x_min, x_max = self.data[:, 0].min(), self.data[:, 0].max()
+            margin = max(1e-6, 0.1 * (x_max - x_min))
+            x_curve = np.linspace(x_min - margin, x_max + margin, 300)
+            pdf_vals = self.pdf(x_curve.reshape(-1, 1))
+            G.axs[0][0].plot(x_curve, pdf_vals, "k-", lw=2, label="PDF")
+    
+        return G
 
     def _str_params(self):
         """
@@ -1766,6 +1865,77 @@ class ComposedMultiVariateNormal(object):
             {self.str_stdcorr}
             {self.stdcorr.tolist()}"""
         return msg
+
+    def tabulate(self, sort_by="weight", return_df=True):
+        """
+        Build a table of CMND parameters: weights, means (mu_i), standard deviations (sigma_i),
+        and correlations (rho_ij, i < j). Diagonal rho_ii are 1 by definition and omitted.
+
+        Parameters
+        ----------
+        sort_by : str, optional
+            How to order the rows (one row per Gaussian component):
+            - ``'weight'``: by weight descending (heaviest first).
+            - ``'distance'``: by Euclidean distance of the mean vector to the origin ascending
+              (closest to origin first).
+        return_df : bool, optional
+            If True (default), return a pandas DataFrame. If False, print the table and return None.
+
+        Returns
+        -------
+        pandas.DataFrame or None
+            Table with columns: w, mu_1, mu_2, ..., sigma_1, sigma_2, ..., rho_12, rho_13, ...
+            (rho_ij only for i < j; no diagonal). Index is component index (1-based).
+            Returns None if return_df is False.
+        """
+        import pandas as pd
+
+        # Column names: w, mu_1..mu_nvars, sigma_1..sigma_nvars, rho_12, rho_13, ...
+        cols = ["w"]
+        cols += [f"mu_{i+1}" for i in range(self.nvars)]
+        cols += [f"sigma_{i+1}" for i in range(self.nvars)]
+        for i in range(self.nvars):
+            for j in range(i + 1, self.nvars):
+                cols.append(f"rho_{i+1}{j+1}")
+
+        # Build rows (one per component)
+        order = np.arange(self.ngauss)
+        if sort_by == "weight":
+            order = np.argsort(-np.asarray(self.weights))
+        elif sort_by == "distance":
+            dist = np.linalg.norm(self.mus, axis=1)
+            order = np.argsort(dist)
+        else:
+            raise ValueError(
+                f"sort_by must be 'weight' or 'distance', got {sort_by!r}"
+            )
+
+        sigmas = getattr(self, "sigmas", None)
+        rhos = getattr(self, "rhos", None)
+        rows = []
+        for k in order:
+            w = self.weights[k]
+            mu = self.mus[k]
+            row = [float(w)] + [float(mu[i]) for i in range(self.nvars)]
+            if sigmas is not None:
+                sig = sigmas[k]
+                row += [float(sig[i]) for i in range(self.nvars)]
+            else:
+                row += [np.nan] * self.nvars
+            Noff = self.nvars * (self.nvars - 1) // 2
+            if rhos is not None and rhos.size > 0:
+                rho = rhos[k]
+                row += [float(rho[i]) for i in range(len(rho))]
+            else:
+                row += [np.nan] * Noff
+            rows.append(row)
+
+        df = pd.DataFrame(rows, columns=cols, index=np.array(order) + 1)
+        df.index.name = "component"
+        if not return_df:
+            print(df.to_string())
+            return None
+        return df
 
 
 class FitCMND:
@@ -1950,7 +2120,8 @@ class FitCMND:
             Flatten parameters with correlations.
         """
         stdcorr = np.array(self.extrap + list(minparams))
-        stdcorr[-self.ngauss * self.Ncorr :] -= 1
+        if self.ngauss * self.Ncorr > 0:
+            stdcorr[-self.ngauss * self.Ncorr :] -= 1
         return stdcorr
 
     def log_l(self, data):
@@ -2036,7 +2207,7 @@ class FitCMND:
 
         self.solution = minimize(
             self.cmnd.sample_cmnd_likelihood,
-            self.minparams,
+            self.uparams,
             callback=_advance,
             args=(data, self.pmap, "stdcorr", self.scales, verbose),
             **self.minargs,
@@ -2086,7 +2257,7 @@ class FitCMND:
 
         Returns
         -------
-        G : matplotlib.figure.Figure or CornerPlot
+        G : matplotlib.figure.Figure or DensityPlot
             Graphic handle.
 
         Examples
@@ -2108,14 +2279,15 @@ class FitCMND:
 
         from matplotlib import pyplot as plt
 
-        if self.nvars > 2:
-            G = CornerPlot(properties, figsize=figsize)
+        if self.nvars == 1 or self.nvars > 2:
+            G = DensityPlot(properties, figsize=figsize)
             G.plot_hist(Xfits, **hargs)
             G.scatter_plot(self.data, **sargs)
             G.fig.tight_layout()
             self.fig = G.fig
             return G
         else:
+            # nvars == 2: 2D hist2d + scatter
             keys = list(properties.keys())
             fig = plt.figure(figsize=(5, 5))
             ax = fig.gca()

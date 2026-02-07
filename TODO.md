@@ -8,7 +8,7 @@
 - [ ] Create a Google Drive repository to store CMND fits.
 - [ ] In `savefit`, change `objfile` to `prefix`.
 - [ ] Allow `W`, `w`, `M` as arguments for the elements PDF.
-- [ ] Corner plot of elements PDF in the notebook (brainstorm method).
+- [ ] Density plot of elements PDF in the notebook (brainstorm method).
 - [ ] Add `tqdm` to long-running tasks.
 - [ ] Save many figures to `gallery`.
 - [ ] Add `gallery` directory creation in notebooks upon package installation.

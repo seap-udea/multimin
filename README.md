@@ -24,7 +24,7 @@
 These are the main features of `MultiMin`:
 
 - **Multivariate Fitting**: Tools for fitting composed multivariate normal distributions (CMND).
-- **Visualization**: Corner plots and specific visualization utilities.
+- **Visualization**: Density plots and specific visualization utilities.
 - **Statistical Analysis**: Tools for handling covariance matrices and correlations.
 
 ## Documentation
@@ -160,7 +160,7 @@ data = CMND.rvs(5000)
 
 ### 3. Visualize the data
 
-We can check the distribution of the generated data using `CornerPlot`.
+We can check the distribution of the generated data using `DensityPlot`.
 
 ```python
 import matplotlib.pyplot as plt
@@ -172,15 +172,15 @@ properties = dict(
     z=dict(label=r"$z$", range=None),
 )
 
-# Plot the corner plot
-G = mn.CornerPlot(properties, figsize=3)
+# Plot the density plot
+G = mn.DensityPlot(properties, figsize=3)
 hargs = dict(bins=30, cmap='Spectral_r')
 sargs = dict(s=1.2, edgecolor='None', color='r')
 hist = G.scatter_plot(data, **sargs)
 ```
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/seap-udea/multimin/master/examples/gallery/multimin_quickstart_1.png" alt="Data Scatter Plot" width="600"/>
+  <img src="https://raw.githubusercontent.com/seap-udea/multimin/master/examples/gallery/quickstart_data_density_scatter.png" alt="Data Scatter Plot" width="600"/>
 </div>
 
 ### 4. Initialize the Fitter and Run the Fit
@@ -210,7 +210,7 @@ G = F.plot_fit(
 ```
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/seap-udea/multimin/master/examples/gallery/multimin_quickstart_3.png" alt="Fit Result" width="600"/>
+  <img src="https://raw.githubusercontent.com/seap-udea/multimin/master/examples/gallery/quickstart_fit_result_3d.png" alt="Fit Result" width="600"/>
 </div>
 
 

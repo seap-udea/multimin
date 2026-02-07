@@ -19,7 +19,7 @@ Future versions will include:
 
 - **Versions 0.6.x**:
 
-  - Richer corner plots
+  - Richer density plots
 
 ---
 
