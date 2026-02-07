@@ -64,7 +64,7 @@ class TestMultiMinBase(unittest.TestCase):
         if hasattr(mn, "MultiMinBase"):
             obj = mn.MultiMinBase()
         else:
-            obj = mn.ComposedMultiVariateNormal(Ngauss=1, Nvars=2)
+            obj = mn.ComposedMultiVariateNormal(ngauss=1, nvars=2)
         str_repr = str(obj)
         self.assertIsInstance(str_repr, str)
 

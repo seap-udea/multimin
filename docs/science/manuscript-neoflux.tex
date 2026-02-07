@@ -1,0 +1,1431 @@
+|
+                                  \documentclass[dvipsnames]{aastex62}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%PACKAGES
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\usepackage[]{xcolor}
+%Colors available here: https://www.overleaf.com/learn/latex/Using_colours_in_LaTeX
+%\usepackage[colorlinks]{hyperref}
+\usepackage{dsfont}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%MACROS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newcommand{\vdag}{(v)^\dagger}
+\newcommand\aastex{AAS\TeX}
+\newcommand\latex{La\TeX}
+
+\newcommand{\model}{{\rm model}}
+\newcommand{\data}{{\rm data}}
+\newcommand{\like}{{\cal L}}
+\newcommand{\beq}{\begin{equation}}
+\newcommand{\eeq}{\end{equation}}
+\newcommand{\pop}{{\cal P}}
+\newcommand{\sub}[1]{_{\rm #1}}
+
+\newcommand{\geolat}{\theta}
+\newcommand{\geolon}{\phi}
+\newcommand{\eclat}{b}
+\newcommand{\eclon}{\lambda}
+\newcommand{\altitude}{H}
+\newcommand{\vimp}{v}
+\newcommand{\rimp}{{\vec\rho}\sub{imp}}
+\newcommand{\rlhel}{{\vec x}\sub{imp,hel}}
+\newcommand{\rhel}{{\vec x}\sub{hel}}
+\newcommand{\rearth}{{\vec x}\sub{\oplus}}
+\newcommand{\rgeo}{{\vec x}\sub{geo}}
+\newcommand{\rsoi}{{\vec x}\sub{SoI}}
+\newcommand{\ehel}{{\vec\xi}\sub{hel}}
+\newcommand{\egeo}{{\vec\xi}\sub{geo}}
+\newcommand{\Ehel}{{\vec{\cal E}}\sub{hel}}
+\newcommand{\RNEO}{{\cal R}}
+
+%Symbols that may change
+\newcommand{\neo}{\eta}
+\newcommand{\neoq}{n}
+\newcommand{\pdf}{{\it pdf}}
+\renewcommand{\Re}{{\rm I\!R}}
+\newcommand{\Norm}{{\cal N}}
+\newcommand{\MND}{multivariate normal distribution}
+\newcommand{\CMND}{{\it CMND}}
+\newcommand{\CMNDf}{{\cal C}}
+\newcommand{\myset}[1]{\{#1\}}
+\newcommand{\var}[1]{{\tilde #1}}
+\newcommand{\Lik}{{\cal L}}
+\newcommand{\Pop}{{\cal P}}
+\newcommand{\serch}[1]{{\it serch#1}}
+
+%Constants
+\newcommand{\qmax}{1.35\;\mathrm{au}}
+
+%Edition commands
+\newcommand{\rdy}[1]{\textcolor{blue}{#1}} %Texto listo
+\newcommand{\chk}[1]{\textcolor{red}{#1}} %Texto para revisar
+\newcommand{\drf}[1]{\textcolor{gray}{#1}} %Borrador
+\newcommand{\otl}[1]{\textcolor{magenta}{#1}} %Comentarios al texto
+
+\input{figures/macros.tex}
+\newcommand{\ms}[1]{\textcolor{teal}{\textbf{MS:} #1}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%CONFIGURATION
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\graphicspath{{./}{figures/}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%FRONTMATTER
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%POTENTIAL LIST OF AUTHORS
+%\correspondingauthor{Jorge I. Zuluaga}\email{jorge.zuluaga@udea.edu.co}
+%\author[0000-0002-6140-3116]{Jorge I. Zuluaga}
+%\author[0000-0000-0000-0000]{Pablo A. Cuartas}
+%\author[0000-0000-0000-0000]{Adriana Araujo}
+%\author[0000-0002-8065-4199{Mario A. Sucerquia}
+%POTENTIAL LIST OF AFFILIATION
+%\affil{Solar, Earth and Planetary Physics Group (SEAP)\\Instituto de F\'{\i}sica - FCEN, Universidad de Antioquia Calle 70 No. 52-21, Medell\'in, Colombia}
+
+%\affil{Instituto de F\'isica y Astronom\'ia, Facultad de Ciencias, Universidad de Valpara\'iso, Av. Gran Breta\~na 1111, 5030 Casilla, Valpara\'iso, Chile}\\
+%\affil{N\'ucleo Milenio Formaci\'on Planetaria - NPF, Universidad de Valpara\'iso, Av. Gran Breta\~na 1111, Valpara\'iso, Chile}
+
+\submitjournal{Celestial Mechanics and Dynamical Astronomy}
+\shorttitle{From NEO orbital statistics to impact contidions}
+\shortauthors{Zuluaga et al.}
+
+\begin{document}
+
+\author[0000-0000-0000-0000]{First Author}
+
+\affil{Group or division 1\\Institution, Address, City, Country}
+
+\author[0000-0000-0000-0000]{Second Author}
+
+\affil{Group or division 2\\Institution, Address, City, Country}
+
+\author[0000-0000-0000-0000]{Third Author}
+
+\affil{Group or division 3\\Institution, Address, City, Country}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%TITLE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%\title{A proyective semi analytical method for calculating the probability of Near Earth Objects approaches}
+%\title{From 3D distribution to the flux of small-body objects close to Earth}
+%\title{An analytical approach to the flux of small-body objects near to Earth}
+%\title{An analytical expression for the flux of small-body objects near to Earth}
+%\title{The flux of small-body objects near to Earth: from graitational ray-tracing to an analytical solution}
+%\title{An analytical description of the flux of Near Earth Objects and its potential applications}
+%\title{An analytical approach to the description of the flux Near Earth Objects}
+\title{A semi analytical description of the density and flux of Near Earth Objects and its potential applications}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%ABSTRACT
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{abstract}
+\rdy{The flux of Near Earth Objects (NEOs) around our planet 
+%, more importantly, the flux of asteroids, meteoroids of comets falling on its surface (impact probability),
+is a key mathematical quantity to \ms{assess} problems ranging from future NEOs space missions to impact risks assessment.  The discrete (and mostly unknown, \chk{at least for objects having H$>$25, D$\lesssim$ 10 m}) nature of the population of small-bodies around the Earth and the complexity of the related dynamical problem, render the calculation of this flux complex and computationally expensive. In this paper, we present a semi analytical formalism to calculate the flux through any surface and at any time around the Earth that can be extended to other planetary objects (eg. the Moon, Mars or Jupiter). We rigorously show, using the probability density distribution transformation formalism, that analytical expressions for the flux of objects coming close to Earth can be written down, provided an analytical description of the density of the corresponding small-bodies (that we demonstrate is possible, at least in principle, to describe analytically).  The resulting analytical formulas can be integrated out to compute absolute fluxes, marginal probability distribution functions (useful for instance to compute latitudinal or seasonal variations in asteroid fluxes), among many other observable quantities. We demonstrate the power of the formalism studying the probability of NEO Earth close approaches and compare our predictions with the the NASA CNEOS database. Furthermore, we sketch out how the formalism could be used to estimate the spatio temporal distribution of NEOs impacts on Earth.}
+
+\end{abstract}
+
+\keywords{Minor planets -- asteroids: general -- comets: general -- meteorites, meteors, meteoroids}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%DOCUMENT BODY
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+%INTRODUCTION
+%SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+
+\section{Introduction}
+\label{sec:introduction}
+
+\chk{The estimation of the number of near-Earth objects (NEOs), the flux of objects on the Earth and its surroundings and their rate of impacts against our planet, has been a matter of concern since the entry of meteoroids with sizes of the order of meters, began to be recorded in a methodical and permanent way, and it has been possible to measure the energy released by these space intruders as they hit in Earth's atmosphere.}
+
+\chk{To calculate the flux of objects and its impact rate it is necessary to have an estimate of the number of objects near the Earth as a function of their size. Improvements in the ability to detect and track these small objects, have made it possible to make better estimates of the number of NEOs. Surveys like those developed by Catalina+Mt.Lemmon \citep{christensen2016catalina, seaman2018timekeeping}, NEOWISE \citep{masiero2018small}, Pan-STARRS \citep{chambers2018pan}, ATLAS \citep{heinze2021neo} and Zwicky
+Transient Facility (ZTF) \citep{ye2019toward}, have improved the statistics and have facilitated the extrapolation of the calculation of populations in different size ranges.}
+
+\textcolor{red}{\citet{Harris2015} estimate that the population of NEOs with sizes greater than 10 m and with H$<$28 could be of the order $10^7$ - $10^8$. \citet{harris2021population} has just published a new work updating the NEOs population estimate. The new proposed number reaches $6\times10^7$ objects $>$10 m. It is important to note that the number of NEOs discovered in this range of size, $<$30 m, and magnitude H$>$25, is of the order of $10^4$.} 
+
+\textcolor{red}{Other recent works such as \citet{Trilling2017size} reduce the number of NEOs by a factor of 10. Analyzing data from the Dark Energy Camera (DECam) installed at Cerro Tololo Inter-American Observatory (CTIO), their models predict that the number of NEOs  $>$10 m could reach $10^{6.6}$. Most of these NEOs are found at geocentric distances less than 1.3 AU. At this distance, the limit of detectability is H$\sim$21, which corresponds to objects with size of the order of $\sim$200 m.
+On the other hand, based on a 4D model of the orbits, \citet{granvik2018debiased} estimate that the number of NEOs with H$<$25 could be of the order of $10^5$. An important conclusion of this work is the fact that the NEOs population has remained relatively constant, at least for objects with H$<$17.}
+
+\chk{Several works have tried to calculate the flux of NEOs and their probability of impact with our planet \ms{[REFS]. For instance, } It is well known the work of \citet{brown2002flux}, in which the rate of impacts against the Earth is estimated for objects in the range of meters to tens of meters. In this work it is proposed that objects on the order of $\sim$1 m can impact the Earth's atmosphere up to $\sim$30 times per year. In the case of objects $\sim$10 m, the waiting time to observe an impact is $\sim$10 years, while objects that reach up to 100 m would impact the Earth in periods of a few thousands of years. The estimate of this impact rate has changed in the last two decades, in fact it increased as a result of events such as the one in Chelyabinsk in 2013, increasing the probability of impacts for larger objects in shorter periods of time \ms{[REF]}. The new calculation estimates that objects up to a couple of tens of meters (20-30m), could impact the Earth approximately every 10 years \citep{Brown2013}.}
+
+\chk{More recent works such as that of \citet{robertson2021latitude} state that the flux of NEOs and their probability of impact with the Earth depends on latitude, in such a way that the probability of impacts near the polar regions is $22\%$ greater than the impacts in regions near the equator. Impact angles near the equator are less pronounced, with a mode close to $30^{\circ}$, while impact angles in polar regions tend to be greater with a mode of $65^{\circ}$. An important result of this work is the fact that according to the new models, the risk of impact of objects $\sim$300 m is greater than that previously calculated by at least $7\%$, this based on the fact of the existence of impactors moving at higher speeds.} 
+
+\rdy{This paper is organized as follows: in \autoref{sec:description} we describe in detail the method. We first introduce the definition of the key quantities and outline the goals of the method (\autoref{sec:outline}); then, we present some key results of the {\it formalism of transformations of probability distribution functions}, and show they are applied for the case studied here (\autoref{sec:transformation}).  The observed distribution of NEOs and its analytical description, as proposed here, is presented and discussed in \autoref{sec:observed-distribution} and \autoref{sec:analytical-distribution}, respectively.  Using these mathematical elements, we finally write down a general expression for the flux of small-bodies close to Earth \autoref{sec:expression}. In \autoref{sec:applications} we apply our analytical formalism for describing, on one hand, the flux of Earth NEO close approaches (\autoref{sec:close}) and to compare our predictions with the observed flux; and, on the other hand, to sketch out how the method can be extended to estimate the spatio-temporal distribution of impacts on Earth. A summary of the results and some conclusions drawn from them are finally presented in \autoref{sec:conclusions}.}
+
+%SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+%DESCRIPTION OF THE METHOD
+%SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+\section{Description of the method}
+\label{sec:description}
+
+Let's imagine that we want to theoretically compute the number of NEOs that we expect to enter, at a given time of the year, into the sphere of influence of the Earth-Moon system. Moreover, let's assume that what we actually want to compute is  the {\it local flux} of NEOs (number of objects crossing per unit of time and per unit of area) at every single point of that surface.  Naturally, if we were able to compute the second quantity, the first one can be computed by a suitable integration procedure.  Would it be possible that the precise knowledge of the NEOs flux at the sphere of influence could be used to estimate the distribution of potential asteroid impacts on the surface of the Earth or the Moon?  These are the kind of questions and answers we want to \ms{assess} in this paper.
+
+%SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+%DEFINITIONS AND OUTLINE
+%SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+\subsection{Definitions and outline}
+\label{sec:outline}
+
+We will call here the {\it differential flux of objects} (NEOs or any other type of objects surrounding a body), $\mathrm{d}\Phi_{\hat n}(\vec r,\vec v)$ to the number of objects per unit of time and per unit of area, crossing a surface centered in a point $\vec r:(x,y,z)$) and with normal vector $\hat n$, incoming with velocities close in magnitude and direction to a reference velocity $\vec v$.  The differential flux is given by (see \autoref{fig:differential_flux}):
+
+$$\mathrm{d}\Phi_{\hat n}(\vec r)= N p(\vec r,\vec v)(\vec v\cdot \hat n) d\vec v$$
+%
+where $N$ is the total number of objects in the population and $p(\vec r,\vec v)$ is the {\it phase-space probability density function}. In other words, the probability that a given object have a position inside a volume $\mathrm{d}\vec r$ centered around $\vec r$ and a velocity inside a velocity-volume $\mathrm{d}\vec v$ centered around $\vec v$ is given by $p(\vec r,\vec v)\mathrm{d}\vec r\mathrm{d}\vec v$.
+
+%FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+\begin{figure*}[ht!]
+    \centering
+    \includegraphics[width=0.6\textwidth]{figures/fig-differential-flux.png}
+    \caption{Differential flux.}
+    \label{fig:differential-flux}
+\end{figure*}
+%FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+
+The {\it fractional flux of objects} $\mathrm{d}\phi_{\hat n}(\vec r,\vec v)$ will be given by the integration of the differential flux over all possible velocities:
+
+$$\phi_{\hat n}(\vec r)= \int_{\Delta V} p(\vec r,\vec v)(\vec v\cdot \hat n) d\vec v$$
+%
+
+Here, $\Delta V$ is the full volume in velocity space where objects may move.  You may notice that if velocity is constant in magnitude and perfectly isotropic ($p$ is independent of $\hat v$), the total flux will be exactly zero. In practical calculations, however, we will be interested in the flux going in an specific {\it sense} (thus for instance going from the outside to the inside of a sphere) and for speeds with a non-trivial  distribution.
+
+It is then clear that in order to calculate the flux we need to determine the phase space probability distribution function $p(\vec r,\vec v)$.  However, the information about the population of NEOs is not provided as an spatial or velocity density distribution. Instead, observations [REFERENCES], theoretical models [REFERENCE] or numerical realizations of the propulation [NEOPOP], provide us a finite set of orbital elements:
+
+$$
+\{\tilde\varepsilon_k:(a_k,e_k,i_k,\Omega_k,\omega_k,M_k)\}_{N}
+$$
+
+Here $a_k$ is the semimajor axis of the osculant orbit for object $k$ (conic curve tangent to the trajectory of the object at a given epoch $t_0$), $e_k$ is the eccentricity, $i_k$ is its inclination, $\Omega_k$ is the longitude of the ascending node, $\omega_k$ is the argument of the periapsis and $M_k$ the mean anomaly at epoch.  Hereafter we will assume that the elements of the osculant orbit and their cartesian coordinates, have focus (and origin) in the center of the Sun and are all referred to the same set of coordinate axes (eg. the Ecliptic J2000).
+
+In the continuous limit, namely $N\rightarrow\infty$, we may assume that the objects in the population follow a continuous probability distribution function $\neo(\tilde\varepsilon)$ in the orbital elements space, where:
+
+$$
+\neo(\tilde\varepsilon)\mathrm{d}\tilde\varepsilon
+$$
+will be the fraction of objects having orbital elements in a ball around $\tilde\varepsilon$ and volume $\mathrm{d}\tilde\varepsilon\equiv \mathrm{d}a\,\mathrm{d}e\,\mathrm{d}i\,\mathrm{d}\Omega\,\mathrm{d}\omega\,\mathrm{d}M$\footnote{We have avoided to use of vector notation $\vec\varepsilon$ to refer to objects that are not rigorously free vectors.}.  In \autoref{fig:distribution-NEAs-MPC} we show an approximation to the true value of $\neo(\tilde\varepsilon)\mathrm{d}\tilde\varepsilon$ for the already discovered Near Earth Asteroids\footnote{Dataset downloaded from the Minor Planet Center repository \url{https://www.minorplanetcenter.net/iau/mpc.html} on \today.}
+
+%FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+\begin{figure*}[ht!]
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/NEAs-MPC.png}
+    \caption{A grid representation of the population of Near Earth Asteroid in the latest version of the Minor Planet Center.  In each panel we show the value of the 2d histogram with the number of objects having a given pairs of orbital elements. The histogram value are coded with colors.}
+    \label{fig:distribution-NEAs-MPC}
+\end{figure*}
+%FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+
+The key question here is how can we relate the supposedly well-known distribution of objects in the orbital elements space $\neo(\tilde\varepsilon)$ with the phase space probability distribution function $p(\vec r,\vec v)$.  
+
+%SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+%PDF TRANFORMATION FORMALISM
+%SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+\subsection{Probability distribution transformation formalism}
+\label{sec:pdf-transformation}
+
+The fraction of objects inside an infinitesimal volume in phase space $\mathrm{d}\tilde X\equiv \mathrm{d}\vec r\mathrm{d}\vec v$ surrounding the point $\tilde X:(x,y,z,v_x,v_y,v_z)$ is equal to the fraction of osculating orbits having orbital elements $\tilde\varepsilon(\tilde X)$ (\textbf{ser\'ia la imagen v\'ia la transformaci\'on $T(\tilde\varepsilon)$}) around the corresponding infinitesimal volume $\mathrm{d}\tilde \varepsilon$:
+
+$$
+p(\tilde X)|\mathrm{d}\tilde X|=\neo(\varepsilon(\tilde X))|\mathrm{d}\tilde \varepsilon|
+$$
+
+For \chk{the theorem WHICH THEOREM}, the phase-space probability distribution function will be then given by:
+
+\beq
+\label{eq:transformation-X-e}
+p(\tilde X)=\neo(\varepsilon(\tilde X)) \det\mathds{J}_{\varepsilon X}
+%\right\vert\right\vert
+\eeq
+
+Here, $\mathds{J}_{\varepsilon X}\equiv \partial\tilde \varepsilon/\partial\tilde X$ is the {\em Jacobian matrix} of the transformation $T_{X\varepsilon}: \tilde\varepsilon \rightarrow \tilde X$( {\color{red}{cambiado}}). Since the transformation is invertible (for each set of orbital elements there is a single state vector) [\textbf {we already know that for the case $i=0$ the transformation is not invertible}] , then we can conveniently express $\mathds{J}_{\varepsilon X}$:
+
+\beq
+\label{eq:J-e-X}
+\mathds{J}_{\varepsilon X}=\mathds{J}_{X\varepsilon}^{-1}
+\eeq
+where $\mathds{J}_{X\varepsilon}$ is by definition:
+
+\renewcommand{\part}[2]{\partial_#1#2}
+\beq
+\label{eq:jacobian-definition}
+\mathds{J}\sub{X\varepsilon}\equiv
+\frac
+{\partial\tilde X}
+{\partial\tilde\varepsilon}
+\equiv
+\left(\begin{array}{cccccc}
+%%%%%%%%%
+\part{a}{x} & 
+\part{e}{x} & 
+\part{i}{x} & 
+\part{\Omega}{x} & 
+\part{\omega}{x} & 
+\part{M}{x} \\
+%%%%%%%%%
+\part{a}{y} & 
+\part{e}{y} & 
+\part{i}{y} & 
+\part{\Omega}{y} & 
+\part{\omega}{y} & 
+\part{M}{y} \\
+%%%%%%%%%
+\part{a}{z} & 
+\part{e}{z} & 
+\part{i}{z} & 
+\part{\Omega}{z} & 
+\part{\omega}{z} & 
+\part{M}{z} \\
+%%%%%%%%%
+\part{a}{v_x} & 
+\part{e}{v_x} & 
+\part{i}{v_x} & 
+\part{\Omega}{v_x} & 
+\part{\omega}{v_x} & 
+\part{M}{v_x} \\
+%%%%%%%%%
+\part{a}{v_y} & 
+\part{e}{v_y} & 
+\part{i}{v_y} & 
+\part{\Omega}{v_y} & 
+\part{\omega}{v_y} & 
+\part{M}{v_y} \\
+%%%%%%%%%
+\part{a}{v_z} & 
+\part{e}{v_z} & 
+\part{i}{v_z} & 
+\part{\Omega}{v_z} & 
+\part{\omega}{v_z} & 
+\part{M}{v_z} \\
+\end{array}\right)
+\eeq
+
+where for the sake of readability we introduced the compact notation $\partial_x f\equiv \partial f/\partial x$.  The convenience of expressing the Jacobian of the transformation in \autoref{eq:transformation-X-e} in terms of the inverse of matrix in \autoref{eq:jacobian-definition}, is that the transformation from orbital elements to state vector, $T_{\varepsilon X}:\tilde \varepsilon\rightarrow\tilde X$ is widely known and algebraically simple:
+
+\newcommand{\sE}{\;{\rm s}E}
+\newcommand{\cE}{\;{\rm c}E}
+\newcommand{\stE}{\;{\rm s}^2E}
+\newcommand{\ctE}{\;{\rm c}^2E}
+\newcommand{\si}{\;{\rm s}i}
+\newcommand{\ci}{\;{\rm c}i}
+\newcommand{\sW}{\;{\rm s}\Omega}
+\newcommand{\cW}{\;{\rm c}\Omega}
+\newcommand{\sw}{\;{\rm s}\omega}
+\newcommand{\cw}{\;{\rm c}\omega}
+
+\beq
+\label{eq:transform-e-r}
+\left(
+\begin{array}{c}
+x\\y\\z
+\end{array}
+\right)
+=|a| \mathds{R}
+\left[
+\begin{array}{c}
+\sigma(\cE-e)\\
+\xi\sE\\
+0
+\end{array}
+\right]
+\eeq
+
+and
+
+\beq
+\label{eq:transform-e-v}
+\left(
+\begin{array}{c}
+v_x\\v_y\\v_z
+\end{array}
+\right)
+=
+\frac{\nu}{r}
+\mathds{R}
+\left[
+\begin{array}{c}
+-\sE\\
+\xi\cE\\
+0
+\end{array}
+\right]
+\eeq
+
+Here and for the sake of full generality, we have introduced a compact notation that allows us to express the transformation either in the case of elliptical orbits (eg. bound orbits around the Sun) or hyperbolic ones (eg. unbound orbits around the Earth and the Moon). In this notation, $\sigma$ is the ``signature'' of the conic: $\sigma=+1$ for the ellipse ($e<1$) and $\sigma=-1$ for the hyperbola ($e>1$); $E$ is the eccentric anomaly which is related to the mean anomaly through the general Kepler equation, $M=\sigma(E-e\sE)$; $\sE=\sin E$, $\cE=\cos E$ in the case of the ellipse (the usual notation) and $\sE=\sinh E$, $\cE=\cosh E$ in the case of the hyperbola; $r=\sqrt{x^2+y^2+z^2}=\sigma a(1-e\cE)$ is the instantaneous distance to the focus of the conic; $\nu\equiv\sqrt{\mu|a|}$, where $\mu\equiv GM$ is the gravitational parameter of the corresponding central body (eg. the Sun or the Earth-Moon system);  $\xi=b/|a|=\sqrt{\sigma(1-e^2)}$, is the axis ratio of the conic; and $n$ is the mean motion that satisfies the Kepler's harmonic law $n^2|a|^3=\mu$.
+
+Finally, the rotation matrix $\mathds{R}(-\Omega,-i,-\omega)$ is given explicitly as:
+    
+$$
+\mathds{R}(-\Omega,-i,-\omega)=
+\left[
+\begin{array}{ccc}
+(\cW\cw-\ci\sW\sw) & 
+(-\cW\sw-\cw\ci\sW) & 
+\si\sW\\
+(\sW\cw+\ci\cW\sw) & 
+(-\sW\sw+\cw\ci\cW) & 
+\si\cw\\
+\sw\si & 
+\cw\si & 
+\ci
+\end{array}
+\right]
+$$
+where, again for compactness, we have used the compact notation $\mathrm{c}\theta\equiv\cos \theta$ and $\mathrm{s}\theta\equiv\sin \theta$.  
+
+Using the transformations in \autoref{eq:transform-e-r} and \autoref{eq:transform-e-v}, the explicit components of the Jacobian matrix of the transformation are given by:
+
+\beq
+\left(
+\begin{array}{c}
+\part{a}{x}\\
+\part{a}{y}\\
+\part{a}{z}
+\end{array}
+\right)
+=
+\mathds{R}
+\left[
+\begin{array}{c}
+\cE-e\\
+\sigma\xi\sE\\
+0
+\end{array}
+\right],
+\left(
+\begin{array}{c}
+\part{a}{v_x}\\
+\part{a}{v_y}\\
+\part{a}{v_z}
+\end{array}
+\right)
+=
+\frac{\nu}{2ra}
+\mathds{R}
+\left[
+\begin{array}{c}
+\sE\\
+-\sigma\cE\\
+0
+\end{array}
+\right]
+\eeq
+
+\beq
+\left(
+\begin{array}{c}
+\part{e}{x}\\
+\part{e}{y}\\
+\part{e}{z}
+\end{array}
+\right)
+=
+|a|
+\mathds{R}
+\left[
+\begin{array}{c}
+\sigma(\part{e}{\cE}-1)\\
+(\part{e}{\xi})\sE+\xi(\part{e}{\sE})\\
+0
+\end{array}
+\right],
+\left(
+\begin{array}{c}
+\part{e}{v_x}\\
+\part{e}{v_y}\\
+\part{e}{v_z}
+\end{array}
+\right)
+=
+\mathds{R}
+\left[
+\begin{array}{c}
+-\part{e}{(\nu r)}\sE-\nu r(\part{e}{\sE})\\
+\part{e}{(\nu r)}\xi\cE+\nu r(\part{e}{\xi})\cE+\nu r\xi(\part{e}{\cE})\\
+0
+\end{array}
+\right]
+\eeq
+where $\part{e}(\cE)=-2|a|\sE/r$, $\part{e}(\sE)=a\cE\sE/r$, $\part{e}{(\nu r)}=\nu a (\cE-|a|e\stE)/r^2$, $\part{e}{\xi}=-\sigma e/\xi$.
+
+\beq
+\left(
+\begin{array}{c}
+\part{i}{x}\\
+\part{i}{y}\\
+\part{i}{z}
+\end{array}
+\right)
+=
+\left[
+\begin{array}{c}
+z\sW\\
+-z\cW\\
+-x\sW+y\cW
+\end{array}
+\right],
+\left(
+\begin{array}{c}
+\part{i}{v_x}\\
+\part{i}{v_y}\\
+\part{i}{v_z}
+\end{array}
+\right)
+=
+\left[
+\begin{array}{c}
+v_z\sW\\
+-v_z\cW\\
+-v_x\sW+v_y\cW
+\end{array}
+\right]
+\eeq
+
+\beq
+\left(
+\begin{array}{c}
+\part{\Omega}{x}\\
+\part{\Omega}{y}\\
+\part{\Omega}{z}
+\end{array}
+\right)
+=
+\left[
+\begin{array}{c}
+-y\sW\\
+-x\cW\\
+0
+\end{array}
+\right],
+\left(
+\begin{array}{c}
+\part{\Omega}{v_x}\\
+\part{\Omega}{v_y}\\
+\part{\Omega}{v_z}
+\end{array}
+\right)
+=
+\left[
+\begin{array}{c}
+-v_y\sW\\
+v_x\cW\\
+0
+\end{array}
+\right]
+\eeq
+
+\beq
+\left(
+\begin{array}{c}
+\part{\omega}{x}\\
+\part{\omega}{y}\\
+\part{\omega}{z}
+\end{array}
+\right)
+=
+\left[
+\begin{array}{c}
+-y\ci-z\si\cW\sW\\
+x\ci-z\si\sW\\
+\si(x\cW+y\sW)
+\end{array}
+\right],
+\left(
+\begin{array}{c}
+\part{\omega}{v_x}\\
+\part{\omega}{v_y}\\
+\part{\omega}{v_z}
+\end{array}
+\right)
+=
+\left[
+\begin{array}{c}
+-v_y\ci-v_z\si\cW\\
+v_x\ci-v_z\si\sW\\
+\si(v_x\cW+v_y\sW)
+\end{array}
+\right]
+\eeq
+
+\beq
+\left(
+\begin{array}{c}
+\part{M}{x}\\
+\part{M}{y}\\
+\part{M}{z}
+\end{array}
+\right)
+=
+\frac{1}{n}
+\left[
+\begin{array}{c}
+v_x\\
+v_y\\
+v_z
+\end{array}
+\right],
+\left(
+\begin{array}{c}
+\part{M}{v_x}\\
+\part{M}{v_y}\\
+\part{M}{v_z}
+\end{array}
+\right)
+=
+-\frac{\sqrt{\mu a^3}}{r^3}
+\left[
+\begin{array}{c}
+x\\
+y\\
+z
+\end{array}
+\right]
+\eeq
+
+It is important to notice that for safety we have carefully verified that the previous analytical expressions and the resulting Jacobians are exact in the range of orbital parameters values.  For performing this verification, we compare the analytical Jacobians in \autoref{eq:J-e-X} and \autoref{eq:jacobian-definition}, with numerical (and very computationally expensive) estimation of the corresponding quantities for a wide range of orbits and initial conditions.
+
+\bigskip 
+
+Now that we have analytical expressions for transforming the probability density of objects in the orbital parameters space $\neo(\tilde\varepsilon)$, to that in the phase-space $p(\tilde X)$, the only remaining task is to find a proper analytical description of the former
+%, namely, to find a ``formula'' for $\neo(\tilde\varepsilon)$, describing the density of objects as a function of orbital elements.  
+
+So far, theoretical models are not able to provide us with such a formula, and the reason is simple: the processes involved in the migration, orbital perturbation and non-gravitational forces acting on small bodies are so complex that we can only attempt a numerical description of the distribution of NEOs.  Observations provide us clues and help us to constraint the resulting numerical distributions. Here, we present an approach that, using the latest numerical results, allows to write down analytical expressions for $\neo(\tilde\varepsilon)$.  But first, let us introduce the starting point for this goal: the observed and numerical distribution of NEOs.
+
+%SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+%OBSERVED AND NUMERICAL DISTRIBUTION OF NEOs
+%SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+\section{The observed distribution of NEOs}
+\label{sec:observed-distribution}
+
+NEOs are classified as those, asteroids or comets, with q$<$1.3 au and a$<$4.2 au [REFERENCE]. Among these objects, those that represent a risk, that are potentially hazardous objects (PHOs) are those whose orbits have intersections with Earth orbit $<0,05$ au and visual magnitudes $H<22$ \citep{Granvik2018}. Knowing the distribution of orbits and sizes of NEOs has become one of the most important needs for researchers of possible impacts on Earth \citep{Granvik2016, Granvik2018}.
+
+Many surveys have been carried out with the objective of identifying the largest number of NEOs and their orbital distribution. This search for NEOs includes the Catalina Sky Survey (CSS), as well as the Siding Spring Survey (SSS) \citep{Larson2003, Christensen2012}. The actual number of NEOs $N$ is not known, but it can be inferred statistically as a function of the number of observed NEOs $n$ and the efficiency of the observation $\epsilon$, all of them being a function of the orbital elements, $a,e,i$, and the $H$ \citep{Granvik2018}:
+
+\begin{equation}
+N(a,e,i,H) = \frac{n(a,e,i,H)}{\epsilon(a,e,i,H)}.
+\end{equation}
+
+The first attempts to understand wh. at is the actual distribution of both, the orbits and the sizes of the NEOs conclude that the distribution of the smallest objects (D$<$100 m) is the most complicated, due to the low resolution for the 4-D models \citep{Rabinowitz1993, Rabinowitz2000}. This is due in part to the low number of objects observed at that time. 
+
+\citet{Gladman2000} uses 117 NEOs observed at that time, and analyzes its dynamic evolution during a period of 60 million years. They find that many objects exchange orbits and end up in groups within the Earth's orbit. They also find that some resonance processes in the inner Solar System determine the orbital distribution of NEOs, affecting their eccentricities and inclinations, even sending these objects in trajectories very close to the Sun (Sun-grazings). 
+
+\citet{Bottke2000} develops a model in which the distribution of orbits and sizes of the NEOs depends on the region of the solar system from which the objects originally come, the main asteroid belt, or cometary origin, before they settling in a close near orbit to Earth. This model is extended in the work of \citet{Bottke2002} by including objects originated beyond the main belt as well as comets from the Jupiter family. Model developed by \citet{Bottke2002} is known as the "Old" model for generating a NEOs population and is based in the observations of the Spacewatch Survey. 
+
+The European Space Agency (ESA) has been developing the project "Synthetic Generation of a Near-Earth Object Population" (SGNEOP) in order to simulate a population of NEOs and to analyze aspects such as the flux of small objects close to Earth, the efficiency of observation surveys and improve search strategies of dangerous objects. The main result of this project, called Near-Earth Object Population Observation Program (NEOPOP), is a software tool that allows the synthetic gereneration of a NEOs population, and is known as the "New" model for generating a NEOs population. NEOPOP is based on the CSS observations between 2006 and 2011 that comprises more than 4000 discovered NEOs \citep{Muller2014, Granvik2018}. The model is calibrated for 15$<$H$<$25 and have an upper limit of 999999 orbits that could be generated. The code can predict a total number of NEOs that reach a certain value of H, and discriminates them in the four subgroups: Apollos, Amors, Atens and Atiras, and other source regions as Hungaria, Phocea and Jupiter family and resonances. In addition, NEOPOP can generate fictitious populations of NEOs, belonging to the four groups, including PHOs. 
+
+The density of observed objects in the orbital parameter space, irrespective of their absolute magnitude, is depicted in \autoref{fig:distribution-NEAs-MPC}.  The definition of NEOs is better represented in the orbital elements space using $q=a(1-e^2)$ instead of $a$ as the size-parameter. We can observe that the distribution of observed objects are particularly non-trivial in the $(q,a,i)$ slice of the 6-dimensional space (upper three panels).  The orientation and position orbital elements $(\Omega,\omega,M)$ are distributed almost uniformly (as it is evident in the panels $\omega-\Omega$, $M-\Omega$ and $M-\omega$ in the lower-right corner of the diagram).  Still, several non-trivial correlations are observed specially between $q$ and $\Omega$ and $\omega$ that are due to observational selection effects [REFERENCE].
+
+We have used NEOPOP to generate a mock population of $\sim 8\times 10^5$ NEOs with absolute magnitude in the range $9<M<25$ (diameters in the range $30\;\mathrm{m}<D<100\;\mathrm{km}$).  For this purpose we configure the software\footnote{\chk{Poner aquí la versión del software usada}.}\chk{PABLO DESCRIBI POR FAVOR AQUÍ LOS PARÁMETROS QUE LE METISTE A NEOPOP PARA GENERAR LA POBLACIÓN}.  In the grid plot in \autoref{fig:distribution-NEAs-NEOPOP} we show the distribution in the orbital parameter space of the resulting elements.  As expected, for the theoretical population, the uniformity in $(\Omega,\omega,i)$ is now clear.  This leaves us with the challenge of describe the nontrivial distribution of the orbital elements $(q,e,i)$. 
+
+%FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+\begin{figure*}[ht!]
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/NEAs-NEOPOP.png}
+    \caption{A grid representation of a mock population of Near Earth Objects according to NEOPOP.}
+    \label{fig:distribution-NEAs-NEOPOP}
+\end{figure*}
+%FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+
+A first conclusion is that the full 6-dimensional probability distribution function $\neo(\tilde\varepsilon)$ can be factorized as:
+
+$$
+\neo(\tilde\varepsilon)=\frac{1}{(2\pi)^3}\;\neoq(q,e,i)
+$$
+where for each independently uniformly distributed orbital element ($\Omega,\omega,M$) we have a factor $\frac{1}{2\pi}$ contributing to the full \pdf\footnote{The \pdf\ of a random variable $x$ uniformly distributed in the interval [a,b] is $p(x)=1/(b-a)$. Angles $\Omega,\omega,M$ are defined in the interval $[0,2\pi)$.}
+
+%SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+%ANALYTICAL PDF
+%SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+\section{An analytical description of the distribution of NEOs}
+\label{sec:analytical-distribution}
+
+By examining the distribution of orbital elements in \autoref{fig:distribution-NEAs-NEOPOP} we can only conclude that an exact description of the underlying distribution is simply impossible.  However, if we find an analytical distribution able to capture every subtle detail in the numerical or observed distribution, the resulting expression could be indistinguishable of an analytical description of the density.  Of course, we do not know any three dimensional distribution, among the couple of well-known distributions, that capture.
+
+%SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+%CMND
+%SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+\subsection{The composed multivariate normal distribution}
+\label{sec:CMND}
+
+We conjecture that any multivariate distribution function $p(\tilde U):\Re^{N}\rightarrow\Re$, where $\tilde U:(u_1,u_2,u_3,\ldots,u_N)$ and $u_i$ are random variables, can be approximated with an {\it arbitrary precision} by a {\it normalized} linear combination of $M$ {\it multivariate normal distributions} (hereafter, \CMND): (\textbf{Definitivamente la convergencia de la suma de las variables aleatorias a una normal, es vía EL TLC, pero hay que discutir una redefinición.})
+
+\beq
+\label{eq:CMND}
+p(\tilde U)\approx \CMNDf_M(\tilde U;\myset{w_k}_M,\myset{\mu_k}_M,\myset{\Sigma_k}_M)\equiv \sum_{i=1}^{M} w_i\;\Norm(\tilde U;\tilde \mu_i,\Sigma_i)
+\eeq
+where the multivariate normal $\Norm(\tilde U;\tilde \mu,\Sigma)$\footnote{Please notice that in our notation a function (eg. $\Norm$ or $\CMNDf$) may depend on a set of independent variables or/and several {\it parameters} which are distinguished of the former by a semicolon ``;''.  Thus, when writing  $\Norm(\var{U};\var{\mu},\Sigma)$ we represent a member $\Norm(\var{U})$ of the family of multivariate normal distributions which is characterized by the parameters $\var{\mu},\Sigma$.} can be written as:
+
+\beq
+\label{eq:MND}
+\Norm(\var{U};\var{\mu},\Sigma)=\frac{1}{\sqrt {(2\pi )^{k}\;\det \Sigma}}\exp\left[-{\frac{1}{2}}(\var{U}-\var{\mu})^{\rm T}\Sigma^{-1}(\var{U}-\var{\mu})\right]
+\eeq
+and $\var{\mu}:(\mu_1,\mu_2,\mu_3,\ldots,\mu_N)$ are the mean values of the random variables $\var{U}:(u_1,u_2,u_3,\ldots,u_N)$ and $\Sigma$ is the corresponding covariance matrix:
+
+\beq
+\Sigma_{ij}=\rho_{ij}\sigma_{i}\sigma_{j}
+\eeq
+with $\sigma_i$ is the standard deviation of $u_i$ and $\rho_{ij}$ is the correlation coefficient among variable $u_i$ and $u_j$ ($-1<\rho_{ij}<1$, $\rho_{ii}=1$).
+
+In other words, we conjecture that for {\color{red}all} $\epsilon>0$, {\color{red}there exist a natural number $M\in \mathbb{N}$}, namely the number of {\MND}s used to approach $p(\var{U})$, such that:
+\beq
+|\CMNDf_M(\tilde U)-p(\tilde U)|<\epsilon
+\eeq
+The normalization condition on $p(\tilde U)$ additionally implies that the set of set weights $\{w_k\}_M$ in the \CMND\ (\autoref{eq:CMND}) are also normalized, namely 
+
+$$\sum_i w_i=1$$.
+
+Finally, it is important to notice that since the domain of the \CMND\ (which is obviously the same of their composing \MND\ functions) is $\Re^N$, ie. $u_k\in (-\infty,\infty)$.  Thus, the same condition applies on $p(\var{U})$.
+
+%SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+%NEOs as CMND
+%SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+\subsection{The distribution of NEOs expressed as a CMND}
+\label{sec:NEOs-CMND}
+
+If our conjucture is true, it will be always possible to find a number $M$ of {\MND}s able to approximate the density of NEOs in the orbital parameter space with arbitrary precision.   This is exactly what we mean when saying that we can find an {\it analytical} expression for $\neoq(q,e,i)$.  
+
+But there is a final transformation we need to perform to achieve our goal. Since the orbital elements are constrained into finite intervals, $q\in[0,1.3]$, $e\in[0,1)$, $i\in[0,\pi]$, but the variables in the {\CMND} are defined in the whole reals, we need to find an adequate map for going from finite to infinite intervals.
+
+Our mathematical and numerical experiments show that the following map have several convenient properties (see below).  If we have a random variable $x$ defined in a finite interval $x\in(0,x\sub{max})$, the transformation:
+
+\beq
+\label{eq:x2u}
+u = \log\left(\frac{x/x_{\rm max}}{1-x/x_{\rm max}}\right)\\
+\eeq
+will map $x$ into $u\in(-\infty,\infty)$.  The inverse will be:
+
+\beq
+\label{eq:u2x}
+x = \frac{x\sub{max}}{1+\exp(-x)}
+\eeq
+
+We have applied this transformation to map the regular orbital parameters $(q,e,i)$ into the corresponding {\it unbound orbital parameters} $(Q,C,I)$.  For this purpose we use $q\sub{max}=\qmax$, $e\sub{max}=1$ and $i\sub{max}=\pi$.  The resulting distributions, both for the observed NEAs and for a synthetic population, are shown in \autoref{fig:distribution-NEAs-QCI}.
+
+%FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+\begin{figure*}[ht!]
+    \centering
+    \includegraphics[width=0.45\textwidth]{figures/NEAs-MPC-QCI.png}
+    \includegraphics[width=0.45\textwidth]{figures/NEAs-NEOPOP-QCI.png}
+    \caption{Grid plot of the distribution of unbound orbital elements $(Q,C,I)$ (see text for details) of two sample of NEOs: left, MPC (the same data as in \autoref{fig:distribution-NEAs-MPC}), right, NEOPOP mock population (the same data as in \autoref{fig:distribution-NEAs-MPC}).}
+    \label{fig:distribution-NEAs-QCI}
+\end{figure*}
+%FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+
+The differences between the observed orbital elements and the synthetic ones are amplified when mapping the elements into unbound intervals.  Since our goal is to describe analytically every detail of the distribution, the fact that the logarithmic transformation in \autoref{eq:x2u} highlights those details, is one of the convenient properties of this map.
+
+Now, the question is what are the proper number $M$ of {MND}s and which are their parameters that approximate the better the distributions in \autoref{fig:distribution-NEAs-QCI}.  In order to quantitatively evaluate how well a given {\CMND} describe the distribution of a population $\Pop:\myset{\var{U}_k}_S$ of $S$ objects, where $\var{U}_k$ are the unbound orbital elements (eg. $Q,C,I$) of the $k$th object, we will use the {\it likelihood} statistics:
+
+\beq
+\label{eq:Likelihood}
+\Lik(\myset{w_k}_M,\myset{\mu_k}_M,\myset{\Sigma_k}_M|\myset{\var{U}_k}_S)=\prod_{i=1}^{S} \CMNDf_M(\var{U}_i;\myset{w_k}_M,\myset{\mu_k}_M,\myset{\Sigma_k}_M)
+\eeq
+
+Given a number $M$, we need to find the parameters of the {\CMND} $\myset{w_k}_M,\myset{\mu_k}_M,\myset{\Sigma_k}_M$ that minimize the negative of the normalized logarithm of $\Lik$:
+
+\beq
+\label{eq:minLikelihood}
+-\frac{\log \Lik}{S}=-\frac{1}{S}\sum_{i=1}^{S}\log  \CMNDf_M
+\eeq
+
+In other words, in order to find the first terms of the {\CMND} that better {\it expands} the population, we will use the {\it maximum likelihood} estimator.  However, it is important to stress that in contrast with a conventional procedure of statistical inference, we are neither assuming here that the orbital elements are actually normally distributed, nor testing any hypothesis concerning the unknown underlying distribution of NEOs.  Our procedure should be better described as a sort of statistical search of the terms of a series that best expands an analytical function.  We will call this procedure ``series terms search'' or in short a ``\serch{}''.
+
+We have performed a \serch{ing} procedure on the observed NEOs dataset (MPC dataset) using different values of $M$.  In table \autoref{tab:serching-MPC} we show the value of the minimum likelihood estimator (\autoref{eq:minLikelihood}) for each $M$. We notice, as expected that the the \serch{ing} procedure tends to converge as more terms are added to the {\CMND}.  In order to test the {\it fidelity} of a high order \serch{ed} {\CMND}, we compare in \autoref{fig:comparison-MPC-serched} the actual MPC dataset with a mock population generated with a ${\CMND}$ having $M=100$.  The data sets are barely distinguishable. 
+
+\chk{DON'T FORGET SIZE.  THE NEOPOP SAMPLE CAN BE SEPARATED IN MAGNITUDE INTERVALS AND FIT SEPARATELY.  WE CAN ALSO FIT THE FULL 4-DIMENSIONAL DISTRIBUTION IN ORBITAL ELEMENTS AND ABSOLUTE MAGNITUDE.}
+
+%----------------------------------------------------------------
+%----------------------------------------------------------------
+%----------------------------------------------------------------
+%----------------------------------------------------------------
+\newpage
+
+We propose that the orbital parameter density distribution $n(q,e,i)$ can be analytically described as a series 
+
+
+Our analytical description of the orbital distribution of NEOs is performed using several {\em multivariate normal distributions (MND)}:
+
+
+where $\vec x$ is a set of $k$ independent variables (eg. orbital elements), $\vec\mu$ are the expected value of those variables and $\Sigma$ is the covariance matrix. 
+
+The MND, ${\cal N}(\vec x,\vec \mu,\Sigma)$ is normalized in the unconstrained intervals $x_i\in(-\infty,\infty)$. However, the classical orbital elements $(q,e,i,\Omega,\omega,M)$, whose distribution we attempt to describe, are constrained into finite intervals, $q,e\in[0,1)$, $i\in(0,\pi)$, $\Omega,\omega, M\in[0,2\pi)$.  In order to preserve the normalization properties of the MND, we introduce here the {\em unconstrained orbital elements}: $(Q,E,I,O,W,{\cal M})$. If we call $\mathcal{E}$ the unconstrained orbital element corresponding to the classical one $\epsilon$, the relationship between them are:
+
+The number density of NEOs,  $\mathcal{R}(Q,E,I,O,W)=\mathcal{R}(\vec\mathcal{E})$, is much more complex than a single MND.  Still, we will assume that it can be described as the weighted superposition of an arbitrary number of different MNDs:
+
+
+
+\chk{Teoría de la aproximación, teorema de Weistrass.  arxiv.org/0805.3795, aproximación de funciones usando Gaussianas.}
+
+Here $w_n$ are a normalized set of weighting factors, namely $\sum w_n=1$. Interestingly, this assumption is matehmatically equivalent to that made in SPH (and in our original work in \citealt{Zuluaga2018GRT}), where an approximation to the continuous density of $N$ objects in a $k$-dimensional space, can be obtained as the superposition of $N$ kernel functions evaluated at the position of each object.
+
+In order to simplify our calculations here, we will assume that we can use a number $N\sub{MND}\ll N$ of functions to approximate the number density of the population.  This considerably reduce the calculation time required to estimate $\mathcal{R}$ for the Gravitational Ray Tracing (GRT) purposes.
+
+In order to test this analytical description, we fitted the orbital distribution of \chk{$12000$} real NEOs (having H$<$20) coming from the MPC database and $10000$ synthetic NEOs generated with the NEOPOP software \citep{Granvik2017}. Since in both cases, the distribution of $\Omega$ and $\omega$ are nearly uniform, we have described the distribution of these objects in terms of just $(q,e,i)$, or equivalently their unconstrained counterparts $(Q,E,I)$.  
+
+To facilitate the parametrization of the covariance matrices $\Sigma$, we express them in terms of scale $S$ and rotation matrices $R$:
+
+%https://www.visiondummy.com/2014/04/geometric-interpretation-covariance-matrix/
+$$
+\Sigma=RSSR^{-1}
+$$
+
+$S$ is a diagonal matrix containing the scale-lengths of the variables, namely $S=\mathrm{diag}(\sigma_Q, \sigma_E, \sigma_I)$ and $R(\vec\theta)$ is a 3d rotation matrix, parameterized in terms of Euler angles $\tilde\theta:(\theta_Q,\theta_E,\theta_I)$.
+
+Each MND in Eq. (\ref{eq:MND_superposition}) depends in total of one weighting factor $w_n$, 3 location parameters $\vec\mu_n$, 3 scale parameters (the diagonal of $S_n$) and 3 euler angles $\vec\theta_n$. The population is then described by $10N\sub{MND}-1$ free parameters.
+
+We provide in Table X and Table Y the resulting parameters for a $N\sub{MND}=4$ fitting of the real and synthetic NEO populations.  In Figure X and Figure Y we show graphical comparisons of the resulting continuous density and the real location of the objects, as well as a comparison with mock populations generated in each case.
+
+We can appreciate that despite being described with a relatively simple analytical function, the fitting works well at describing the distribution of objects. 
+
+\section{Applications}
+\label{sec:applications}
+
+\subsection{NEO close approaches}
+\label{sec:close}
+
+\subsection{Towards a spatio-temporal impact distribution}
+\label{sec:impacts}
+
+\section{Discussion}
+\label{sec:discussion}
+
+Describing the distribution with an analytic function has not been proved before.  It is possible that better functions can be found to describe the distributions of objects.  In the meanwhile our approach is a good starting point.
+
+In past version of GRT we performed numerical integrations of the test particle orbits.  Although numerical integration is good for considering the collision with Solar System Objects and to take into account the perturbation of those objects.  However, numerical integration is numerically expensive.  It takes several seconds in some cases.
+
+\section{Summary and conclusions}
+\label{sec:conclusions}
+
+\chk{In this paper we presented analytical expressions for the flux of.}
+
+This procedure can be used to improve our knowledge of the distribution of metre-sized objects, as other impacts happen on Earth.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%ACKNOWLEDGEMENTS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section*{Acknowledgements}
+
+We acknowledge.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%BIBLIOGRAPHY
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\bibliographystyle{aasjournal}
+\bibliography{bibliography}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%AUTHOR CONTRIBUTIONS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section*{Author contributions}
+
+{\bf Author 1} write the code.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%SUPPLEMENTARY MATERIAL
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\appendix
+
+\section{Numerical experiments}
+\label{sec:numerical}
+
+\drf{
+\begin{itemize}
+    \item Fit distribution of MPC NEOs using 4 MND.
+    \item Fit distribution of NEOPOP NEOs using 4 MND.
+    \item Generate orbital elements for objects using GRT numerical integrations.\chk{DONE}
+    \item Calculate orbital elements for the same conditions before in the simple approximation. \chk{DONE}
+    \item Calculate orbital elements for the same conditions before in the patched-conics approximation.\chk{DONE}
+    \item Calculate the distribution of orbital distances between the previous estimates.\chk{DONE}
+    \item Numerical experiment for testing the Jacobian using known distributions.
+    \item Test the Jacobian for the conversion from orbital elements to state vector elements.  Take a gaussian distribution of orbital elements and convert to state vector and see if you can predict the distribution of state vector components.
+    \item Generate a mock fireball CNEOs-like database using a target population using a rejection-like procedure.
+    \item Calculate the probability using an analytical description of the target population distribution (ray probability).
+\end{itemize}
+}
+
+\section{Gravitational Ray Tracing}
+
+Although we know the orbital distribution of a few bright fireballs and bolides, uncertainties in the determination of their impact conditions, render unreliable the determination of their orbital distribution.
+
+In this work we considerably improve the GRT technique, originally introduced in \citep{Zuluaga2017p,Zuluaga2018GRT}, including with the next key features:
+
+\begin{itemize}
+    \item The original version of the technique relied in the distribution of relatively large NEOs ($H<20$ or equivalently, diameters $D<500$ m).  In the new version we have started with theoretical prior distribution calculated theoretically for objects down to 50 m \citep{Granvik2018}.
+    
+    \item The calculation of the parent bodies density in the orbital elements space have been improved considerably. We introduce a novel analytical description based on a superposition of multivariate normal distributions.  This reduce considerably the time of computation of the asteroid density in the orbital elements space.
+    
+    \item In the previous version we use a relatively inefficient numerical procedure to integrate the orbit of test particles (rays) and to determine their asymptotic orbital elements.  In the new version we estimate analytically the orbital elements, increasing the speed of the method by a factor of $\sim1000$, in the case of impacts on Earth, and $\sim500$ for impacts on the Moon.  
+    
+    \item The generation of initial incoming directions use now a clever and efficient algorithm able to cover the unit sphere with points separated by an arbitrary minimum distance.  In the past our algorithms were very inefficient and restricted to  minimum separations of $3^\circ$.
+    
+    \item The impact probability, drawn from the density of potential parent bodies, is now calculated including the Jacobian of the transformation between the probability in the orbital elements space and that in the sky coordinates which is relevant to the impact site. In previous version the Jacobian correction was not taken into account.
+    
+    \item Impact probabilities in the new formalism are normalized.  In previous version we only estimate the relative impact probability (RIP).  Proper normalization allows us to compare impact probabilities at different times during the year.
+    
+    \item Lastly, but not least important, our new code is parallel and it combines efficiently {\tt C++} and {\tt Python} code.  We have additionally improved the usability of the code as well as the documentation, in order to make it more usable by other researchers.
+
+\end{itemize}
+
+After all these improvements, GRT raises as a powerful albeit simple technique with multiple applications in Meteor science \citep{Zuluaga2019predict,Zuluaga2019lunar}. 
+
+\subsection{Initial conditions}
+\label{subsec:grt-initial}
+
+Incoming directions are now generated using the tool {\tt fibpy}, that implements the so-called ``fibonacci spiral sampling'' (FSS) devised by Martin Roberts\footnote{\url{https://github.com/matt77hias/fibpy}} \footnote{\url{http://extremelearning.com.au/evenly-distributing-points-on-a-sphere/}}.  The problems of generating points on a sphere that does not follow a trivial distribution have been studied by many authors (see eg. \citealt{Hardin2016sphere,Aistleitner2012sphere} and references there in).  The algorithm by Roberts is robust and fast enough for our purposes.
+
+\subsection{Impact probability and asymptotic orbit}
+\label{subsec:grt-orbits}
+
+\section{Data}
+\label{sec:data}
+
+We use the CNEOS data set\footnote{\url{https://cneos.jpl.nasa.gov/fireballs/}}. Errors in position are better than \chk{1\%}, while error in times are negligible for the precision pursued here.
+
+We use \chk{498} events reported between \chk{1993 and 2018} having energies larger than \chk{0.5 kTon} which correspond to objects having sizes between \chk{0.3 and 20 meters}.
+
+\section{Method}
+\label{sec:method}
+
+The method devised here for fitting the distribution of parent bodies is the following.  
+
+Let's assume that all the impactors in the CNEOS database come from a population having a distribution of objects described analitycally as described in Section X.  We call this the model.  We may compute the Likelihood distribution of the CNEOS database defined as $P(\data|\model)$:
+
+$$
+P(\data|\model)=\prod^{\rm CNEOS} P_i(\model)
+$$
+
+Where $P_i(\model)$ is the GRT probability that the $i$th impact occur provided the object come from the distribution given by the model.
+
+According to the Bayes's theorem, the likelihood of the model is given by:
+
+$$
+\like(\model)=\frac{P(\data|\model) P(\model)}{P(\data)}
+$$
+
+We use a minimum likelihood procedure for minimizing $\like(\model)$ and find the set of the distribution parameters that best match the observed CNEOS.
+
+We applied this procedure to the full CNEOs database and found the distribution shown in Figure Y.  We compare it with the distribution of large NEOs, showing there the location in the orbital elements space of 2000 large NEOs.
+
+\section{Validation}
+\label{sec:validation}
+
+In order to validate the method we performed the following numerical experiment.
+
+We started with a hypothetical distribution of parent bodies in the space of orbital elements (see Figure X).  Using GRT we generate 500 artificial impacts having orbital elements compatible with the hypothetical distribution.  For this purpose we use a rejection-like procedure: 1) a random geographical site was generated, 2) random incoming direction and impact speed was choose for a test particle, 3) the orbital element of the test particle is calculated following the formalism in Section Y, 4) the probability that the test particle be part of the parent body population is calculated using the formulas in Section Z. 5) A random number between 0 and 1 is generated and if the number is lower than the probability in step 4, the test particle is accepted as a potential impactor.  6) Finally, the size of the object is generated following the observed size in the CNEOS database.  
+
+Size is not important for the purpose here, but it helps for an intuitive comparison between the real CNEOs set and the mock set.  The result are shown in Figure X.
+
+We use the methods developed here for reconstructing the orbital distribution of these impact set following the procedure described before.  The resulting best-fit distribution is shown in Figure X.  As you can see the general features of the original hypothetical distribution is reconstructed with our method.
+
+We use this method to predict the region of the impact for 100 future mock impacts (generated using the procedure before).  The results are shown in Figure X.  If we measure the success of the model to forecast impacts using the GRT probability of a region with 300 km around the actual site of the impact, a histogram of the this indicator is shown in Figure X.  We should take into account that if we assume that impacts occur randomly (same probability for all impact sites) the probability of guess the impact site with the condition above is the same \chk{3\%} (vertical line in Figure X). As we see the probability calculated with our model is larger than the random model for \chk{80\%} of the mock impacts.  More interesting is the fact that in \chk{20 of 100} impacts the probability provided by our model is \chk{90\%}. 
+
+\section{Analytical vs. numerical orbit integration}
+\label{appsec:analytical}
+
+We have performed numerical experiments, testing the difference between calculating $\rhel$ Siwith these three approaches.  For this comparison we compute the Zapala distance, $D_Z$ \citep{Zappala1990} between the numerical integrated trajectory ($\vec\xi_1$) and the orbital elements $\vec\xi_2$ obtained with the approximation procedures described before: 
+
+\beq
+\label{eq:Z-metric}
+\begin{array}{lll}
+D_Z(a_1,a_2)^2/(n_m a_m)^2 & = &
+\frac{5}{4} (a_1-a_m)^2/a_m^2 + \\
+& & + 2 (e_1 - e_2)^2 + \\ 
+&  & + 2 (\sin i_1 - \sin i_2)^2 +\\
+&  & + 
+10^{-4} (\Omega_1 - \Omega_2)^2 +\\
+& & +10^{-4} (\varpi_1 - \varpi_2)^2
+\end{array} 
+\eeq
+
+Here $a_m=(a_1+a_2)/2$ is the average semi-major axis, $n_m$ is the corresponding orbital mean motion and $\varpi=\Omega+\omega$ is the longitude of the perihelion.
+
+The Z-metric is particularly well suited for our purposes since it includes the orbital elements $\Omega$ and $\omega$.  Moreover, the metric has been successfully used for comparing orbital elements of asteroids ($e<1$) and to perform cluster analysis in configuration space, which is similar in nature to the calculations required here.
+
+The result (histogram of distances) for 1 million particles thrown from the Earth at different places and different moments during the year are shown in Figure X.
+
+%FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+%TIME AND DATE
+\begin{figure*}[ht!]
+    \centering
+    \includegraphics[width=0.6\textwidth]{fig-compare_NUM_SIM_PCON.png}
+    \caption{Distribution of the Zappala distance  between the orbital elements of the asymptotic orbit determined with a numerical procedure and two approximate estimations: the simple (SIM) and the patched-conics (PCON) procedures (see the text). We compare 365000 particle trajectories starting from the Earth at different geographical sites and during a whole year.}
+    \label{fig:comparisons}
+\end{figure*}
+%FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+
+
+
+\section{Analytical formulae}
+\label{appsec:analytical}
+
+Do not forget the case of asteroid Gault eg.  \url{http://bit.ly/2Wt8GAT}
+
+Probability distribution transformation: \url{http://bit.ly/2WuoGCP}.
+
+Jacobian: \url{http://bit.ly/2WtWC2j}.
+
+
+GRT aims at answering the following question: given an arbitrary large number of meteoroids belonging to a population $\pop$, what is the probability that at a given time $t$, at least one of them be on the surface of the Earth at a point with latitude $\geolat$, longitude $\geolon$ and elevation $\altitude$, moving at a speed $\vimp$ and coming from a point in the sky with azimuth and elevation $A,h$. We call this set of conditions, the {\it impact vector}: $\rimp:(\geolat,\geolon,\altitude,A,h,\vimp)$. 
+
+In order to solve this question, we need first to find the heliocentric (unconstrained) orbital elements $\Ehel:(Q,E,I,O,W)$ (see Section X) corresponding to the impact vector.  
+
+Assuming that the number of objects of the parent population in the volume ($\Ehel$,$\Ehel+d\Ehel$) are the same that those that impact the Earth in the corresponding local volume ($\rimp$,$\rimp+d\rimp$), the probability density function of impacts $p(\rimp)$ and the number density of objects will be related by:
+
+$$
+p(\rimp)|d\rimp|=\RNEO(\Ehel)|d\Ehel|
+$$
+
+Or equivalently,
+
+\beq
+\label{eq:prel}
+p(\rimp)=\RNEO(\Ehel)\left|\frac{d\Ehel}{d\rimp}\right|
+\eeq
+
+Here $|d\Ehel/d\rimp|$ is the {\em Jacobian} of the transformation $\rimp\rightarrow\Ehel$.
+
+Three different approximations can be used for transforming $\rimp$ into $\Ehel$, namely for obtaining the asymptotic orbital elements of a ray in GRT, and estimating the corresponding Jacobian: 
+
+\begin{itemize}
+
+    \item A numerical integration ({\tt NUM}). This was the approximation we used previous versions of GRT.  The main drawback of the numerical approximation is that we cannot calculate efficiently the Jacobian.  In our previous papers, we have essentially assumed $|d\Ehel/d\rimp|\sub{NUM}\sim 1$.  In this paper, we revisit the problem and improve this key assumption.
+    
+    \item A two-body approximation ({\tt 2B}).  This approximation assumes that only the sun determines the final orbit of the test particle, once it is out of the Earth's atmosphere (the effect of the gravitational field of the Earth is neglected). This approximation is used for first-order estimations of meteor orbital properties \ref{Jenniskens2012}. Under this approximation, $\rimp$ is first transformed into an impact heliocentric state-vector $\rlhel:(x,y,z,v_x,v_y,v_z)$ (where $x$,$y$,$z$ are coordinates in the ecliptic system), and from there into $\Ehel$.  The Jacobian in this case will be simply:
+    
+    $$
+    \left|\frac{d\Ehel}{d\rimp}\right|\sub{2B}=
+    \left|\frac{d\Ehel}{d\rlhel}\right|\times
+    \left|\frac{d\rlhel}{d\rimp}\right|
+    $$
+
+    \item A patched conics approximation ({\tt PCON}).  This is the approximation used in the new version of the method described here.  We assume that the orbit of the test particle can be described as two keplerian orbits (or three if the impact is on a moon, see Appendix Y): 1) an earth-centered hyperbola inside the sphere-of-influence (SoI) of our planet and 2) a heliocentric conic (ellipse or hyperbola for solar system escaping orbits) outside this region.  The effect of the Moon is neglected.
+    
+    A schematic representation of this approximation is provided in Figure \ref{fig:propagation}, both, in the case of an impact against a planet (the Earth for instance) or a natural satellite (eg. the Moon). 
+    
+%FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+%TIME AND DATE
+\begin{figure*}[ht!]
+    \centering
+    \includegraphics[width=0.5\textwidth]{fig-diagram_Conversion.png}\\
+    \includegraphics[width=0.9\textwidth]{fig-diagram_Conversion_Moon.png}
+    \caption{Diagrams (not to scale) of the patched-conic propagation procedure used by GRT, for impacts on Earth (upper panel) and on the Moon (lower panel).  Dashed circumferences represent the Hill spheres of the Earth in the gravitational field of the Sun, and the Moon in the gravitational field of the Earth. In the insets, we show the local reference frame at the site of impact and the correction of the observed impact speed and incoming direction (continuous arrow) by the rotation speed of the corresponding body.}
+    \label{fig:propagation}
+\end{figure*}
+%FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+    
+    Under this approximation, the impact vector must be first converted into a geocentric state vector $\rgeo:(x\sub{geo},y\sub{geo},z\sub{geo},v\sub{geo,x},v\sub{geo,y},v\sub{geo,z})$ (expressed in the ecliptic reference system); then, and after propagating the object up to the Hill-radius, we compute the state vector at SoI, $\rsoi:(x\sub{SoI},y\sub{SoI},z\sub{SoI},v\sub{SoI,x},v\sub{SoI,y},v\sub{SoI,z})$.  Finally, after adding-up the instantaneous state vector of the Earth $\rhel=\rsoi+\rearth$, we can get the  heliocentric unconstrained orbital elements $\Ehel$.  In summary:
+    
+    $$
+    \rimp\rightarrow
+    \rgeo\rightarrow
+    \rsoi\rightarrow
+    \Ehel
+    $$
+    
+    The Jacobian of the full transformation may be written as:
+    
+    \beq
+    \label{eq:JPCON}
+    \left|\frac{d\Ehel}{d\rimp}\right|\sub{PCON}=
+    \left|\frac{d\Ehel}{d\rhel}\right|\times
+    \left|\frac{d\rhel}{d\rsoi}\right|\times
+    \left|\frac{d\rsoi}{d\rgeo}\right|\times
+    \left|\frac{d\rgeo}{d\rimp}\right|
+    \eeq
+
+    Now, since the transformation  $\rsoi\rightarrow\rhel$ only involves the addition of a constant vector, $\rearth$, then $|d\rhel/d\rsoi|=1$. On the other hand, the transformation $\rgeo\rightarrow\rsoi$ is done via the {\em state transition matrix}, $\Phi(t,t_o)\equiv\partial \vec x(t)/\partial \vec x(t_o)$ which is a well-known Symplectic matrix, and therefore it has unitary determinant.  The patched conics jacobian simplifies to:
+    
+    \beq
+    \label{eq:JPCON}
+    \left|\frac{d\Ehel}{d\rimp}\right|\sub{PCON}=
+    \left|\frac{d\Ehel}{d\rhel}\right|\times
+    \left|\frac{d\rgeo}{d\rimp}\right|
+    \eeq
+
+\end{itemize}
+
+Explicit analytic expressions for the transformations and the correspoding Jacobians in Eq (\ref{eq:JPCON}) are provided in the appendix X.  
+
+One of the key features of the new GRT method is the fact that it relies almost entirely on analytical expressions for both, the estimation of the test particles asymptotic orbital elements starting with the impact conditions, and the corresponding Jacobians of the transformation.  For the sake of completeness and reproducibility, we provide here all the formulae used in the method.  
+
+All these formulae, and the related algorithms have been implemented in the light {\tt Python} package, {\tt gravray} which is available in a {\tt PyPI} repository\footnote{\url{https://pypi.org/}, the package can be installed in Linux or MacOS using {\tt python -m pip install gravray}} as well as in a public {\tt GitHub}\footnote{\url{http://github.com/seap-udea/gravray}} repository.  In the later, all the scripts and data used for obtaining the results in this paper, are freely available. The full documentation of the package is also available at {\tt pythondocs}\footnote{\url{http://github.com/seap-udea/gravray}}.
+
+For the sake of brevity we will use the followng compact notations: 1) for the trigonometric functions we will use ${\rm c}\theta\equiv\cos \theta$, ${\rm s}\theta\equiv\sin \theta$; 2) for the partial derivatives we will use $\partial_x y \equiv \partial y/\partial x$.
+
+The position $(x,y,z)$ and velocity $(v_x,v_y,v_z)$ of the test particle at the impacting site, in the (non-rotating) geocentric reference frame (hereafter {\em g.r.f.}, having $x$-axis over the equator and pointing towards the zero-meridian and $z$ towards the geographic North pole), is computed from the impact conditions $\rimp:(\lambda,\phi,H,A,h,v)$ using the following prescription:
+
+\newcommand{\sh}{\;{\rm s}h}
+\newcommand{\ch}{\;{\rm c}h}
+\newcommand{\sA}{\;{\rm s}A}
+\newcommand{\cA}{\;{\rm c}h}
+\newcommand{\sphi}{\;{\rm s}\phi}
+\newcommand{\stphi}{\;{\rm s}^2\phi}
+\newcommand{\cphi}{\;{\rm c}\phi}
+\newcommand{\ctphi}{\;{\rm c}^2\phi}
+\newcommand{\slam}{\;{\rm s}\lambda}
+\newcommand{\clam}{\;{\rm c}\lambda}
+\newcommand{\fr}{f\sub{r}}
+
+\begin{eqnarray}
+\label{eq:xgeo_x}
+x & = & (N_\phi+H)\cphi\clam \\
+\label{eq:xgeo_y}
+y & = & (N_\phi+H)\cphi\slam\\
+\label{eq:xgeo_z}
+z & = & \left(\frac{R_c^2}{R_a^2}N_\phi+H\right)\sphi\\
+\label{eq:xgeo_vx}
+v_x/v & = & -\ch\cA\sphi\clam-(\ch\sA+\fr)\slam+\sh\cphi\clam\\
+v_y/v & = & -\ch\cA\sphi\slam+(\ch\sA+\fr)\clam+\sh\cphi\slam\\
+v_z/v & = & \ch\cA\cphi + \sh\sphi\\
+\end{eqnarray}
+
+where:
+
+\begin{itemize} 
+\item $N_\phi\equiv R_a^2/\sqrt{R_a^2\ctphi+R_c^2\stphi}$, with $R_a, R_c$ are the equatorial and polar radius of the reference ellipsoid.
+
+\item $f\sub{r}\equiv v\sub{r}/v = 2\pi\sqrt{x^2+y^2}/(v P)$, with $v_r$ the rotational velocity of the body at the impact site and $P$ its rotational period.
+\end{itemize}
+
+Here it is worth noticing that for the reference frame used here, the impact ``speed'', $v$ is negative if the test particle is impacting the surface of the object.
+
+The Jacobian of this transformation is by definition:
+
+\renewcommand{\part}[2]{\partial_#1#2}
+
+$$
+J\sub{xi}\equiv
+\frac
+{\partial\rgeo}
+{\partial\rimp}
+\equiv
+\left(\begin{array}{cccccc}
+%%%%%%%%%
+\part{\lambda}{x} & 
+\part{\phi}{x} & 
+\part{H}{x} & 
+\part{A}{x} & 
+\part{h}{x} & 
+\part{v}{x} \\
+%%%%%%%%%
+\part{\lambda}{y} & 
+\part{\phi}{y} & 
+\part{H}{y} & 
+\part{A}{y} & 
+\part{h}{y} & 
+\part{v}{y} \\
+%%%%%%%%%
+\part{\lambda}{z} & 
+\part{\phi}{z} & 
+\part{H}{z} & 
+\part{A}{z} & 
+\part{h}{z} & 
+\part{v}{z} \\
+%%%%%%%%%
+\part{\lambda}{v_x} & 
+\part{\phi}{v_x} & 
+\part{H}{v_x} & 
+\part{A}{v_x} & 
+\part{h}{v_x} & 
+\part{v}{v_x} \\
+%%%%%%%%%
+\part{\lambda}{v_y} & 
+\part{\phi}{v_y} & 
+\part{H}{v_y} & 
+\part{A}{v_y} & 
+\part{h}{v_y} & 
+\part{v}{v_y} \\
+%%%%%%%%%
+\part{\lambda}{v_z} & 
+\part{\phi}{v_z} & 
+\part{H}{v_z} & 
+\part{A}{v_z} & 
+\part{h}{v_z} & 
+\part{v}{v_z} \\
+%%%%%%%%%
+\end{array}\right)
+$$
+
+where the individual Jacobian matrix entries are:
+
+\begin{itemize}
+    \item $\partial_\lambda$:
+        \begin{itemize}
+            \item[*] 
+            $\part{\lambda}{x}=-y$, $\part{\lambda}{y}=x$, $\part{\lambda}{z}=0$.
+            \item[*] 
+            $\part{\lambda}{v_x}=-v_y$, 
+            $\part{\lambda}{v_y}=v_x$, 
+            $\part{\lambda}{v_z}=0$. 
+        \end{itemize}
+    \item $\partial_\phi$:
+        \begin{itemize}
+            \item[*] 
+            $\part{\phi}{x}=(R_a^2-R_c^2) \cphi\sphi N_\phi^3\cphi\clam/R_a^4-(N_\phi+H)\sphi\clam$.
+            \item[*] 
+            $\part{\phi}{y}=(R_a^2-R_c^2) \cphi\sphi N_\phi^3\cphi\slam/R_a^4-(N_\phi+H)\cphi\slam$.
+            \item[*] 
+            $\part{\phi}{z}=R_c^2(R_a^2-R_c^2) \cphi\stphi N_\phi^3/R_a^6-(R_c^2 N_\phi/R_a^2+H)\cphi$.
+            \item[*] 
+            $\part{\phi}{v_x}=-v\ch\cA\cphi\clam-(2\pi/P)^2\slam(x\part{\phi}{x}+y\part{\phi}{y})/(\fr v)-v\sh\sphi\clam$.
+            \item[*] 
+            $\part{\phi}{v_y}=-v\ch\cA\cphi\slam-(2\pi/P)^2\clam(x\part{\phi}{x}+y\part{\phi}{y})/(\fr v)-v\sh\sphi\slam$.
+            \item[*] 
+            $\part{\phi}{v_z}=v(-\ch\cA\sphi+\sh\cphi)$
+        \end{itemize}
+\item $\partial_H$:
+        \begin{itemize}
+            \item[*] 
+            $\part{H}{x}=\cphi\clam$,
+            $\part{H}{y}=\cphi\slam$,
+            $\part{H}{z}=\sphi$.
+            \item[*] 
+            $\part{H}{v_x}=-(2\pi/P)^2 \slam (x\cphi\clam+y\cphi\slam)/(\fr v)$
+            \item[*] 
+            $\part{H}{v_y}=(2\pi/P)^2 \clam (x\cphi\clam+y\cphi\slam)/(\fr v)$
+            \item[*] 
+            $\part{H}{v_z}=0$
+        \end{itemize}
+\item $\partial_A$:
+        \begin{itemize}
+            \item[*] 
+            $\part{A}{x}=
+            \part{A}{y}=
+            \part{A}{z}=0$
+        \item[*] 
+            $\part{A}{(v_x/v)}=\ch\sA\sphi\clam-\ch\cA\slam$
+        \item[*] 
+            $\part{A}{(v_y/v)}=\ch\sA\sphi\slam+\ch\cA\clam$
+        \item[*] 
+            $\part{A}{(v_z/v)}=-\ch\sA\cphi$
+        \end{itemize}
+\item $\partial_h$:
+        \begin{itemize}
+            \item[*]  $\part{h}{x}=
+            \part{h}{y}=
+            \part{h}{z}=0$
+            \item[*] 
+            $\part{h}{(v_x/v)}=-\ch\cA\sphi\clam+\sh\sA\slam+\ch\cphi\clam$
+            \item[*] 
+            $\part{h}{(v_y/v)}=\sh\cA\sphi\slam-\sh\sA\clam+\ch\cphi\slam$
+            \item[*] 
+            $\part{h}{(v_z/v)}=-\sh\cA\cphi+\ch\sphi$
+        \end{itemize}
+\item $\partial_v$:
+        \begin{itemize}
+            \item[*]  $\part{v}{x}=
+            \part{v}{y}=
+            \part{v}{z}=0$
+            \item[*] 
+            $\part{v}{v_x}=v_x/v+\slam\fr$
+            \item[*] 
+            $\part{v}{v_y}=v_y/v-\clam\fr$
+            \item[*] 
+            $\part{v}{v_z}=v_z/v$
+        \end{itemize}
+\end{itemize}
+
+The Jacobian of the inverse transformation, ie. $J\sub{ix}\equiv \partial\rimp/\partial\vec x$ is simply the inverse of $J\sub{xi}$:
+
+$$
+J\sub{ix}=J\sub{xi}^{-1}
+$$
+
+All this formulae have been carefully checked for typos.  They have also been thoroughly tested against numerical estimates of the derivatives under an exhaustive set of impact conditions.
+
+For the transformation from the classical orbital elements $\vec\epsilon:(a,e,i,\Omega,\omega,M)$ to the state vector $\vec x:(x,y,z,v_x,v_y,v_z)$, we use the following parameterization:
+
+The Jacobian of this transformation is by definition:
+
+$$
+J\sub{xe}\equiv
+\frac
+{\partial\vec x}
+{\partial\vec\epsilon}
+\equiv
+\left(\begin{array}{cccccc}
+%%%%%%%%%
+\part{a}{x} & 
+\part{e}{x} & 
+\part{i}{x} & 
+\part{\Omega}{x} & 
+\part{\omega}{x} & 
+\part{M}{x} \\
+%%%%%%%%%
+\part{a}{y} & 
+\part{e}{y} & 
+\part{i}{y} & 
+\part{\Omega}{y} & 
+\part{\omega}{y} & 
+\part{M}{y} \\
+%%%%%%%%%
+\part{a}{z} & 
+\part{e}{z} & 
+\part{i}{z} & 
+\part{\Omega}{z} & 
+\part{\omega}{z} & 
+\part{M}{z} \\
+%%%%%%%%%
+\part{a}{v_x} & 
+\part{e}{v_x} & 
+\part{i}{v_x} & 
+\part{\Omega}{v_x} & 
+\part{\omega}{v_x} & 
+\part{M}{v_x} \\
+%%%%%%%%%
+\part{a}{v_y} & 
+\part{e}{v_y} & 
+\part{i}{v_y} & 
+\part{\Omega}{v_y} & 
+\part{\omega}{v_y} & 
+\part{M}{v_y} \\
+%%%%%%%%%
+\part{a}{v_z} & 
+\part{e}{v_z} & 
+\part{i}{v_z} & 
+\part{\Omega}{v_z} & 
+\part{\omega}{v_z} & 
+\part{M}{v_z} \\
+\end{array}\right)
+$$
+
+where the individual terms are:
+
+\begin{itemize}
+    \item $\partial_a$:
+        \begin{itemize}
+            \item[*] $\part{a}{\vec r}$:
+                \beq
+                \left(
+                \begin{array}{c}
+                \part{a}{x}\\
+                \part{a}{y}\\
+                \part{a}{z}
+                \end{array}
+                \right)
+                =
+                R
+                \left(
+                \begin{array}{c}
+                \cE-e\\
+                \sigma\xi\sE\\
+                0
+                \end{array}
+                \right)
+                \eeq
+            \item[*] $\part{a}{\vec v}$:
+                \beq
+                \left(
+                \begin{array}{c}
+                \part{a}{v_x}\\
+                \part{a}{v_y}\\
+                \part{a}{v_z}
+                \end{array}
+                \right)
+                =
+                \frac{\nu}{2ra}
+                R
+                \left(
+                \begin{array}{c}
+                \sE\\
+                -\sigma\cE\\
+                0
+                \end{array}
+                \right)
+                \eeq
+        \end{itemize}
+    \item $\partial_e$: If we identify that $\part{e}(\cE)=-2|a|\sE/r$, $\part{e}(\sE)=a\cE\sE/r$, $\part{e}{(\nu r)}=\nu a (\cE-|a|e\stE)/r^2$, $\part{e}{\xi}=-\sigma e/\xi$, the individual derivatives with respect to $e$ are:
+        \begin{itemize}
+            \item[*] $\part{e}{\vec r}$:
+                \beq
+                \left(
+                \begin{array}{c}
+                \part{e}{x}\\
+                \part{e}{y}\\
+                \part{e}{z}
+                \end{array}
+                \right)
+                =
+                |a|
+                R
+                \left[
+                \begin{array}{c}
+                \sigma(\part{e}{\cE}-1)\\
+                (\part{e}{\xi})\sE+\xi(\part{e}{\sE})\\
+                0
+                \end{array}
+                \right]
+                \eeq
+            \item[*] $\part{e}{\vec v}$:
+                \beq
+                \left(
+                \begin{array}{c}
+                \part{e}{v_x}\\
+                \part{e}{v_y}\\
+                \part{e}{v_z}
+                \end{array}
+                \right)
+                =
+                R
+                \left[
+                \begin{array}{c}
+                -\part{e}{(\nu r)}\sE-\nu r(\part{e}{\sE})\\
+                \part{e}{(\nu r)}\xi\cE+\nu r(\part{e}{\xi})\cE+\nu r\xi(\part{e}{\cE})\\
+                0
+                \end{array}
+                \right]
+                \eeq
+        \end{itemize}
+    \item $\partial_i$:
+        \begin{itemize}
+            \item[*] $\part{i}{x}=z\sW$
+            \item[*] $\part{i}{y}=-z\cW$
+            \item[*] $\part{i}{z}=-x\sW+y\cW$
+            \item[*] $\part{i}{v_x}=v_z\sW$
+            \item[*] $\part{i}{v_y}=-v_z\cW$
+            \item[*] $\part{i}{v_z}=-v_x\sW+v_y\cW$
+        \end{itemize}
+    \item $\partial_\Omega$:
+        \begin{itemize}
+            \item[*] 
+            $\part{\Omega}{x}=-y$, 
+            $\part{\Omega}{y}=x$, 
+            $\part{\Omega}{z}=0$.
+            \item[*] 
+            $\part{\Omega}{v_x}=-v_y$, 
+            $\part{\Omega}{v_y}=v_x$, 
+            $\part{\Omega}{v_z}=0$.
+        \end{itemize}
+    \item $\partial_\omega$:
+        \begin{itemize}
+            \item[*] 
+            $\part{\omega}{x}=-y\ci-z\si\cW$ 
+            \item[*] 
+            $\part{\omega}{y}=x\ci-z\si\sW$, 
+            \item[*] 
+            $\part{\omega}{z}=\si(x\cW+y\sW)$.
+            \item[*] 
+            $\part{\omega}{v_x}=-v_y\ci-v_z\si\cW$ 
+            \item[*] 
+            $\part{\omega}{v_y}=v_x\ci-v_z\si\sW$, 
+            \item[*] 
+            $\part{\omega}{v_z}=\si(v_x\cW+v_y\sW)$
+        \end{itemize}
+    \item $\partial_M$:
+        \begin{itemize}
+            \item[*] 
+            $\part{M}{\vec r}=\vec v/n$ 
+            \item[*] 
+            $\part{M}{\vec v}=-\sqrt{\mu a^3} \vec x/r^3$ 
+        \end{itemize}
+\end{itemize}
+
+The Jacobian transformation of inverse transformation is:
+
+$$
+J\sub{ex}=J\sub{ex}^{-1}
+$$
+
+
+\end{document}

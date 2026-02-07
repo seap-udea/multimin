@@ -92,17 +92,10 @@ class Util(object):
     """
     This abstract class contains useful methods for the package.
 
-    Attr. [HC]
+
     """
 
     # Mathematical functions
-    """
-    #Interesting but it can be problematic
-    sin=math.sin
-    cos=math.cos
-    log=math.log
-    exp=math.exp
-    """
     sin = np.sin
     cos = np.cos
     log = np.log
@@ -136,9 +129,7 @@ class Util(object):
         --------
         >>> from multimin.util import Util
         >>> path=Util.get_data("nea_extended.json.gz")
-        Attribution
-        -----------
-        [HC] This function was mostly developed by human intelligences.
+
         """
         return os.path.join(ROOTDIR, "data", filename)
 
@@ -158,9 +149,7 @@ class Util(object):
         -------
         u : float or array_like
             Unbound value.
-        Attribution
-        -----------
-        [HC] This function was mostly developed by human intelligences.
+
         """
         return Util.log((x / s) / (1 - (x / s)))
 
@@ -180,9 +169,7 @@ class Util(object):
         -------
         x : float or array_like
             Value in the interval [0,s].
-        Attribution
-        -----------
-        [HC] This function was mostly developed by human intelligences.
+
         """
         return s / (1 + Util.exp(-t))
 
@@ -216,9 +203,7 @@ class Util(object):
         >>> uparams = Util.t_if(minparams, scales, Util.f2u)
         >>> print(uparams)
         [0.0, 0.0, -2.197224577336219, -2.197224577336219, 0.8472978603872034]
-        Attribution
-        -----------
-        [HC] This function was mostly developed by human intelligences.
+
         """
         return [f(p[i], s[i]) if s[i] > 0 else p[i] for i in range(len(p))]
 
@@ -239,15 +224,6 @@ class Util(object):
         M : float
             Mean anomaly.
 
-        Notes
-        -----
-        This function:
-        1. Calculates eccentric anomaly E from true anomaly f
-        2. Uses Kepler's equation to calculate mean anomaly M from E and e
-
-        The conversion uses the formula:
-        - E = 2 * arctan(tan(f/2) / sqrt((1+e)/(1-e)))
-        - M = E - e*sin(E) (Kepler's equation)
         """
         # Calculate eccentric anomaly E from true anomaly f
         E = 2 * np.arctan(np.tan(f / 2) / np.sqrt((1 + e) / (1 - e)))
@@ -265,9 +241,7 @@ class Util(object):
             Error handle (eg. except ValueError as error).
         msg : str
             Message to add to error.
-            Attribution
-            -----------
-            [HC] This class was mostly developed by human intelligences.
+
         """
         error.args = (error.args if error.args else tuple()) + (msg,)
 
@@ -306,9 +280,7 @@ class Util(object):
         >>> Util.el_time(verbose=0) # no output
         >>> Util.el_time(start=True) # measure elapsed time since program start
         >>> print(Util.DTIME, Util.DUTIME) # show values of elapsed time
-            Attribution
-            -----------
-            [HC] This class was mostly developed by human intelligences.
+
         """
         t = time()
         dt = t - Util.TIME
@@ -347,9 +319,7 @@ class Util(object):
         # returns m=2.345, e=2
         >>> m, e = Util.mantisa_exp(-0.000023213)
         # return m=-2.3213, e=-5
-            Attribution
-            -----------
-            [HC] This class was mostly developed by human intelligences.
+
         """
         xa = np.abs(x)
         s = np.sign(x)
@@ -365,7 +335,7 @@ class Stats(object):
     """
     Abstract class with useful routines
 
-    Attr. [HC]
+
     """
 
     # Golden ratio: required for golden gaussian.
@@ -393,9 +363,7 @@ class Stats(object):
         Examples
         --------
         >>> n = Stats.gen_index([0.1, 0.7, 0.2])
-            Attribution
-            -----------
-            [HC] This class was mostly developed by human intelligences.
+
         """
         cums = np.cumsum(probs)
         if not math.isclose(cums[-1], 1, rel_tol=1e-5):
@@ -430,9 +398,7 @@ class Stats(object):
         [[1. , 0.1, 0.2],
          [0.1, 1. , 0.3],
          [0.2, 0.3, 1. ]]
-            Attribution
-            -----------
-            [HC] This class was mostly developed by human intelligences.
+
         """
         I, J = np.where(~np.eye(M.shape[0], dtype=bool))
         ffo = list(off[::-1])
@@ -447,14 +413,14 @@ class Stats(object):
         Parameters
         ----------
         sigmas : numpy.ndarray
-            Array of values of standard deviation for variables (Ngauss x Nvars).
+            Array of values of standard deviation for variables (ngauss x nvars).
         rhos : numpy.ndarray
-            Array with correlations (Ngauss x Nvars x (Nvars-1)/2).
+            Array with correlations (ngauss x nvars x (nvars-1)/2).
 
         Returns
         -------
         Sigmas : numpy.ndarray
-            Array with covariance matrices corresponding to these sigmas and rhos (Ngauss x Nvars x Nvars).
+            Array with covariance matrices corresponding to these sigmas and rhos (ngauss x nvars x nvars).
 
         Examples
         --------
@@ -483,14 +449,9 @@ class Stats(object):
          [0.2 4.  1.8]
          [0.6 1.8 9. ]]
 
-        Sources
-        -------
-        Based on: https://www.visiondummy.com/2014/04/geometric-interpretation-covariance-matrix/
-
-        Attr. [HC]
         """
         try:
-            Nvars = len(sigmas[0])
+            nvars = len(sigmas[0])
         except:
             raise AssertionError("Array of sigmas must be an array of arrays")
         try:
@@ -498,12 +459,12 @@ class Stats(object):
         except:
             raise AssertionError("Array of rhos must be an array of arrays")
 
-        if Nrhos != int(Nvars * (Nvars - 1) / 2):
+        if Nrhos != int(nvars * (nvars - 1) / 2):
             raise AssertionError(
-                f"Size of rhos ({Nrhos}) are incompatible with Nvars={Nvars}.  It should be Nvars(Nvars-1)/2={int(Nvars * (Nvars - 1) / 2)}."
+                f"Size of rhos ({Nrhos}) are incompatible with nvars={nvars}.  It should be nvars(nvars-1)/2={int(nvars * (nvars - 1) / 2)}."
             )
 
-        Sigmas = np.array(len(sigmas) * [np.eye(Nvars)])
+        Sigmas = np.array(len(sigmas) * [np.eye(nvars)])
         for Sigma, sigma, rho in zip(Sigmas, sigmas, rhos):
             Stats.set_matrix_off_diagonal(Sigma, rho)
             Sigma *= np.outer(sigma, sigma)
@@ -517,14 +478,14 @@ class Stats(object):
         Parameters
         ----------
         Sigmas : numpy.ndarray
-            Array of covariance matrices (Ngauss x Nvars x Nvars).
+            Array of covariance matrices (ngauss x nvars x nvars).
 
         Returns
         -------
         sigmas : numpy.ndarray
-            Array of standard deviations (Ngauss x Nvars).
+            Array of standard deviations (ngauss x nvars).
         rhos : numpy.ndarray
-            Array of correlation coefficients (Ngauss x Nvars * (Nvars-1) / 2).
+            Array of correlation coefficients (ngauss x nvars * (nvars-1) / 2).
 
         Examples
         --------
@@ -539,7 +500,7 @@ class Stats(object):
         >>> print(rhos)
         [[0.1 0.2 0.3]]
 
-        Attr. [HC]
+
         """
         if len(np.array(Sigmas).shape) != 3:
             raise AssertionError(
@@ -564,28 +525,26 @@ class Stats(object):
         Parameters
         ----------
         sigmas : numpy.ndarray
-            Array of values of standard deviation for variables (Ngauss x 3).
+            Array of values of standard deviation for variables (ngauss x 3).
         angles : numpy.ndarray
-            Euler angles expressing the directions of the principal axes of the distribution (Ngauss x 3).
+            Euler angles expressing the directions of the principal axes of the distribution (ngauss x 3).
 
         Returns
         -------
         Sigmas : numpy.ndarray
-            Array with covariance matrices corresponding to these sigmas and angles (Ngauss x 3 x 3).
-            Attribution
-            -----------
-            [HC] This class was mostly developed by human intelligences.
+            Array with covariance matrices corresponding to these sigmas and angles (ngauss x 3 x 3).
+
         """
         try:
-            Nvars = len(sigmas[0])
+            nvars = len(sigmas[0])
         except:
             raise AssertionError("Sigmas must be an array of arrays")
         Sigmas = []
         for scale, angle in zip(sigmas, angles):
-            L = np.identity(Nvars) * np.outer(np.ones(Nvars), scale)
+            L = np.identity(nvars) * np.outer(np.ones(nvars), scale)
             Rot = (
                 spy.eul2m(-angle[0], -angle[1], -angle[2], 3, 1, 3)
-                if Nvars == 3
+                if nvars == 3
                 else spy.rotate(-angle[0], 3)[:2, :2]
             )
             Sigmas += [np.matmul(np.matmul(Rot, np.matmul(L, L)), np.linalg.inv(Rot))]
@@ -612,9 +571,7 @@ class Stats(object):
         >>> F = Stats.flatten_symmetric_matrix(M)
         >>> print(F)
         [1.  0.2 3. ]
-            Attribution
-            -----------
-            [HC] This class was mostly developed by human intelligences.
+
         """
         return M[np.triu_indices(M.shape[0], k=0)]
 
@@ -642,9 +599,7 @@ class Stats(object):
         >>> print(M)
         [[1.  0.2]
          [0.2 3. ]]
-            Attribution
-            -----------
-            [HC] This class was mostly developed by human intelligences.
+
         """
         M[np.triu_indices(M.shape[0], k=0)] = np.array(F)
         M[:, :] = np.triu(M) + np.tril(M.T, -1)
@@ -655,7 +610,7 @@ class Stats(object):
 # =============================================================================
 
 
-def multimin_watermark(ax, enlarge=1, alpha=0.5):
+def multimin_watermark(ax, frac=1 / 6, alpha=0.5):
     """Add a water mark to a 2d or 3d plot.
 
     Parameters:
@@ -669,7 +624,7 @@ def multimin_watermark(ax, enlarge=1, alpha=0.5):
         .transformed(ax.get_figure().dpi_scale_trans.inverted())
         .height
     )
-    fig_factor = axh / 4
+    fig_factor = frac * axh
 
     # Options of the water mark
     args = dict(
@@ -678,7 +633,7 @@ def multimin_watermark(ax, enlarge=1, alpha=0.5):
         va="top",
         transform=ax.transAxes,
         color="pink",
-        fontsize=8 * fig_factor * enlarge,
+        fontsize=8 * fig_factor,
         zorder=100,
         alpha=alpha,
     )
@@ -839,7 +794,7 @@ class CornerPlot(object):
         """
         Tight layout if no constrained_layout was used.
 
-        Attr. [HC]
+
         """
         if self.constrained == False:
             self.fig.subplots_adjust(wspace=self.fw / 100.0, hspace=self.fw / 100.0)
@@ -854,7 +809,7 @@ class CornerPlot(object):
         **args : dict
             Same arguments as tick_params method.
 
-        Attr. [HC]
+
         """
         opts = dict(axis="both", which="major", labelsize=0.8 * self.fs)
         opts.update(args)
@@ -866,7 +821,7 @@ class CornerPlot(object):
         """
         Set ranges in panels according to ranges defined in dparameters.
 
-        Attr. [HC]
+
         """
         for i, propi in enumerate(self.properties):
             for j, propj in enumerate(self.properties):
@@ -886,7 +841,7 @@ class CornerPlot(object):
         **args : dict
             Common arguments of set_xlabel, set_ylabel and text.
 
-        Attr. [HC]
+
         """
         opts = dict(fontsize=self.fs)
         opts.update(args)
@@ -975,7 +930,7 @@ class CornerPlot(object):
         >>> hargs = dict(bins=100, cmap='viridis')
         >>> hist = G.plot_hist(udata, **hargs)
 
-        Attr. [HC]
+
         """
         opts = dict()
         opts.update(args)
@@ -1067,7 +1022,7 @@ class CornerPlot(object):
         >>> sargs = dict(s=0.2, edgecolor='None', color='r')
         >>> hist = G.scatter_plot(udata, **sargs)
 
-        Attr. [HC]
+
         """
         scatter = []
         for i, propi in enumerate(self.properties):
@@ -1092,48 +1047,70 @@ class CornerPlot(object):
 
 
 class ComposedMultiVariateNormal(object):
-    """
-    A linear combination of multivariate normal distribution (MND) with special methods
-    for specifying the parameters of the distributions.
+    r"""
+    The Composed Multivariate Normal Distribution (CMND).
+
+    We conjecture that any multivariate distribution function :math:`p(\tilde U):\Re^{N}\rightarrow\Re`,
+    where :math:`\tilde U:(u_1,u_2,u_3,\ldots,u_N)` and :math:`u_i` are random variables, can be approximated
+    with an arbitrary precision by a normalized linear combination of :math:`M` Multivariate Normal Distributions
+    (MND):
+
+    .. math::
+
+        p(\tilde U) \approx \mathcal{C}_M(\tilde U; \{w_k\}_M, \{\mu_k\}_M, \{\Sigma_k\}_M) \equiv \sum_{i=1}^{M} w_i\;\mathcal{N}(\tilde U; \tilde \mu_i, \Sigma_i)
+
+    where the multivariate normal :math:`\mathcal{N}(\tilde U; \tilde \mu, \Sigma)` with mean vector :math:`\tilde \mu`
+    and covariance matrix :math:`\Sigma` is given by:
+
+    .. math::
+
+        \mathcal{N}(\tilde U; \tilde \mu, \Sigma) = \frac{1}{\sqrt{(2\pi)^{k} \det \Sigma}} \exp\left[-\frac{1}{2}(\tilde U - \tilde \mu)^{\rm T} \Sigma^{-1} (\tilde U - \tilde \mu)\right]
+
+    The covariance matrix :math:`\Sigma` elements are defined as :math:`\Sigma_{ij} = \rho_{ij}\sigma_{i}\sigma_{j}`, where
+    :math:`\sigma_i` is the standard deviation of :math:`u_i` and :math:`\rho_{ij}` is the correlation coefficient among variable
+    :math:`u_i` and :math:`u_j` (:math:`-1<\rho_{ij}<1`, :math:`\rho_{ii}=1`).
+
+    The normalization condition on :math:`p(\tilde U)` implies that the set of weights :math:`\{w_k\}_M` are also normalized,
+    i.e., :math:`\sum_i w_i=1`.
 
     Attributes
     ----------
-    Ngauss : int
+    ngauss : int
         Number of composed MND.
-    Nvars : int
+    nvars : int
         Number of random variables.
     mus : numpy.ndarray
-        Array with average (mu) of random variables (Ngauss x Nvars).
+        Array with average (mu) of random variables (ngauss x nvars).
     weights : numpy.ndarray
-        Array with weights of each MND (Ngauss).
+        Array with weights of each MND (ngauss).
         NOTE: These weights are normalized at the end.
     sigmas : numpy.ndarray
-        Standard deviation of each variable(Ngauss x Nvars).
+        Standard deviation of each variable(ngauss x nvars).
     rhos : numpy.ndarray
-        Elements of the upper triangle of the correlation matrix (Ngauss x Nvars x (Nvars-1)/2).
+        Elements of the upper triangle of the correlation matrix (ngauss x nvars x (nvars-1)/2).
     Sigmas : numpy.ndarray
-        Array with covariance matrices for each MND (Ngauss x Nvars x Nvars).
+        Array with covariance matrices for each MND (ngauss x nvars x nvars).
     params : numpy.ndarray
         Parameters of the distribution in flatten form including symmetric elements of the covariance
-        matrix (Ngauss*(1+Nvars+Nvars*(Nvars+1)/2)).
+        matrix (ngauss*(1+nvars+nvars*(nvars+1)/2)).
     stdcorr : numpy.ndarray
         Parameters of the distribution in flatten form, including upper triangle of the correlation
-        matrix (Ngauss*(1+Nvars+Nvars*(Nvars+1)/2)).
+        matrix (ngauss*(1+nvars+nvars*(nvars+1)/2)).
 
     Notes
     -----
     There are several ways of initialize a CMND:
 
-    1. Providing: Ngauss and Nvars
+    1. Providing: ngauss and nvars
        In this case the class is instantiated with zero means, unitary dispersion and
-       covariance matrix equal to Ngasus identity matrices Nvars x Nvars.
+       covariance matrix equal to Ngasus identity matrices nvars x nvars.
 
-    2. Providing: params, Nvars
+    2. Providing: params, nvars
        In this case you have a flatted version of the parametes (weights, mus, Sigmas)
        and want to instantiate the system.  All parameters are set and no other action
        is required.
 
-    3. Providing: stdcorr, Nvars
+    3. Providing: stdcorr, nvars
        In this case you have a flatted version of the parametes (weights, mus, sigmas, rhos)
        and want to instantiate the system.  All parameters are set and no other action
        is required.
@@ -1150,7 +1127,7 @@ class ComposedMultiVariateNormal(object):
     >>> print(MND1)
 
     >>> params = [0.1, 0.9, 0, 0, 1, 1, 1, 0.2, 0.2, 1, 1, 0, 0, 1]
-    >>> MND2 = ComposedMultiVariateNormal(params=params, Nvars=2)
+    >>> MND2 = ComposedMultiVariateNormal(params=params, nvars=2)
     >>> print(MND2)
     """
 
@@ -1159,8 +1136,8 @@ class ComposedMultiVariateNormal(object):
 
     def __init__(
         self,
-        Ngauss=0,
-        Nvars=0,
+        ngauss=0,
+        nvars=0,
         params=None,
         stdcorr=None,
         weights=None,
@@ -1169,19 +1146,19 @@ class ComposedMultiVariateNormal(object):
     ):
 
         # Method 1: initialize a simple instance
-        if Ngauss > 0:
-            mus = [[0] * Nvars] * Ngauss
-            weights = [1 / Ngauss] * Ngauss
-            Sigmas = [np.eye(Nvars)] * Ngauss
+        if ngauss > 0:
+            mus = [[0] * nvars] * ngauss
+            weights = [1 / ngauss] * ngauss
+            Sigmas = [np.eye(nvars)] * ngauss
             self.__init__(mus=mus, weights=weights, Sigmas=Sigmas)
 
         # Method 2: initialize from flatten parameters
         elif params is not None:
-            self.set_params(params, Nvars)
+            self.set_params(params, nvars)
 
         # Method 3: initialize from flatten parameters
         elif stdcorr is not None:
-            self.set_stdcorr(stdcorr, Nvars)
+            self.set_stdcorr(stdcorr, nvars)
 
         # Method 4: initialize from explicit arrays
         else:
@@ -1195,15 +1172,15 @@ class ComposedMultiVariateNormal(object):
             self.mus = mus
 
             # Number of variables
-            self.Ngauss = len(mus)
-            self.Nvars = len(mus[0])
+            self.ngauss = len(mus)
+            self.nvars = len(mus[0])
 
             # Weights and normalization
             if weights is None:
-                self.weights = [1] + (self.Ngauss - 1) * [0]
-            elif len(weights) != self.Ngauss:
+                self.weights = [1] + (self.ngauss - 1) * [0]
+            elif len(weights) != self.ngauss:
                 raise ValueError(
-                    f"Length of weights array ({len(weights)}) must be equal to number of MND ({self.Ngauss})"
+                    f"Length of weights array ({len(weights)}) must be equal to number of MND ({self.ngauss})"
                 )
             else:
                 self._normalize_weights(weights)
@@ -1228,14 +1205,14 @@ class ComposedMultiVariateNormal(object):
         Sigmas : list or numpy.ndarray
             Array of covariance matrices.
 
-        Attr. [HC]
+
         """
         self.Sigmas = np.array(Sigmas)
         self._check_sigmas()
         self._flatten_params()
         self._flatten_stdcorr()
 
-    def set_params(self, params, Nvars):
+    def set_params(self, params, nvars):
         """
         Set the properties of the CMND from flatten params.
 
@@ -1245,20 +1222,20 @@ class ComposedMultiVariateNormal(object):
         ----------
         params : list or numpy.ndarray
             Flattened parameters.
-        Nvars : int
+        nvars : int
             Number of variables.
 
-        Attr. [HC]
+
         """
-        if Nvars == 0 or len(params) == 0:
+        if nvars == 0 or len(params) == 0:
             raise ValueError(
-                f"When setting from flat params, Nvars ({Nvars}) cannot be zero"
+                f"When setting from flat params, nvars ({nvars}) cannot be zero"
             )
-        self._unflatten_params(params, Nvars)
+        self._unflatten_params(params, nvars)
         self._normalize_weights(self.weights)
         return
 
-    def set_stdcorr(self, stdcorr, Nvars):
+    def set_stdcorr(self, stdcorr, nvars):
         """
         Set the properties of the CMND from flatten stdcorr.
 
@@ -1268,16 +1245,16 @@ class ComposedMultiVariateNormal(object):
         ----------
         stdcorr : list or numpy.ndarray
             Flattened standard deviations and correlations.
-        Nvars : int
+        nvars : int
             Number of variables.
 
-        Attr. [HC]
+
         """
-        if Nvars == 0 or len(stdcorr) == 0:
+        if nvars == 0 or len(stdcorr) == 0:
             raise ValueError(
-                f"When setting from flat params, Nvars ({Nvars}) cannot be zero"
+                f"When setting from flat params, nvars ({nvars}) cannot be zero"
             )
-        self._unflatten_stdcorr(stdcorr, Nvars)
+        self._unflatten_stdcorr(stdcorr, nvars)
         self._normalize_weights(self.weights)
         return
 
@@ -1285,7 +1262,7 @@ class ComposedMultiVariateNormal(object):
         """
         Normalize weights in such a way that sum(weights)=1
 
-        Attr. [HC]
+
         """
         self.weights = np.array(weights) / sum(np.array(weights))
 
@@ -1293,25 +1270,25 @@ class ComposedMultiVariateNormal(object):
         """
         Flatten params
 
-        Attr. [HC]
+
         """
         self._check_params(self.Sigmas)
 
         # Flatten covariance matrix
         SF = [
             Stats.flatten_symmetric_matrix(self.Sigmas[i]).tolist()
-            for i in range(self.Ngauss)
+            for i in range(self.ngauss)
         ]
         self.params = np.concatenate(
             (self.weights.flatten(), self.mus.flatten(), list(itertools.chain(*SF)))
         )
-        self.Npars = len(self.params)  # Ngauss*(1+Nvars+Nvar*(Nvars+1)/2)
+        self.Npars = len(self.params)  # ngauss*(1+nvars+Nvar*(nvars+1)/2)
 
     def _flatten_stdcorr(self):
         """
         Flatten stdcorr
 
-        Attr. [HC]
+
         """
         self._check_params(self.sigmas)
 
@@ -1326,42 +1303,42 @@ class ComposedMultiVariateNormal(object):
         )
         self.Ncor = len(self.stdcorr)
 
-    def _unflatten_params(self, params, Nvars):
+    def _unflatten_params(self, params, nvars):
         """
         Unflatten properties from params
 
-        Attr. [HC]
+
         """
 
         self.params = np.array(params)
         self.Npars = len(self.params)
 
-        factor = int(1 + Nvars + Nvars * (Nvars + 1) / 2)
+        factor = int(1 + nvars + nvars * (nvars + 1) / 2)
 
         if (self.Npars % factor) != 0:
             raise AssertionError(
-                f"The number of parameters {self.Npars} is incompatible with the provided number of variables ({Nvars})"
+                f"The number of parameters {self.Npars} is incompatible with the provided number of variables ({nvars})"
             )
 
         # Number of gaussian functions
-        Ngauss = int(self.Npars / factor)
+        ngauss = int(self.Npars / factor)
 
         # Get the weights
         i = 0
-        weights = self.params[i:Ngauss]
-        i += Ngauss
+        weights = self.params[i:ngauss]
+        i += ngauss
 
         # Get the mus
-        mus = self.params[i : i + Ngauss * Nvars].reshape(Ngauss, Nvars)
-        i += Ngauss * Nvars
+        mus = self.params[i : i + ngauss * nvars].reshape(ngauss, nvars)
+        i += ngauss * nvars
 
         # Get the sigmas
-        Nsym = int(Nvars * (Nvars + 1) / 2)
-        Sigmas = np.zeros((Ngauss, Nvars, Nvars))
+        Nsym = int(nvars * (nvars + 1) / 2)
+        Sigmas = np.zeros((ngauss, nvars, nvars))
         [
             Stats.unflatten_symmetric_matrix(F, Sigmas[i])
             for i, F in enumerate(
-                self.params[i : i + Ngauss * Nsym].reshape(Ngauss, Nsym)
+                self.params[i : i + ngauss * Nsym].reshape(ngauss, Nsym)
             )
         ]
 
@@ -1369,8 +1346,8 @@ class ComposedMultiVariateNormal(object):
         self._normalize_weights(weights)
 
         # Check Sigmas
-        self.Nvars = Nvars
-        self.Ngauss = Ngauss
+        self.nvars = nvars
+        self.ngauss = ngauss
         self.weights = weights
         self.mus = mus
         self.Sigmas = Sigmas
@@ -1379,49 +1356,49 @@ class ComposedMultiVariateNormal(object):
         # Flatten correlations
         self._flatten_stdcorr()
 
-    def _unflatten_stdcorr(self, stdcorr, Nvars):
+    def _unflatten_stdcorr(self, stdcorr, nvars):
         """
         Unflatten properties from stdcorr
 
-        Attr. [HC]
+
         """
 
         self.stdcorr = np.array(stdcorr)
         self.Ncor = len(self.stdcorr)
 
-        factor = int(1 + Nvars + Nvars * (Nvars + 1) / 2)
+        factor = int(1 + nvars + nvars * (nvars + 1) / 2)
 
         if (self.Ncor % factor) != 0:
             raise AssertionError(
-                f"The number of parameters {self.Ncor} is incompatible with the provided number of variables ({Nvars})"
+                f"The number of parameters {self.Ncor} is incompatible with the provided number of variables ({nvars})"
             )
 
         # Number of gaussian functions
-        Ngauss = int(self.Ncor / factor)
+        ngauss = int(self.Ncor / factor)
 
         # Get the weights
         i = 0
-        weights = self.stdcorr[i:Ngauss]
-        i += Ngauss
+        weights = self.stdcorr[i:ngauss]
+        i += ngauss
 
         # Get the mus
-        mus = self.stdcorr[i : i + Ngauss * Nvars].reshape(Ngauss, Nvars)
-        i += Ngauss * Nvars
+        mus = self.stdcorr[i : i + ngauss * nvars].reshape(ngauss, nvars)
+        i += ngauss * nvars
 
         # Get the sigmas
-        sigmas = self.stdcorr[i : i + Ngauss * Nvars].reshape(Ngauss, Nvars)
-        i += Ngauss * Nvars
+        sigmas = self.stdcorr[i : i + ngauss * nvars].reshape(ngauss, nvars)
+        i += ngauss * nvars
 
         # Get the rhos
-        Noff = int(Nvars * (Nvars - 1) / 2)
-        rhos = self.stdcorr[i : i + Ngauss * Noff].reshape(Ngauss, Noff)
+        Noff = int(nvars * (nvars - 1) / 2)
+        rhos = self.stdcorr[i : i + ngauss * Noff].reshape(ngauss, Noff)
 
         # Normalize weights
         self._normalize_weights(weights)
 
         # Set properties
-        self.Nvars = Nvars
-        self.Ngauss = Ngauss
+        self.nvars = nvars
+        self.ngauss = ngauss
         self.weights = weights
         self.mus = mus
         self.sigmas = sigmas
@@ -1438,23 +1415,23 @@ class ComposedMultiVariateNormal(object):
         """
         Check value of sigmas
 
-        Attr. [HC]
+
         """
         self._check_params(self.Sigmas)
 
         # Check matrix
-        if len(self.Sigmas) != self.Ngauss:
+        if len(self.Sigmas) != self.ngauss:
             raise ValueError(
-                f"You provided {len(self.Sigmas)} matrix, but Ngauss={self.Ngauss} are required"
+                f"You provided {len(self.Sigmas)} matrix, but ngauss={self.ngauss} are required"
             )
 
-        elif self.Sigmas[0].shape != (self.Nvars, self.Nvars):
+        elif self.Sigmas[0].shape != (self.nvars, self.nvars):
             raise ValueError(
-                f"Matrices have wrong dimensions ({self.Sigmas[0].shape}). It should be {self.Nvars}x{self.Nvars}"
+                f"Matrices have wrong dimensions ({self.Sigmas[0].shape}). It should be {self.nvars}x{self.nvars}"
             )
 
         # Symmetrize
-        for i in range(self.Ngauss):
+        for i in range(self.ngauss):
             self.Sigmas[i] = np.triu(self.Sigmas[i]) + np.tril(self.Sigmas[i].T, -1)
             """
             #This check can be done, but it can be a problem when fitting
@@ -1469,7 +1446,7 @@ class ComposedMultiVariateNormal(object):
         """
         Check if parameters are set.
 
-        Attr. [HC]
+
         """
         if checkvar is None:
             raise AssertionError(
@@ -1490,7 +1467,7 @@ class ComposedMultiVariateNormal(object):
         p : float
             PDF value at X.
 
-        Attr. [HC]
+
         """
         self._check_params(self.params)
         self._nerror = 0
@@ -1522,15 +1499,15 @@ class ComposedMultiVariateNormal(object):
         Returns
         -------
         rs : numpy.ndarray
-            Samples (Nsam x Nvars).
+            Samples (Nsam x nvars).
 
-        Attr. [HC]
+
         """
         self._check_params(self.params)
 
         from scipy.stats import multivariate_normal as multinorm
 
-        Xs = np.zeros((Nsam, self.Nvars))
+        Xs = np.zeros((Nsam, self.nvars))
         for i in range(Nsam):
             n = Stats.gen_index(self.weights)
             Xs[i] = multinorm.rvs(self.mus[n], self.Sigmas[n])
@@ -1567,7 +1544,7 @@ class ComposedMultiVariateNormal(object):
         log_l : float
             Negative log-likelihood.
 
-        Attr. [HC]
+
         """
         # Map unbound minimization parameters into their right range
         minparams = np.array(Util.t_if(uparams, scales, Util.u2f))
@@ -1582,9 +1559,9 @@ class ComposedMultiVariateNormal(object):
 
         # Update CMND parameters according to type of minimization parameters
         if tset == "params":
-            self.set_params(params, self.Nvars)
+            self.set_params(params, self.nvars)
         else:
-            self.set_stdcorr(params, self.Nvars)
+            self.set_stdcorr(params, self.nvars)
 
         if verbose >= 2:
             print("CMND:")
@@ -1631,17 +1608,17 @@ class ComposedMultiVariateNormal(object):
         Returns
         -------
         G : matplotlib.figure.Figure or CornerPlot
-            Graphic handle. If Nvars = 2, it is a figure object, otherwise is a CornerPlot instance.
+            Graphic handle. If nvars = 2, it is a figure object, otherwise is a CornerPlot instance.
 
         Examples
         --------
         >>> G = CMND.plot_sample(N=10000, sargs=dict(s=1, c='r'))
         >>> G = CMND.plot_sample(N=1000, sargs=dict(s=1, c='r'), hargs=dict(bins=20))
 
-        >>> CMND = ComposedMultiVariateNormal(Ngauss=1, Nvars=2)
+        >>> CMND = ComposedMultiVariateNormal(ngauss=1, nvars=2)
         >>> fig = CMND.plot_sample(N=1000, hargs=dict(bins=20), sargs=dict(s=1, c='r'))
 
-        >>> CMND = ComposedMultiVariateNormal(Ngauss=2, Nvars=3)
+        >>> CMND = ComposedMultiVariateNormal(ngauss=2, nvars=3)
         >>> print(CMND)
         >>> mus = [[0, 0], [1, 1]]
         >>> weights = [0.1, 0.9]
@@ -1651,11 +1628,11 @@ class ComposedMultiVariateNormal(object):
         >>> print(MND1)
         >>> print(MND1.pdf([1, 1]))
         >>> params = [0.1, 0.9, 0.0, 0.0, 1.0, 1.0, 1.0, 0.2, 1.0, 1.0, 0.0, 1.0]
-        >>> MND2 = ComposedMultiVariateNormal(params=params, Nvars=2)
+        >>> MND2 = ComposedMultiVariateNormal(params=params, nvars=2)
         >>> print(MND2)
         >>> print(MND2.pdf([1, 1]))
 
-        Attr. [HC]
+
         """
         if data is None:
             self.data = self.rvs(N)
@@ -1663,14 +1640,14 @@ class ComposedMultiVariateNormal(object):
             self.data = np.copy(data)
 
         properties = dict()
-        for i in range(self.Nvars):
+        for i in range(self.nvars):
             symbol = string.ascii_letters[i] if props is None else props[i]
             rang = None if ranges is None else ranges[i]
             properties[symbol] = dict(label=f"${symbol}$", range=rang)
 
         from matplotlib import pyplot as plt
 
-        if self.Nvars > 2:
+        if self.nvars > 2:
             G = CornerPlot(properties, figsize=figsize)
             if hargs is not None:
                 G.plot_hist(self.data, **hargs)
@@ -1713,27 +1690,27 @@ class ComposedMultiVariateNormal(object):
         str_params = "["
         bnd_stdcorr = "["
         # Probabilities
-        for n in range(self.Ngauss):
+        for n in range(self.ngauss):
             str_params += f"p{n + 1},"
             bnd_stdcorr += f"1,"
 
         # Mus
-        for n in range(self.Ngauss):
-            for i in range(self.Nvars):
+        for n in range(self.ngauss):
+            for i in range(self.nvars):
                 str_params += f"μ{n + 1}_{i + 1},"
                 bnd_stdcorr += f"0,"
 
         str_stdcorr = str_params
         # Std. devs
-        for n in range(self.Ngauss):
-            for i in range(self.Nvars):
+        for n in range(self.ngauss):
+            for i in range(self.nvars):
                 str_stdcorr += f"σ{n + 1}_{i + 1},"
                 bnd_stdcorr += f"10,"
 
         # Sigmas
-        for n in range(self.Ngauss):
-            for i in range(self.Nvars):
-                for j in range(self.Nvars):
+        for n in range(self.ngauss):
+            for i in range(self.nvars):
+                for j in range(self.nvars):
                     if j >= i:
                         str_params += f"Σ{n + 1}_{i + 1}{j + 1},"
                     if j > i:
@@ -1753,9 +1730,9 @@ class ComposedMultiVariateNormal(object):
 
         self._str_params()
 
-        msg = f"""Composition of Ngauss = {self.Ngauss} gaussian multivariates of Nvars = {self.Nvars} random variables:
+        msg = f"""Composition of ngauss = {self.ngauss} gaussian multivariates of nvars = {self.nvars} random variables:
     Weights: {self.weights.tolist()}
-    Number of variables: {self.Nvars}
+    Number of variables: {self.nvars}
     Averages (μ): {self.mus.tolist()}
 """
         if self.Sigmas is None:
@@ -1784,9 +1761,9 @@ class FitCMND:
 
     Attributes
     ----------
-    Ngauss : int
+    ngauss : int
         Number of fitting MND.
-    Nvars : int
+    nvars : int
         Number of variables in each MND.
     cmnd : ComposedMultiVariateNormal
         Fitting object of the class CMND. This object will have the result of the fitting procedure.
@@ -1823,7 +1800,7 @@ class FitCMND:
     >>> Sigmas = Stats.calc_covariance_from_rotation(sigmas, angles)
     >>> CMND = ComposedMultiVariateNormal(mus=mus, weights=weights, Sigmas=Sigmas)
     >>> data = CMND.rvs(10000)
-    >>> F = FitCMND(Ngauss=CMND.Ngauss, Nvars=CMND.Nvars)
+    >>> F = FitCMND(ngauss=CMND.ngauss, nvars=CMND.nvars)
     >>> F.cmnd._fevfreq = 200
     >>> bounds = None
     >>> # bounds = F.set_bounds(boundw=(0.1, 0.9))
@@ -1848,26 +1825,24 @@ class FitCMND:
     _sigmax = 10
     _ignoreWarnings = True
 
-    def __init__(self, objfile=None, Ngauss=1, Nvars=2):
+    def __init__(self, objfile=None, ngauss=1, nvars=2):
         """
         Initialize FitCMND object.
 
-        Attribution
-        -----------
-        [HC] This method was mostly developed by human intelligences.
+
         """
 
         if objfile is not None:
             self._load_fit(objfile)
         else:
             # Basic attributes
-            self.Ngauss = Ngauss
-            self.Nvars = Nvars
-            self.Ndim = Ngauss * Nvars
-            self.Ncorr = int(Nvars * (Nvars - 1) / 2)
+            self.ngauss = ngauss
+            self.nvars = nvars
+            self.Ndim = ngauss * nvars
+            self.Ncorr = int(nvars * (nvars - 1) / 2)
 
             # Define the model cmnds
-            self.cmnd = ComposedMultiVariateNormal(Ngauss=Ngauss, Nvars=Nvars)
+            self.cmnd = ComposedMultiVariateNormal(ngauss=ngauss, nvars=nvars)
 
             # Set parameters
             self.set_params()
@@ -1900,17 +1875,17 @@ class FitCMND:
         minparams = (
             [mu] * self.Ndim
             + [sigma] * self.Ndim
-            + [1 + rho] * self.Ngauss * self.Ncorr
+            + [1 + rho] * self.ngauss * self.Ncorr
         )
         scales = (
             [0] * self.Ndim
             + [self._sigmax] * self.Ndim
-            + [2] * self.Ngauss * self.Ncorr
+            + [2] * self.ngauss * self.Ncorr
         )
-        if self.Ngauss > 1:
+        if self.ngauss > 1:
             self.extrap = []
-            minparams = [1 / self.Ngauss] * self.Ngauss + minparams
-            scales = [1] * self.Ngauss + scales
+            minparams = [1 / self.ngauss] * self.ngauss + minparams
+            scales = [1] * self.ngauss + scales
         else:
             self.extrap = [1]
 
@@ -1924,7 +1899,7 @@ class FitCMND:
 
         Mapping may change depending on the complexity of the parameters to be minimized.
         Here we assume that all parameters in the stdcorr vector is susceptible to be minimized
-        (with the exception of weights in the case of Ngauss=1 when this parameter should not
+        (with the exception of weights in the case of ngauss=1 when this parameter should not
         be included).
 
         Parameters
@@ -1938,7 +1913,7 @@ class FitCMND:
             Flatten parameters with correlations.
         """
         stdcorr = np.array(self.extrap + list(minparams))
-        stdcorr[-self.Ngauss * self.Ncorr :] -= 1
+        stdcorr[-self.ngauss * self.Ncorr :] -= 1
         return stdcorr
 
     def log_l(self, data):
@@ -1948,7 +1923,7 @@ class FitCMND:
         Parameters
         ----------
         data : numpy.ndarray
-            Array with data (Nsam x Nvars).
+            Array with data (Nsam x nvars).
 
         Returns
         -------
@@ -1970,7 +1945,7 @@ class FitCMND:
         Parameters
         ----------
         data : numpy.ndarray
-            Array with data (Nsam x Nvars).
+            Array with data (Nsam x nvars).
         verbose : int, optional
             Verbosity level for the sample_cmnd_likelihood routine (default 0).
         advance : int, optional
@@ -2038,16 +2013,14 @@ class FitCMND:
         # Set the new params
         self.minparams = Util.t_if(self.uparams, self.scales, Util.u2f)
         params = self.pmap(self.minparams)
-        self.cmnd.set_stdcorr(params, self.Nvars)
+        self.cmnd.set_stdcorr(params, self.nvars)
         self._update_prefix()
 
     def _load_fit(self, objfile):
         """
         Load a fit object from file.
 
-        Attribution
-        -----------
-        [HC] This method was mostly developed by human intelligences.
+
         """
         F = pickle.load(open(objfile, "rb"))
         for k in F.__dict__.keys():
@@ -2088,7 +2061,7 @@ class FitCMND:
         """
         Xfits = self.cmnd.rvs(N)
         properties = dict()
-        for i in range(self.Nvars):
+        for i in range(self.nvars):
             symbol = string.ascii_letters[i] if props is None else props[i]
             if ranges is not None:
                 rang = ranges[i]
@@ -2099,7 +2072,7 @@ class FitCMND:
 
         from matplotlib import pyplot as plt
 
-        if self.Nvars > 2:
+        if self.nvars > 2:
             G = CornerPlot(properties, figsize=figsize)
             G.plot_hist(Xfits, **hargs)
             G.scatter_plot(self.data, **sargs)
@@ -2124,13 +2097,11 @@ class FitCMND:
         """
         Invert stdcorr to minparams.
 
-        Attribution
-        -----------
-        [HC] This method was mostly developed by human intelligences.
+
         """
         minparams = np.copy(stdcorr)
-        minparams[-self.Ngauss * self.Ncorr :] += 1
-        self.minparams = minparams[1:] if self.Ngauss == 1 else minparams
+        minparams[-self.ngauss * self.Ncorr :] += 1
+        self.minparams = minparams[1:] if self.ngauss == 1 else minparams
 
     def _update_prefix(self, myprefix=None):
         """
@@ -2145,7 +2116,7 @@ class FitCMND:
             - Bounds are changed.
 
         Alternative prefix:
-        >>> self.hash = md5(pickle.dumps([self.Ngauss, self.data])).hexdigest()[:5]
+        >>> self.hash = md5(pickle.dumps([self.ngauss, self.data])).hexdigest()[:5]
         >>> self.hash = md5(pickle.dumps(self.__dict__)).hexdigest()[:5]
         >>> self.hash = md5(pickle.dumps(self.minparams)).hexdigest()[:5]
         >>> self.hash = md5(pickle.dumps(self.cmnd)).hexdigest()[:5]
@@ -2153,7 +2124,7 @@ class FitCMND:
         self.hash = md5(pickle.dumps(self)).hexdigest()[:5]
         if myprefix is not None:
             myprefix = f"_{myprefix}"
-        self.prefix = f"{self.Ngauss}cmnd{myprefix}_{self.hash}"
+        self.prefix = f"{self.ngauss}cmnd{myprefix}_{self.hash}"
 
     def save_fit(self, objfile=None, useprefix=True, myprefix=None):
         """
@@ -2166,7 +2137,7 @@ class FitCMND:
             by the routine as FitCMND.pkl.
         useprefix : bool, optional
             Use a prefix in the filename of the pickle file (default True).
-            The prefix is normally {Ngauss}cmnd_{hash}.
+            The prefix is normally {ngauss}cmnd_{hash}.
         myprefix : str, optional
             Custom prefix.
 
@@ -2199,7 +2170,7 @@ class FitCMND:
             Bounds of averages (default (-np.inf, np.inf)).
             Normally the bounds on averages must be expressed in this way:
             boundsm = ((-min_1, max_1), (-min_2, max_2), ...)
-            Example for Nvars = 2:
+            Example for nvars = 2:
             boundsm = ((-2, 1), (-3, 0))
 
         Returns
@@ -2208,7 +2179,7 @@ class FitCMND:
             Formatted bounds for minimization.
         """
         if boundsm is None:
-            boundsm = ((-np.inf, np.inf),) * self.Nvars
+            boundsm = ((-np.inf, np.inf),) * self.nvars
 
         # Regular bounds
         if boundw is None:
@@ -2227,14 +2198,14 @@ class FitCMND:
             boundr = tuple([Util.f2u(1 + br, 2) for br in boundr])
 
         bounds = (
-            *((boundw,) * self.Ngauss),
-            *(boundsm * self.Ngauss),
-            *((bounds,) * self.Nvars * self.Ngauss),
-            *((boundr,) * self.Ngauss * int(self.Nvars * (self.Nvars - 1) / 2)),
+            *((boundw,) * self.ngauss),
+            *(boundsm * self.ngauss),
+            *((bounds,) * self.nvars * self.ngauss),
+            *((boundr,) * self.ngauss * int(self.nvars * (self.nvars - 1) / 2)),
         )
         self.bounds = bounds
 
-        if self.Ngauss == 1:
+        if self.ngauss == 1:
             bounds = bounds[1:]
         self.cmnd._str_params()
         return bounds

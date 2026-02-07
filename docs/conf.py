@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.abspath("../src"))
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "MultiMin"
-copyright = "2024, Jorge I. Zuluaga"
+copyright = "2024-present, Jorge I. Zuluaga"
 author = "Jorge I. Zuluaga"
 from multimin.version import __version__
 

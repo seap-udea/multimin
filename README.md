@@ -66,6 +66,24 @@ If you use Google Colab, you can install `MultiMin` by executing:
 !pip install -U multimin
 ```
 
+## Theoretical Background
+
+The core of `MultiMin` is the **Composed Multivariate Normal Distribution (CMND)**. The theory behind it posits that any multivariate distribution function $p(\tilde U):\Re^{N}\rightarrow\Re$, where $\tilde U:(u_1,u_2,u_3,\ldots,u_N)$ are random variables, can be approximated with arbitrary precision by a normalized linear combination of $M$ Multivariate Normal Distributions (MND):
+
+$$
+p(\tilde U) \approx \mathcal{C}_M(\tilde U; \{w_k\}_M, \{\mu_k\}_M, \{\Sigma_k\}_M) \equiv \sum_{i=1}^{M} w_i\;\mathcal{N}(\tilde U; \tilde \mu_i, \Sigma_i)
+$$
+
+where the multivariate normal $\mathcal{N}(\tilde U; \tilde \mu, \Sigma)$ with mean vector $\tilde \mu$ and covariance matrix $\Sigma$ is given by:
+
+$$
+\mathcal{N}(\tilde U; \tilde \mu, \Sigma) = \frac{1}{\sqrt{(2\pi)^{k} \det \Sigma}} \exp\left[-\frac{1}{2}(\tilde U - \tilde \mu)^{\rm T} \Sigma^{-1} (\tilde U - \tilde \mu)\right]
+$$
+
+The covariance matrix $\Sigma$ elements are defined as $\Sigma_{ij} = \rho_{ij}\sigma_{i}\sigma_{j}$, where $\sigma_i$ is the standard deviation of $u_i$ and $\rho_{ij}$ is the correlation coefficient between variable $u_i$ and $u_j$ ($-1<\rho_{ij}<1$, $\rho_{ii}=1$).
+
+The normalization condition on $p(\tilde U)$ implies that the set of weights $\{w_k\}_M$ are also normalized, i.e., $\sum_i w_i=1$.
+
 ## Quick Start
 
 Getting started with `MultiMin` is straightforward. Import the package:
@@ -84,7 +102,7 @@ Here is a basic example of how to use `MultiMin` to fit a 3D distribution compos
 
 ### 1. Define a true distribution
 
-First, we define a distribution from which we will generate synthetic data. We use a **Composed Multivariate Normal Distribution (CMND)** with 2 Gaussian components (`Ngauss=2`) in 3 dimensions (`Nvars=3`).
+First, we define a distribution from which we will generate synthetic data. We use a **Composed Multivariate Normal Distribution (CMND)** with 2 Gaussian components (`ngauss=2`) in 3 dimensions (`nvars=3`).
 
 ```python
 import numpy as np
@@ -147,7 +165,7 @@ We initialize the `FitCMND` handler with the expected number of Gaussians (2) an
 
 ```python
 # Initialize the fitter
-F = mn.FitCMND(Ngauss=2, Nvars=3)
+F = mn.FitCMND(ngauss=2, nvars=3)
 
 # Run the fit (using advance=True for better convergence on complex models)
 F.fit_data(data, advance=True)
