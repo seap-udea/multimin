@@ -28,6 +28,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "nbsphinx",
     "sphinx_rtd_theme",
+    "sphinx.ext.mathjax",
 ]
 
 napoleon_numpy_docstring = True
@@ -50,3 +51,9 @@ html_theme_options = {
         {"name": "Source", "url": "https://github.com/seap-udea/multimin"},
     ],
 }
+
+html_js_files = [
+    "https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js",
+    "https://unpkg.com/@jupyter-widgets/html-manager@^0.20.0/dist/embed-amd.js",
+    "https://cdn.plot.ly/plotly-latest.min.js",
+]

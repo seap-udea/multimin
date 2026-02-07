@@ -1,7 +1,47 @@
-#!/usr/bin/env python3
+#! /usr/bin/env python3
 import os
 import glob
 import shutil
+import json
+
+
+def process_notebook(src, dest):
+    with open(src, "r") as f:
+        nb = json.load(f)
+
+    # Filter out footer cells
+    new_cells = []
+    for cell in nb.get("cells", []):
+        is_footer = False
+        if cell.get("cell_type") == "markdown":
+            source = "".join(cell.get("source", []))
+            if (
+                "MultiMin - Multivariate Gaussian fitting" in source
+                and "Jorge I. Zuluaga" in source
+            ):
+                is_footer = True
+
+        if not is_footer:
+            # Inject Plotly renderer fix for documentation build
+            if cell.get("cell_type") == "code":
+                source = "".join(cell.get("source", []))
+                if "fig.show()" in source or "go.Figure" in source:
+                    # Check if not already present (idempotency)
+                    if "pio.renderers.default = 'iframe'" not in source:
+                        # Add import if needed, assuming standard imports might be elsewhere but safe to add
+                        injection = [
+                            "import plotly.io as pio\n",
+                            "pio.renderers.default = 'iframe'\n",
+                            "\n",
+                        ]
+                        cell["source"] = injection + cell.get("source", [])
+
+            new_cells.append(cell)
+
+    nb["cells"] = new_cells
+
+    with open(dest, "w") as f:
+        json.dump(nb, f, indent=1)
 
 
 def main():
@@ -46,9 +86,10 @@ def main():
     for f in ordered_files:
         basename = os.path.basename(f)
         dest = os.path.join(docs_examples_dir, basename)
-        shutil.copy2(f, dest)
+        # shutil.copy2(f, dest)
+        process_notebook(f, dest)
         notebooks.append(basename)
-        print(f"Copied {basename} to docs/examples/")
+        print(f"Copied and processed {basename} to docs/examples/")
 
     # Generate examples.rst
     print(f"Updating {rst_file}...")
