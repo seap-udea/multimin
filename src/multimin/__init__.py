@@ -1120,13 +1120,23 @@ class ComposedMultiVariateNormal(object):
 
     Examples
     --------
+    Example 1: Initialization using explicit arrays for means and weights.
+
+    >>> # Define means for 2 Gaussian components in 2D
     >>> mus = [[0, 0], [1, 1]]
+    >>> # Define weights (normalization is handled automatically)
     >>> weights = [0.1, 0]
+    >>> # Create the CMND object
     >>> MND1 = ComposedMultiVariateNormal(mus=mus, weights=weights)
+    >>> # Set covariance matrices explicitly
     >>> MND1.set_sigmas([[[1, 0.2], [0, 1]], [[1, 0], [0, 1]]])
     >>> print(MND1)
 
+    Example 2: Initialization using a flattened parameter array.
+
+    >>> # Flattened parameters: [weights..., mus..., flattened_covariances...]
     >>> params = [0.1, 0.9, 0, 0, 1, 1, 1, 0.2, 0.2, 1, 1, 0, 0, 1]
+    >>> # Create CMND object specifying number of variables
     >>> MND2 = ComposedMultiVariateNormal(params=params, nvars=2)
     >>> print(MND2)
     """

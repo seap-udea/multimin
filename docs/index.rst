@@ -8,7 +8,6 @@
    examples
 
 .. toctree::
-   :titlesonly:
    :hidden:
    :maxdepth: 2
    :caption: API Reference

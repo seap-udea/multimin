@@ -45,7 +45,7 @@ setup(
         # "License :: OSI Approved :: GNU Affero General Public License v3",
         "Operating System :: OS Independent",
     ],
-    version='0.5.1',
+    version="0.5.2",
     # ######################################################################
     # FILES
     # ######################################################################
@@ -65,6 +65,7 @@ setup(
         "matplotlib>=3.3.0",
         "spiceypy>=5.0.0",
         "pandas>=1.0.0",
+        "plotly>=5.0.0",
     ],
     python_requires=">=3.8",
     # ######################################################################

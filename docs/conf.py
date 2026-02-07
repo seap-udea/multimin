@@ -44,7 +44,9 @@ pygment_style = "sphinx"
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
 html_theme_options = {
+    "collapse_navigation": False,
+    "titles_only": False,
     "external_links": [
         {"name": "Source", "url": "https://github.com/seap-udea/multimin"},
-    ]
+    ],
 }
