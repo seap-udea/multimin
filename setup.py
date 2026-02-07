@@ -45,7 +45,7 @@ setup(
         # "License :: OSI Approved :: GNU Affero General Public License v3",
         "Operating System :: OS Independent",
     ],
-    version="0.5.0",
+    version='0.5.1',
     # ######################################################################
     # FILES
     # ######################################################################

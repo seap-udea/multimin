@@ -10,9 +10,11 @@
 [![version](https://img.shields.io/pypi/v/multimin?color=blue)](https://pypi.org/project/multimin/)
 [![license](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://github.com/seap-udea/multimin/blob/master/LICENSE)
 [![pythonver](https://img.shields.io/pypi/pyversions/multimin)](https://pypi.org/project/multimin/)
-<!-- [![downloads](https://img.shields.io/pypi/dw/multimin)](https://pypi.org/project/multimin/) -->
+[![downloads](https://img.shields.io/pypi/dw/multimin)](https://pypi.org/project/multimin/)
+[![Powered by SciPy](https://img.shields.io/badge/Powered%20by-SciPy-blue)](https://scipy.org/)
 
 <div align="center">
+<p></p>
 </div>
 
 ## Introducing `MultiMin`
