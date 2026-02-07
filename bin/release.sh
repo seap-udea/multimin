@@ -38,6 +38,13 @@ python_bin() {
 PY="$(python_bin)" || die "Could not find 'python' nor 'python3' in PATH."
 have git || die "Could not find 'git' in PATH."
 
+# Auto-activate local venv if present
+if [[ -f ".multimin/bin/activate" ]]; then
+  log "Activating local environment (.multimin)..."
+  source .multimin/bin/activate
+  PY="python3"
+fi
+
 rollback() {
   local exit_code=$?
 
