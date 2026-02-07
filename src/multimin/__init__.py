@@ -1902,15 +1902,28 @@ class ComposedMultiVariateNormal(object):
             return "[" + ", ".join(str(round(float(x), decimals)) for x in arr) + "]"
         return "[" + ", ".join(self._fmt_py_literal(row, decimals) for row in arr) + "]"
 
-    def _fmt_latex_array(self, arr, decimals=6):
-        """Format array as LaTeX \\begin{array}...\\end{array}."""
+    def _fmt_latex_array(self, arr, decimals=6, single_line=True):
+        """Format array as LaTeX \\begin{array}...\\end{array}.
+
+        Parameters
+        ----------
+        arr : array-like
+            Vector or matrix to format.
+        decimals : int
+            Decimal places for numeric values.
+        single_line : bool, optional
+            If True (default), output has no newlines so each $...$ formula fits on one
+            line. This avoids RST/PyPI long_description errors when the LaTeX is
+            pasted into README or similar.
+        """
         arr = np.asarray(arr)
         if arr.ndim == 0:
             return str(round(float(arr), decimals))
+        sep = " \\\\ " if single_line else " \\\\\n        "
         if arr.ndim == 1:
-            body = " \\\\\n        ".join(
-                str(round(float(x), decimals)) for x in arr
-            )
+            body = sep.join(str(round(float(x), decimals)) for x in arr)
+            if single_line:
+                return "\\begin{array}{c} " + body + " \\end{array}"
             return "\\begin{array}{c}\n        " + body + "\n    \\end{array}"
         # matrix
         nrows, ncols = arr.shape
@@ -1918,8 +1931,10 @@ class ComposedMultiVariateNormal(object):
             " & ".join(str(round(float(arr[i, j]), decimals)) for j in range(ncols))
             for i in range(nrows)
         ]
-        body = " \\\\\n        ".join(rows)
+        body = sep.join(rows)
         colspec = "c" * ncols
+        if single_line:
+            return "\\begin{array}{" + colspec + "} " + body + " \\end{array}"
         return "\\begin{array}{" + colspec + "}\n        " + body + "\n    \\end{array}"
 
     def get_function(self, print_code=True, decimals=6, type="python"):
@@ -1936,6 +1951,8 @@ class ComposedMultiVariateNormal(object):
         type : str, optional
             - ``'python'`` (default): return Python source and callable.
             - ``'latex'``: return LaTeX formula with explicit parameters and matrices in \\begin{array}.
+            LaTeX output is single-line per formula so it can be pasted into README or other
+            RST-derived long descriptions without triggering PyPI/twine markup errors.
 
         Returns
         -------

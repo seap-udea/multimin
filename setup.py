@@ -128,7 +128,7 @@ setup(
         "Programming Language :: Python :: 3.11",
         "Operating System :: OS Independent",
     ],
-    version='0.6.3',
+    version='0.6.4',
     package_dir={"": "src"},
     packages=find_packages(where="src"),
     test_suite="pytest",
