@@ -8,3 +8,4 @@ Tutorials and Examples
 
    examples/multimin_quickstart
    examples/multimin_indepth
+   examples/multimin_finite_domain_quickstart

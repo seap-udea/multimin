@@ -1177,6 +1177,35 @@ class ComposedMultiVariateNormal(object):
     The normalization condition on :math:`p(\tilde U)` implies that the set of weights :math:`\{w_k\}_M` are also normalized,
     i.e., :math:`\sum_i w_i=1`.
 
+    **Truncated multivariate distributions**
+
+    In real problems the domain of the variables is often bounded. Starting from the unbounded multivariate normal
+    :math:`\mathcal{N}_k(\tilde U; \tilde \mu, \Sigma)`, let :math:`T \subset \{1,\ldots,k\}` be the set of indices of
+    truncated variables and :math:`a_i < b_i` the truncation bounds for :math:`i \in T`. The truncation region is
+
+    .. math::
+
+        A_T = \left\{ \tilde U \in \mathbb{R}^k \;:\; a_i \le \tilde U_i \le b_i \;\; \forall i \in T \right\},
+
+    with the remaining coordinates :math:`i \notin T` unbounded. The partially truncated multivariate normal is
+
+    .. math::
+
+        \mathcal{TN}_T(\tilde U; \tilde\mu, \Sigma, \mathbf{a}_T, \mathbf{b}_T)
+        = \frac{\mathcal{N}(\tilde U; \tilde\mu, \Sigma) \, \mathbf{1}_{A_T}(\tilde U)}
+               {Z_T(\tilde\mu, \Sigma, \mathbf{a}_T, \mathbf{b}_T)},
+
+    where :math:`\mathbf{1}_{A_T}` is the indicator of :math:`A_T` and the normalization constant is
+
+    .. math::
+
+        Z_T(\tilde\mu, \Sigma, \mathbf{a}_T, \mathbf{b}_T)
+        = \int_{A_T} \mathcal{N}(\tilde T; \tilde\mu, \Sigma) \, d\tilde T
+        = \mathbb{P}_{\tilde T \sim \mathcal{N}(\tilde\mu,\Sigma)}\!\left( \tilde T \in A_T \right).
+
+    When a finite ``domain`` is set (e.g. ``domain=[[0, 1], None]``), the CMND uses truncated normals for the
+    bounded variables so that the PDF is zero outside the domain and the mixture remains normalized.
+
     Attributes
     ----------
     ngauss : int
@@ -1219,10 +1248,12 @@ class ComposedMultiVariateNormal(object):
        and want to instantiate the system.  All parameters are set and no other action
        is required.
 
-    4. Providing: weights, mus, Sigmas (optional)
+    4. Providing: weights, mus, Sigmas (optional), domain (optional)
        In this case the basic properties of the CMND are set.
        For univariate (one variable), mus may be a 1-D array of means, e.g. [0, 2],
        and Sigmas a 1-D array of variances, e.g. [1.0, 0.25].
+       domain: list of length nvars; each element is None (unbounded) or [low, high]
+       (finite support). Example: [None, [0, 1], None] for variable 1 in [0, 1].
 
     Examples
     --------
@@ -1259,22 +1290,26 @@ class ComposedMultiVariateNormal(object):
         weights=None,
         mus=None,
         Sigmas=None,
+        domain=None,
     ):
-
         # Method 1: initialize a simple instance
         if ngauss > 0:
             mus = [[0] * nvars] * ngauss
             weights = [1 / ngauss] * ngauss
             Sigmas = [np.eye(nvars)] * ngauss
-            self.__init__(mus=mus, weights=weights, Sigmas=Sigmas)
+            self.__init__(mus=mus, weights=weights, Sigmas=Sigmas, domain=domain)
 
         # Method 2: initialize from flatten parameters
         elif params is not None:
             self.set_params(params, nvars)
+            self._set_domain(domain, self.nvars)
+            self._Z_cache = None
 
         # Method 3: initialize from flatten parameters
         elif stdcorr is not None:
             self.set_stdcorr(stdcorr, nvars)
+            self._set_domain(domain, self.nvars)
+            self._Z_cache = None
 
         # Method 4: initialize from explicit arrays
         else:
@@ -1305,6 +1340,10 @@ class ComposedMultiVariateNormal(object):
             else:
                 self._normalize_weights(weights)
 
+            # Domain: list of (low, high) per variable; None or [a,b] for each
+            self._set_domain(domain, self.nvars)
+            self._Z_cache = None
+
             # Secondary attributes
             if Sigmas is None:
                 self.Sigmas = None
@@ -1313,6 +1352,81 @@ class ComposedMultiVariateNormal(object):
                 self.set_sigmas(Sigmas)
 
         self._nerror = 0
+
+    def _set_domain(self, domain, nvars):
+        """Set _domain_bounds from domain. domain: list length nvars of None or [a,b]."""
+        if domain is None:
+            self._domain_bounds = [(-np.inf, np.inf)] * nvars
+            return
+        if len(domain) != nvars:
+            raise ValueError(
+                f"domain must have length nvars ({nvars}), got {len(domain)}"
+            )
+        bounds = []
+        for i, d in enumerate(domain):
+            if d is None:
+                bounds.append((-np.inf, np.inf))
+            else:
+                a, b = float(d[0]), float(d[1])
+                if a >= b:
+                    raise ValueError(
+                        f"domain[{i}] must have lower < upper, got {d}"
+                    )
+                bounds.append((a, b))
+        self._domain_bounds = bounds
+
+    def set_domain(self, domain):
+        """
+        Set the support domain for each variable (finite or infinite).
+
+        Parameters
+        ----------
+        domain : list of length nvars
+            Each element is None (unbounded) or [low, high] (finite interval).
+            Example: [None, [0, 1], None] for variable 1 bounded to [0, 1].
+        """
+        self._set_domain(domain, self.nvars)
+        self._Z_cache = None
+
+    def _in_domain(self, X):
+        """Return mask of points inside the domain box. X: (N x nvars) or (nvars,)."""
+        X = np.atleast_2d(X)
+        out = np.ones(X.shape[0], dtype=bool)
+        for j, (lo, hi) in enumerate(self._domain_bounds):
+            out &= (X[:, j] >= lo) & (X[:, j] <= hi)
+        return out
+
+    def _normalization_constant(self, k, mc_samples=50000):
+        """Integral of Gaussian k over the domain box (cached). For nvars>=2 uses
+        scipy.stats.multivariate_normal.cdf (Genz-type quadrature) when available,
+        else Monte Carlo."""
+        from scipy.stats import multivariate_normal as mvn
+
+        if getattr(self, "_Z_cache", None) is not None and self._Z_cache[k] is not None:
+            return self._Z_cache[k]
+        if self._Z_cache is None:
+            self._Z_cache = [None] * self.ngauss
+        mu = self.mus[k]
+        Sigma = self.Sigmas[k]
+        bounds = self._domain_bounds
+        if self.nvars == 1:
+            self._Z_cache[k] = 1.0
+            return 1.0
+        # Multivariate: Z = P(lower < X < upper). Use scipy MVN CDF (Genz algorithm) if available.
+        lower = np.array([bounds[j][0] for j in range(self.nvars)])
+        upper = np.array([bounds[j][1] for j in range(self.nvars)])
+        try:
+            # cdf(upper, mean=mu, cov=Sigma, lower_limit=lower) = P(lower < X < upper)
+            Z = float(mvn.cdf(upper, mean=mu, cov=Sigma, lower_limit=lower))
+        except (AttributeError, TypeError, ValueError):
+            # Old scipy or unsupported: fall back to Monte Carlo
+            samples = mvn.rvs(mu, Sigma, size=mc_samples)
+            in_box = self._in_domain(samples)
+            Z = np.mean(in_box).astype(float)
+        if Z <= 0:
+            Z = 1e-300
+        self._Z_cache[k] = Z
+        return Z
 
     def set_sigmas(self, Sigmas):
         """
@@ -1337,6 +1451,7 @@ class ComposedMultiVariateNormal(object):
         self._check_sigmas()
         self._flatten_params()
         self._flatten_stdcorr()
+        self._Z_cache = None
 
     def set_params(self, params, nvars):
         """
@@ -1359,6 +1474,7 @@ class ComposedMultiVariateNormal(object):
             )
         self._unflatten_params(params, nvars)
         self._normalize_weights(self.weights)
+        self._Z_cache = None
         return
 
     def set_stdcorr(self, stdcorr, nvars):
@@ -1382,6 +1498,7 @@ class ComposedMultiVariateNormal(object):
             )
         self._unflatten_stdcorr(stdcorr, nvars)
         self._normalize_weights(self.weights)
+        self._Z_cache = None
         return
 
     def _normalize_weights(self, weights):
@@ -1610,44 +1727,98 @@ class ComposedMultiVariateNormal(object):
                 )
         else:
             raise ValueError("X must be a point (length nvars) or array of points (N x nvars)")
-
-        value = np.zeros(X.shape[0] if X.ndim == 2 else 1)
-        for w, muvec, Sigma in zip(self.weights, self.mus, self.Sigmas):
+        X2 = np.atleast_2d(X)
+        in_dom = self._in_domain(X2)
+        has_finite_domain = any(
+            np.isfinite(self._domain_bounds[j][0]) or np.isfinite(self._domain_bounds[j][1])
+            for j in range(self.nvars)
+        )
+        from scipy.stats import multivariate_normal as multinorm
+        value = np.zeros(X2.shape[0])
+        if has_finite_domain:
+            value[~in_dom] = 0.0
+        for k, (w, muvec, Sigma) in enumerate(zip(self.weights, self.mus, self.Sigmas)):
             try:
-                value += w * multinorm.pdf(X, muvec, Sigma)
+                if has_finite_domain and self.nvars == 1:
+                    from scipy.stats import truncnorm
+                    lo, hi = self._domain_bounds[0]
+                    mu0 = float(muvec.ravel()[0])
+                    sig = np.sqrt(float(Sigma.ravel()[0]))
+                    a = (lo - mu0) / sig if np.isfinite(lo) else -np.inf
+                    b = (hi - mu0) / sig if np.isfinite(hi) else np.inf
+                    val_k = w * truncnorm.pdf(X2[:, 0], a, b, loc=mu0, scale=sig)
+                elif has_finite_domain and self.nvars >= 2:
+                    Zk = self._normalization_constant(k)
+                    val_k = np.atleast_1d(w * multinorm.pdf(X2, muvec, Sigma) / Zk)
+                    val_k = val_k.copy()
+                    val_k[~in_dom] = 0.0
+                else:
+                    val_k = w * multinorm.pdf(X2, muvec, Sigma)
+                value += val_k
             except Exception as error:
                 if not self._ignoreWarnings:
                     print(
                         f"Error: {error}, params = {self.params.tolist()}, stdcorr = {self.params.tolist()}"
                     )
                     self._nerror += 1
-                value += 0
         return value.item() if value.size == 1 else value
 
-    def rvs(self, Nsam=1):
+    def rvs(self, Nsam=1, max_tries=100000):
         """
         Generate a random sample of points following this Multivariate distribution.
+
+        When domain is finite, samples are drawn inside the domain (rejection sampling
+        for multivariate; truncated normal for univariate).
 
         Parameters
         ----------
         Nsam : int, optional
             Number of samples (default 1).
+        max_tries : int, optional
+            Maximum attempts per sample when using rejection sampling (default 100000).
 
         Returns
         -------
         rs : numpy.ndarray
             Samples (Nsam x nvars).
-
-
         """
         self._check_params(self.params)
 
         from scipy.stats import multivariate_normal as multinorm
-
+        has_finite_domain = any(
+            np.isfinite(self._domain_bounds[j][0]) or np.isfinite(self._domain_bounds[j][1])
+            for j in range(self.nvars)
+        )
         Xs = np.zeros((Nsam, self.nvars))
+        if not has_finite_domain:
+            for i in range(Nsam):
+                n = Stats.gen_index(self.weights)
+                Xs[i] = multinorm.rvs(self.mus[n], self.Sigmas[n])
+            return Xs
+        if self.nvars == 1:
+            from scipy.stats import truncnorm
+            lo, hi = self._domain_bounds[0]
+            for i in range(Nsam):
+                k = Stats.gen_index(self.weights)
+                mu0 = float(self.mus[k].ravel()[0])
+                sig = np.sqrt(float(self.Sigmas[k].ravel()[0]))
+                a = (lo - mu0) / sig if np.isfinite(lo) else -np.inf
+                b = (hi - mu0) / sig if np.isfinite(hi) else np.inf
+                Xs[i, 0] = truncnorm.rvs(a, b, loc=mu0, scale=sig)
+            return Xs
+        # Multivariate finite domain: rejection sampling
         for i in range(Nsam):
-            n = Stats.gen_index(self.weights)
-            Xs[i] = multinorm.rvs(self.mus[n], self.Sigmas[n])
+            k = Stats.gen_index(self.weights)
+            for _ in range(max_tries):
+                x = multinorm.rvs(self.mus[k], self.Sigmas[k])
+                if self._in_domain(x[np.newaxis, :]).item():
+                    Xs[i] = x
+                    break
+            else:
+                raise RuntimeError(
+                    f"rvs: failed to draw a sample inside domain after {max_tries} tries. "
+                    "Domain may be too narrow for the current covariance."
+                )
         return Xs
 
     def sample_cmnd_likelihood(
@@ -1705,7 +1876,11 @@ class ComposedMultiVariateNormal(object):
             print(self)
 
         # Compute PDF for each point in data and sum
-        log_l = -np.log(self.pdf(data)).sum()
+        pdf_vals = self.pdf(data)
+        # Avoid log(0) when PDF underflows or is zero at boundaries (bounded case)
+        pdf_vals = np.atleast_1d(pdf_vals)
+        pdf_vals = np.maximum(pdf_vals, 1e-300)
+        log_l = -np.log(pdf_vals).sum()
 
         if verbose >= 1:
             print(f"-log_l = {log_l:e}")
@@ -1792,11 +1967,15 @@ class ComposedMultiVariateNormal(object):
             properties[symbol] = dict(label=f"${symbol}$", range=rang)
 
         G = DensityPlot(properties, figsize=figsize)
+        ymax = -1e100
         if hargs is not None:
             G.plot_hist(self.data, **hargs)
+            if self.nvars == 1:
+                ymax = max(ymax, G.axs[0][0].get_ylim()[1])
         if sargs is not None:
             G.scatter_plot(self.data, **sargs)
-        G.fig.tight_layout()
+            if self.nvars == 1:
+                ymax = max(ymax, G.axs[0][0].get_ylim()[1])
         
         # When the distribution is univariate, add the PDF curve to the plot
         if self.nvars == 1:
@@ -1805,7 +1984,11 @@ class ComposedMultiVariateNormal(object):
             x_curve = np.linspace(x_min - margin, x_max + margin, 300)
             pdf_vals = self.pdf(x_curve.reshape(-1, 1))
             G.axs[0][0].plot(x_curve, pdf_vals, "k-", lw=2, label="PDF")
-    
+            ymax = max(ymax, pdf_vals.max())
+            G.axs[0][0].set_ylim(0, ymax)
+
+        G.fig.tight_layout()
+        multimin_watermark(G.axs[0][0])
         return G
 
     def _str_params(self):
@@ -2285,11 +2468,21 @@ class FitCMND:
     _sigmax = 10
     _ignoreWarnings = True
 
-    def __init__(self, objfile=None, ngauss=1, nvars=2):
+    def __init__(self, objfile=None, ngauss=1, nvars=2, domain=None):
         """
         Initialize FitCMND object.
 
-
+        Parameters
+        ----------
+        objfile : str, optional
+            Path to a pickled fit to load.
+        ngauss : int
+            Number of Gaussian components.
+        nvars : int
+            Number of variables.
+        domain : list, optional
+            Domain for each variable: None (unbounded) or [low, high] per variable.
+            Example: [None, [0, 1], None] for variable 1 bounded to [0, 1].
         """
 
         if objfile is not None:
@@ -2300,9 +2493,10 @@ class FitCMND:
             self.nvars = nvars
             self.Ndim = ngauss * nvars
             self.Ncorr = int(nvars * (nvars - 1) / 2)
+            self.domain = domain
 
             # Define the model cmnds
-            self.cmnd = ComposedMultiVariateNormal(ngauss=ngauss, nvars=nvars)
+            self.cmnd = ComposedMultiVariateNormal(ngauss=ngauss, nvars=nvars, domain=domain)
 
             # Set parameters
             self.set_params()
@@ -2350,7 +2544,52 @@ class FitCMND:
             self.extrap = [1]
 
         self.minparams = np.array(minparams)
+        # When domain is finite, spread initial mus inside each variable's domain
+        bounds = getattr(self.cmnd, "_domain_bounds", None)
+        if bounds is not None and self.ngauss > 1:
+            for j in range(self.nvars):
+                lo, hi = bounds[j][0], bounds[j][1]
+                if np.isfinite(lo) or np.isfinite(hi):
+                    a = lo if np.isfinite(lo) else hi - 1.0
+                    b = hi if np.isfinite(hi) else lo + 1.0
+                    for i in range(self.ngauss):
+                        idx = self.ngauss + i * self.nvars + j
+                        self.minparams[idx] = a + (i + 1) / (self.ngauss + 1) * (b - a)
         self.scales = np.array(scales)
+        self.uparams = Util.t_if(self.minparams, self.scales, Util.f2u)
+
+    def _init_params_from_data_finite_domain(self, data):
+        """When domain is finite, set initial mus from data percentiles and modest sigmas so the optimizer starts near the peaks."""
+        bounds = getattr(self.cmnd, "_domain_bounds", None)
+        if bounds is None or self.ngauss < 2:
+            return
+        data = np.asarray(data)
+        if data.size == 0:
+            return
+        # Flatten so we can index by variable
+        if data.ndim == 1:
+            data = np.reshape(data, (-1, 1))
+        n = data.shape[0]
+        for j in range(self.nvars):
+            lo, hi = bounds[j][0], bounds[j][1]
+            if not (np.isfinite(lo) and np.isfinite(hi)):
+                continue
+            col = data[:, j]
+            # Initial mus = percentiles of data along this dimension, sorted and clipped
+            pct = np.linspace(5, 95, self.ngauss)
+            mus_init = np.percentile(col, pct)
+            mus_init = np.sort(mus_init)
+            mus_init = np.clip(mus_init, lo, hi)
+            for i in range(self.ngauss):
+                idx = self.ngauss + i * self.nvars + j
+                self.minparams[idx] = mus_init[i]
+            # Initial sigmas: start with a fraction of domain width so we don't drift to flat
+            width = hi - lo
+            sigma_init = min(0.25 * width, max(0.05 * width, np.std(col) * 0.5))
+            for i in range(self.ngauss):
+                idx = self.ngauss + self.Ndim + i * self.nvars + j
+                if idx < len(self.minparams):
+                    self.minparams[idx] = sigma_init
         self.uparams = Util.t_if(self.minparams, self.scales, Util.f2u)
 
     def pmap(self, minparams):
@@ -2458,6 +2697,31 @@ class FitCMND:
         self.minargs = dict(method="Powell")
         self.minargs.update(args)
 
+        # When domain is finite, set bounds so mus stay inside the domain and sigmas stay > 0
+        has_finite_domain = getattr(self.cmnd, "_domain_bounds", None) is not None and any(
+            np.isfinite(self.cmnd._domain_bounds[j][0])
+            or np.isfinite(self.cmnd._domain_bounds[j][1])
+            for j in range(self.nvars)
+        )
+        if has_finite_domain and "bounds" not in args:
+            # bounds from domain; sigma: lower 1e-6 to avoid div by zero; upper limited so fit cannot go flat
+            sigma_hi = 0.99 * self._sigmax
+            domain_widths = [
+                self.cmnd._domain_bounds[j][1] - self.cmnd._domain_bounds[j][0]
+                for j in range(self.nvars)
+                if np.isfinite(self.cmnd._domain_bounds[j][0])
+                and np.isfinite(self.cmnd._domain_bounds[j][1])
+            ]
+            if domain_widths:
+                # Cap sigma at ~2x largest bounded dimension width to avoid flat (uniform) optimum
+                sigma_hi = min(sigma_hi, 2.0 * max(domain_widths))
+            bounds_tuple = self.set_bounds(bounds=(1e-6, sigma_hi))
+            self.minargs["bounds"] = bounds_tuple
+            if self.minargs.get("method") == "Powell":
+                self.minargs["method"] = "L-BFGS-B"
+            # Data-based init: set initial mus (and sigmas) from data so optimizer starts near the peaks
+            self._init_params_from_data_finite_domain(data)
+
         self.solution = minimize(
             self.cmnd.sample_cmnd_likelihood,
             self.uparams,
@@ -2561,6 +2825,7 @@ class FitCMND:
                 ax_twin.set_ylabel("PDF")
                 ax_twin.set_ylim(0, None)
             G.fig.tight_layout()
+            multimin_watermark(G.axs[0][0])
             self.fig = G.fig
             return G
         if self.nvars > 2:
@@ -2569,6 +2834,7 @@ class FitCMND:
             G.plot_hist(Xfits, **hargs)
             G.scatter_plot(self.data, **sargs)
             G.fig.tight_layout()
+            multimin_watermark(G.axs[0][0])
             self.fig = G.fig
             return G
         else:
@@ -2673,7 +2939,14 @@ class FitCMND:
             Formatted bounds for minimization.
         """
         if boundsm is None:
-            boundsm = ((-np.inf, np.inf),) * self.nvars
+            # Use domain as bounds for means when domain is finite
+            if getattr(self.cmnd, "_domain_bounds", None) is not None:
+                boundsm = tuple(
+                    (self.cmnd._domain_bounds[j][0], self.cmnd._domain_bounds[j][1])
+                    for j in range(self.nvars)
+                )
+            else:
+                boundsm = ((-np.inf, np.inf),) * self.nvars
 
         # Regular bounds
         if boundw is None:

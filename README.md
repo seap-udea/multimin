@@ -302,6 +302,38 @@ $$\mathcal{N}(\mathbf{x}; \boldsymbol{\mu}, \mathbf{\Sigma}) = \frac{1}{\sqrt{(2
 
 A parameter table in LaTeX is also available via ``F.cmnd.tabulate(sort_by='weight', type='latex')``.
 
+## Truncated multivariate distributions.
+
+In real problems the domain of the variables is not infinite but bounded into a semi-finite region. 
+
+If we start from the unbounded multivariate normal distribution:
+
+$$
+\mathcal{N}_k(\tilde U; \tilde \mu, \Sigma) = \frac{1}{\sqrt{(2\pi)^{k}\det \Sigma}} \exp\left[ -\frac{1}{2}(\tilde U - \tilde \mu)^{\rm T}\Sigma^{-1}(\tilde U - \tilde \mu) \right]
+$$
+
+Let $T\subset\{l,\dots,m\}$, where $l\leq k$ and $m\leq k$ be the set of indices of the truncated variables, and let $a_i<b_i$ be the truncation bounds for $i\in S$. Define the truncation region:
+
+$$
+A_S \;=\; \Big\{\tilde U\in\mathbb{R}^k:\ a_i \le \tilde U_i \le b_i \ \ \forall\, i\in T \Big\},
+$$
+
+with the remaining coordinates $i\notin T$ unbounded. The partially-truncated multivariate normal distribution is defined by
+
+$$
+\mathcal{TN}_T(\tilde U;\tilde\mu,\Sigma,\mathbf{a}_T,\mathbf{b}_T) \;=\; \frac{\mathcal{N}(\tilde U;\tilde\mu,\Sigma)\,\mathbf{1}_{A_T}(\tilde U)}{Z_ (\tilde\mu,\Sigma,\mathbf{a}_T,\mathbf{b}_T)},
+$$
+
+where $\mathbf{1}_{A_T}$ is the indicator function of $A_T$ and the normalization constant is
+
+$$
+Z_T(\tilde\mu,\Sigma,\mathbf{a}_T,\mathbf{b}_T)
+\;=\;
+\int_{A_T}\mathcal{N}(\tilde T;\tilde\mu,\Sigma)\,d\tilde T
+\;=\;
+\mathbb{P}_{\tilde T\sim\mathcal{N}(\tilde\mu,\Sigma)}\!\left(\tilde T\in A_T\right).
+$$
+
 ## Citation
 
 The numerical tools and codes provided in this package have been developed and tested over several years of scientific research.
