@@ -17,24 +17,38 @@ _DIV_IMG_PAT = re.compile(
     r'<div\s+align="center">\s*<img\s+src="([^"]+)"\s+alt="([^"]*)"\s+width="([^"]+)"\s*/>\s*</div>',
     re.IGNORECASE | re.DOTALL,
 )
+# Pattern: logo block with link <div align="center">\n  <a href="HREF">\n  <img src="URL" alt="ALT" width="W"/>\n  </a>\n</div>
+_DIV_A_IMG_PAT = re.compile(
+    r'<div\s+align="center">\s*<a\s+href="([^"]+)">\s*<img\s+src="([^"]+)"\s+alt="([^"]*)"\s+width="([^"]+)"\s*/>\s*</a>\s*</div>',
+    re.IGNORECASE | re.DOTALL,
+)
 
 
 def _preprocess_readme_for_rst(md_text: str) -> str:
-    """Replace HTML image blocks with Markdown image syntax so pypandoc outputs .. image:: (no raw)."""
+    """Replace HTML image blocks with Markdown so pypandoc outputs .. figure:: / .. image:: (no raw)."""
+    # Logo with link -> [![alt](imgurl)](href)
+    def repl_logo(m):
+        href, imgurl, alt = m.group(1), m.group(2), m.group(3)
+        return "\n\n[![{alt}]({imgurl})]({href})\n\n".format(alt=alt, imgurl=imgurl, href=href)
+    md_text = _DIV_A_IMG_PAT.sub(repl_logo, md_text)
+    # Plain div+img -> ![alt](url)
     def repl(m):
-        url, alt, width = m.group(1), m.group(2), m.group(3)
-        return '\n\n![{alt}]({url})\n\n'.format(alt=alt, url=url)
+        url, alt = m.group(1), m.group(2)
+        return "\n\n![{alt}]({url})\n\n".format(alt=alt, url=url)
     return _DIV_IMG_PAT.sub(repl, md_text)
 
 
 def _add_width_to_gallery_images(rst_text: str, width: str = "600") -> str:
-    """Add :width: to .. image:: or .. figure:: lines that point to our examples/gallery."""
+    """Add :width: to .. image:: or .. figure:: lines (our gallery images and header logo)."""
     lines = rst_text.splitlines()
     out = []
     for line in lines:
         out.append(line)
         stripped = line.strip()
-        if (stripped.startswith(".. image::") or stripped.startswith(".. figure::")) and "gallery" in line and "png" in line:
+        if not (stripped.startswith(".. image::") or stripped.startswith(".. figure::")):
+            continue
+        # Gallery figures (png) or header logo (webp)
+        if ("gallery" in line and "png" in line) or ("docs" in line and "webp" in line):
             out.append("   :width: " + width)
     return "\n".join(out)
 
@@ -114,7 +128,7 @@ setup(
         "Programming Language :: Python :: 3.11",
         "Operating System :: OS Independent",
     ],
-    version='0.6.1',
+    version='0.6.2',
     package_dir={"": "src"},
     packages=find_packages(where="src"),
     test_suite="pytest",
