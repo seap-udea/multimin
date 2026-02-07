@@ -8,6 +8,9 @@
 
 - **Versions 0.6.x**:
   - Include univariate distributions.
+  - You can ask the CMND objects to show and return a simplified version of the function.
+  - CMND objects now have a method to show in a table its parameters.
+  - LaTeX support, ie. the CMND class is able to produce LaTeX code tabulating parameters and function.
 
 - **Versions 0.5.x**:
 
