@@ -10,6 +10,8 @@
 
   - Official release of `MultiMin`.
   - Major refactoring of the codebase.
+  - Improved documentation.
+  - Conservative naming conventions.
 
 ### Planned Features
 
