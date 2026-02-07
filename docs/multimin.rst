@@ -5,3 +5,4 @@ Multi-dimensional gaussian fit
    :members:
    :undoc-members:
    :show-inheritance:
+   :exclude-members: welcome, MultiMinBase

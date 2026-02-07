@@ -84,6 +84,30 @@ The covariance matrix $\Sigma$ elements are defined as $\Sigma_{ij} = \rho_{ij}\
 
 The normalization condition on $p(\tilde U)$ implies that the set of weights $\{w_k\}_M$ are also normalized, i.e., $\sum_i w_i=1$.
 
+## Fitting procedure
+
+To estimate the parameters of the CMND that best describe a given dataset ,
+we use the **Likelihood Statistics** method.
+
+Given a dataset of $S$ objects with state vectors $\{\tilde U_k\}_{k=1}^S$, the likelihood $\mathcal{L}$ of the
+CMND parameters is defined as the product of the probability densities evaluated at each data point:
+
+$$
+\mathcal{L} = \prod_{i=1}^{S} \mathcal{C}_M(\tilde U_i)
+$$
+
+The goal is to find the set of parameters (weights, means, and covariances) that maximize this likelihood.
+In practice, it is numerically more stable to minimize the **negative normalized log-likelihood**:
+
+$$
+-\frac{\log \mathcal{L}}{S} = -\frac{1}{S} \sum_{i=1}^{S} \log \mathcal{C}_M(\tilde U_i)
+$$
+
+This approach allows us to fit the distribution without making strong assumptions about the underlying
+normality of the data, effectively treating the CMND as a series expansion of the true probability density function.
+
+In `MultiMin`, we use the `scipy.optimize.minimize` function to find the set of parameters that minimize the negative normalized log-likelihood.
+
 ## Quick Start
 
 Getting started with `MultiMin` is straightforward. Import the package:
