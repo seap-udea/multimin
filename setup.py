@@ -9,6 +9,25 @@
 from setuptools import setup, find_packages
 import os
 
+def _strip_unsafe_rst_directives(rst_text: str) -> str:
+    """Remove .. raw:: and .. container:: blocks so PyPI's renderer accepts the RST."""
+    lines = rst_text.splitlines()
+    out = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        stripped = line.strip()
+        # Skip directive and its body (next indented lines)
+        if stripped.startswith(".. raw::") or stripped == ".. container::":
+            i += 1
+            while i < len(lines) and (lines[i].startswith(" ") or lines[i].strip() == ""):
+                i += 1
+            continue
+        out.append(line)
+        i += 1
+    return "\n".join(out).replace("\n\n\n\n", "\n\n")  # collapse excess blank lines
+
+
 # Prefer RST long_description for PyPI so LaTeX math (via :math: and .. math::) can render
 _readme_path = os.path.join(os.path.dirname(__file__), "README.md")
 long_description_content_type = "text/markdown"
@@ -23,7 +42,7 @@ try:
                 format=_fmt,
                 extra_args=["--wrap=none"],
             )
-            long_description = long_description.replace(".. container::", "")
+            long_description = _strip_unsafe_rst_directives(long_description)
             long_description_content_type = "text/x-rst"
             break
         except RuntimeError:
