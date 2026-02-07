@@ -5,10 +5,12 @@
 ##################################################################
 # License: GNU Affero General Public License v3 (AGPL-3.0)       #
 ##################################################################
-
 from setuptools import setup, find_packages
 import os
 
+##################################################################
+# Prepare README.md for include Math in LaTeX format for PyPI
+##################################################################
 def _strip_unsafe_rst_directives(rst_text: str) -> str:
     """Remove .. raw:: and .. container:: blocks so PyPI's renderer accepts the RST."""
     lines = rst_text.splitlines()
@@ -54,10 +56,10 @@ except (ImportError, OSError):
     with open(_readme_path, "r", encoding="utf-8") as _fh:
         long_description = _fh.read()
 
+##################################################################
+# Setup the package
+##################################################################
 setup(
-    # ######################################################################
-    # BASIC DESCRIPTION
-    # ######################################################################
     name="multimin",
     author="Jorge I. Zuluaga",
     author_email="jorge.zuluaga@udea.edu.co",
@@ -67,9 +69,6 @@ setup(
     url="https://github.com/seap-udea/multimin",
     keywords="fitting multivariate-normal statistics optimization",
     license="AGPL-3.0-only",
-    # ######################################################################
-    # CLASSIFIER
-    # ######################################################################
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
         "Intended Audience :: Science/Research",
@@ -79,23 +78,13 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
-        # "License :: OSI Approved :: GNU Affero General Public License v3",
         "Operating System :: OS Independent",
     ],
-    version='0.5.10',
-    # ######################################################################
-    # FILES
-    # ######################################################################
+    version='0.5.11',
     package_dir={"": "src"},
     packages=find_packages(where="src"),
-    # ######################################################################
-    # TESTS
-    # ######################################################################
     test_suite="pytest",
     tests_require=["pytest"],
-    # ######################################################################
-    # DEPENDENCIES
-    # ######################################################################
     install_requires=[
         "numpy>=1.20.0",
         "scipy>=1.7.0",
@@ -106,9 +95,6 @@ setup(
         "pypandoc"
     ],
     python_requires=">=3.8",
-    # ######################################################################
-    # OPTIONS
-    # ######################################################################
     include_package_data=True,
     package_data={"": ["data/*.*", "tests/*.*"]},
 )
