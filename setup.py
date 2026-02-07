@@ -7,35 +7,59 @@
 ##################################################################
 from setuptools import setup, find_packages
 import os
+import re
 
 ##################################################################
 # Prepare README.md for include Math in LaTeX format for PyPI
 ##################################################################
+# Pattern: <div align="center">\n  <img src="URL" alt="ALT" width="W"/>\n</div>
+_DIV_IMG_PAT = re.compile(
+    r'<div\s+align="center">\s*<img\s+src="([^"]+)"\s+alt="([^"]*)"\s+width="([^"]+)"\s*/>\s*</div>',
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def _preprocess_readme_for_rst(md_text: str) -> str:
+    """Replace HTML image blocks with Markdown image syntax so pypandoc outputs .. image:: (no raw)."""
+    def repl(m):
+        url, alt, width = m.group(1), m.group(2), m.group(3)
+        return '\n\n![{alt}]({url})\n\n'.format(alt=alt, url=url)
+    return _DIV_IMG_PAT.sub(repl, md_text)
+
+
+def _add_width_to_gallery_images(rst_text: str, width: str = "600") -> str:
+    """Add :width: to .. image:: or .. figure:: lines that point to our examples/gallery."""
+    lines = rst_text.splitlines()
+    out = []
+    for line in lines:
+        out.append(line)
+        stripped = line.strip()
+        if (stripped.startswith(".. image::") or stripped.startswith(".. figure::")) and "gallery" in line and "png" in line:
+            out.append("   :width: " + width)
+    return "\n".join(out)
+
+
 def _strip_unsafe_rst_directives(rst_text: str) -> str:
-    """Remove .. raw:: (except html) and .. container:: blocks so PyPI's renderer accepts the RST.
-    Keep .. raw:: html so images and divs in the README are shown on PyPI."""
+    """Remove .. raw:: and .. container:: blocks (PyPI disables raw directive)."""
     lines = rst_text.splitlines()
     out = []
     i = 0
     while i < len(lines):
         line = lines[i]
         stripped = line.strip()
-        # Skip .. container:: entirely
         if stripped == ".. container::":
             i += 1
             while i < len(lines) and (lines[i].startswith(" ") or lines[i].strip() == ""):
                 i += 1
             continue
-        # Skip .. raw:: only when not html (keep .. raw:: html for images)
         if stripped.startswith(".. raw::"):
-            if "html" not in stripped.lower():
+            i += 1
+            while i < len(lines) and (lines[i].startswith(" ") or lines[i].strip() == ""):
                 i += 1
-                while i < len(lines) and (lines[i].startswith(" ") or lines[i].strip() == ""):
-                    i += 1
-                continue
+            continue
         out.append(line)
         i += 1
-    return "\n".join(out).replace("\n\n\n\n", "\n\n")  # collapse excess blank lines
+    return "\n".join(out).replace("\n\n\n\n", "\n\n")
 
 
 # Prefer RST long_description for PyPI so LaTeX math (via :math: and .. math::) can render
@@ -43,23 +67,25 @@ _readme_path = os.path.join(os.path.dirname(__file__), "README.md")
 long_description_content_type = "text/markdown"
 try:
     import pypandoc
-    # Convert Markdown to RST; tex_math_dollars makes $...$ and $$...$$ become :math: and .. math::
+    with open(_readme_path, "r", encoding="utf-8") as _fh:
+        _md = _fh.read()
+    _md = _preprocess_readme_for_rst(_md)  # HTML img -> ![alt](url) so RST has .. image:: (no raw)
     for _fmt in ("markdown+tex_math_dollars", "markdown"):
         try:
-            long_description = pypandoc.convert_file(
-                _readme_path,
+            long_description = pypandoc.convert_text(
+                _md,
                 "rst",
                 format=_fmt,
                 extra_args=["--wrap=none"],
             )
             long_description = _strip_unsafe_rst_directives(long_description)
+            long_description = _add_width_to_gallery_images(long_description)
             long_description_content_type = "text/x-rst"
             break
         except RuntimeError:
             continue
     else:
-        with open(_readme_path, "r", encoding="utf-8") as _fh:
-            long_description = _fh.read()
+        long_description = _md
 except (ImportError, OSError):
     with open(_readme_path, "r", encoding="utf-8") as _fh:
         long_description = _fh.read()
