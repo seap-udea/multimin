@@ -2238,13 +2238,13 @@ class ComposedMultiVariateNormal(object):
             if univariate:
                 mu_val = round(float(mu.ravel()[0]), decimals)
                 sigma_val = round(float(np.sqrt(Sigma.ravel()[0])), decimals)
-                parts.append("$w_{0} = {1}$, $\\mu_{0} = {2}$, $\\sigma_{0} = {3}$.".format(k, w, mu_val, sigma_val))
+                parts.append("$$w_{0} = {1},\\quad \\mu_{0} = {2},\\quad \\sigma_{0} = {3}$$".format(k, w, mu_val, sigma_val))
             else:
-                parts.append("$w_{} = {}$".format(k, w))
+                parts.append("$$w_{} = {}$$".format(k, w))
                 mu_arr = self._fmt_latex_array(mu, decimals)
                 sig_arr = self._fmt_latex_array(Sigma, decimals)
-                parts.append("$\\boldsymbol{{\\mu}}_{} = \\left( {}\\right)$".format(k, mu_arr))
-                parts.append("$\\mathbf{{\\Sigma}}_{} = \\left( {}\\right)$".format(k, sig_arr))
+                parts.append("$$\\boldsymbol{{\\mu}}_{} = \\left( {}\\right)$$".format(k, mu_arr))
+                parts.append("$$\\mathbf{{\\Sigma}}_{} = \\left( {}\\right)$$".format(k, sig_arr))
             parts.append("")
         # Definition of the normal distribution
         parts.append("Here the normal distribution is defined as:")

@@ -288,13 +288,17 @@ $$f(\mathbf{x}) = w_1 \, \mathcal{N}(\mathbf{x}; \boldsymbol{\mu}_1, \mathbf{\Si
 
 where
 
-$w_1 = 0.502413$
-$\boldsymbol{\mu}_1 = \left( \begin{array}{c} 1.02777 \\ 0.501464 \\ -0.598576 \end{array}\right)$
-$\mathbf{\Sigma}_1 = \left( \begin{array}{ccc} 1.083742 & -0.358056 & 0.200127 \\ -0.358056 & 2.311214 & -1.74296 \\ 0.200127 & -1.74296 & 4.396044 \end{array}\right)$
+$$w_1 = 0.502413$$
 
-$w_2 = 0.497587$
-$\boldsymbol{\mu}_2 = \left( \begin{array}{c} 1.003249 \\ -0.504171 \\ 0.456568 \end{array}\right)$
-$\mathbf{\Sigma}_2 = \left( \begin{array}{ccc} 0.641322 & 0.106588 & 0.033927 \\ 0.106588 & 0.05814 & 0.006255 \\ 0.033927 & 0.006255 & 10.440096 \end{array}\right)$
+$$\boldsymbol{\mu}_1 = \left( \begin{array}{c} 1.02777 \\ 0.501464 \\ -0.598576 \end{array}\right)$$
+
+$$\mathbf{\Sigma}_1 = \left( \begin{array}{ccc} 1.083742 & -0.358056 & 0.200127 \\ -0.358056 & 2.311214 & -1.74296 \\ 0.200127 & -1.74296 & 4.396044 \end{array}\right)$$
+
+$$w_2 = 0.497587$$
+
+$$\boldsymbol{\mu}_2 = \left( \begin{array}{c} 1.003249 \\ -0.504171 \\ 0.456568 \end{array}\right)$$
+
+$$\mathbf{\Sigma}_2 = \left( \begin{array}{ccc} 0.641322 & 0.106588 & 0.033927 \\ 0.106588 & 0.05814 & 0.006255 \\ 0.033927 & 0.006255 & 10.440096 \end{array}\right)$$
 
 Here the normal distribution is defined as:
 
@@ -315,7 +319,7 @@ $$
 Let $T\subset\{l,\dots,m\}$, where $l\leq k$ and $m\leq k$ be the set of indices of the truncated variables, and let $a_i<b_i$ be the truncation bounds for $i\in S$. Define the truncation region:
 
 $$
-A_S \;=\; \Big\{\tilde U\in\mathbb{R}^k:\ a_i \le \tilde U_i \le b_i \ \ \forall\, i\in T \Big\},
+A_S \;=\; \left\{\tilde U\in\mathbb{R}^k:\ a_i \le \tilde U_i \le b_i \ \ \forall\, i\in T \right\},
 $$
 
 with the remaining coordinates $i\notin T$ unbounded. The partially-truncated multivariate normal distribution is defined by
