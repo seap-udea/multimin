@@ -319,7 +319,7 @@ $$
 Let $T\subset\{l,\dots,m\}$, where $l\leq k$ and $m\leq k$ be the set of indices of the truncated variables, and let $a_i<b_i$ be the truncation bounds for $i\in S$. Define the truncation region:
 
 $$
-A_S \;=\; \{\tilde U\in\mathbb{R}^k:\ a_i \le \tilde U_i \le b_i \ \ \forall\, i\in T \}
+A_S = \{\tilde U\in\mathbb{R}^k:\ a_i \le \tilde U_i \le b_i \ \ \forall\, i\in T \}
 $$
 
 with the remaining coordinates $i\notin T$ unbounded. The partially-truncated multivariate normal distribution is defined by
