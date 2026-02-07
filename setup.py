@@ -7,26 +7,9 @@
 ##################################################################
 
 from setuptools import setup, find_packages
-import os
 
-# Read version from src/multimin/version.py
-version_file = os.path.join(os.path.dirname(__file__), "src", "multimin", "version.py")
-with open(version_file, "r") as f:
-    exec(f.read())
-
-try:
-    import pypandoc
-
-    long_description = pypandoc.convert_file("README.md", "rst")
-    # Fix: remove empty container directives that pandoc generates from div tags
-    long_description = long_description.replace(".. container::", "")
-    long_description_content_type = "text/x-rst"
-    print("DEBUG: [setup.py] Converted README to reST via pypandoc.")
-except (IOError, ImportError) as e:
-    print(f"DEBUG: [setup.py] Conversion failed: {e}. Falling back to Markdown.")
-    with open("README.md", "r", encoding="utf-8") as fh:
-        long_description = fh.read()
-    long_description_content_type = "text/markdown"
+with open("README.md", "r", encoding="utf-8") as fh:
+    long_description = fh.read()
 
 setup(
     # ######################################################################
@@ -37,7 +20,7 @@ setup(
     author_email="jorge.zuluaga@udea.edu.co",
     description="MultiMin: Multivariate Gaussian fitting",
     long_description=long_description,
-    long_description_content_type=long_description_content_type,
+    long_description_content_type="text/markdown",
     url="https://github.com/seap-udea/multimin",
     keywords="fitting multivariate-normal statistics optimization",
     license="AGPL-3.0-only",
