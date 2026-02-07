@@ -212,6 +212,111 @@ G = F.plot_fit(
   <img src="https://raw.githubusercontent.com/seap-udea/multimin/master/examples/gallery/quickstart_fit_result_3d.png" alt="Fit Result" width="600"/>
 </div>
 
+### 6. Inspect Parameters and Get Explicit PDF Function
+
+You can tabulate the fitted parameters and obtain an explicit Python function that evaluates the fitted PDF. Below, each step is shown with its output.
+
+**Stage 1: Tabulate the fitted CMND**
+
+```python
+F.cmnd.tabulate(sort_by='weight')
+```
+
+Output (example):
+
+```
+             w  mu_1  mu_2  mu_3  sigma_1  sigma_2  sigma_3  rho_12   rho_13   rho_23
+component
+1          0.5  1.02  0.52 -0.59     1.07     1.51     2.08   -0.28    0.22   -0.57
+2          0.5  1.01 -0.50  0.53     0.79     0.24     3.23    0.56    0.02  -0.02
+```
+
+**Stage 2: Get the source code and a callable function**
+
+```python
+code, cmnd = F.cmnd.get_function()
+```
+
+Output (the printed code, which you can copy):
+
+```
+from multimin import nmd
+
+def cmnd(X):
+
+    mu1 = [1.02, 0.52, -0.59]
+    Sigma1 = [[1.14, -0.38, 0.36], [-0.38, 2.28, -1.70], [0.36, -1.70, 4.35]]
+    n1 = nmd(X, mu1, Sigma1)
+
+    mu2 = [1.01, -0.50, 0.53]
+    Sigma2 = [[0.63, 0.11, 0.04], [0.11, 0.06, -0.01], [0.04, -0.01, 10.41]]
+    n2 = nmd(X, mu2, Sigma2)
+
+    w1 = 0.52
+    w2 = 0.48
+
+    return (
+        w1*n1
+        + w2*n2
+    )
+```
+
+**Stage 3: Evaluate the PDF at a point**
+
+```python
+cmnd([1.0, 0.5, -0.5])
+```
+
+Output (example):
+
+```
+0.12345678901234567
+```
+
+**Stage 4: LaTeX output for papers**
+
+You can get the fitted PDF as a LaTeX string (suitable for inclusion in papers) with parameter values and the definition of the normal distribution:
+
+```python
+latex_str, _ = F.cmnd.get_function(print_code=False, type='latex', decimals=4)
+print(latex_str)
+```
+
+Example output:
+
+$$f(\mathbf{x}) = w_1 \, \mathcal{N}(\mathbf{x}; \boldsymbol{\mu}_1, \mathbf{\Sigma}_1) + w_2 \, \mathcal{N}(\mathbf{x}; \boldsymbol{\mu}_2, \mathbf{\Sigma}_2)$$
+
+where
+
+$w_1 = 0.502413$
+$\boldsymbol{\mu}_1 = \left( \begin{array}{c}
+        1.02777 \\
+        0.501464 \\
+        -0.598576
+    \end{array}\right)$
+$\mathbf{\Sigma}_1 = \left( \begin{array}{ccc}
+        1.083742 & -0.358056 & 0.200127 \\
+        -0.358056 & 2.311214 & -1.74296 \\
+        0.200127 & -1.74296 & 4.396044
+    \end{array}\right)$
+
+$w_2 = 0.497587$
+$\boldsymbol{\mu}_2 = \left( \begin{array}{c}
+        1.003249 \\
+        -0.504171 \\
+        0.456568
+    \end{array}\right)$
+$\mathbf{\Sigma}_2 = \left( \begin{array}{ccc}
+        0.641322 & 0.106588 & 0.033927 \\
+        0.106588 & 0.05814 & 0.006255 \\
+        0.033927 & 0.006255 & 10.440096
+    \end{array}\right)$
+
+Here the normal distribution is defined as:
+
+$$\mathcal{N}(\mathbf{x}; \boldsymbol{\mu}, \mathbf{\Sigma}) = \frac{1}{\sqrt{(2\pi)^{{k}} \det \mathbf{\Sigma}}} \exp\left[-\frac{1}{2}(\mathbf{x}-\boldsymbol{\mu})^{\top} \mathbf{\Sigma}^{{-1}} (\mathbf{x}-\boldsymbol{\mu})\right]$$
+
+A parameter table in LaTeX is also available via `F.cmnd.tabulate(sort_by='weight', type='latex')`.
 
 ## Citation
 

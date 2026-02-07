@@ -37,6 +37,7 @@ from hashlib import md5
 from time import time
 from scipy.optimize import minimize
 from matplotlib import pyplot as plt
+from scipy.stats import norm, multivariate_normal as multinorm
 
 import numpy as np
 import spiceypy as spy
@@ -609,6 +610,34 @@ class Stats(object):
         """
         M[np.triu_indices(M.shape[0], k=0)] = np.array(F)
         M[:, :] = np.triu(M) + np.tril(M.T, -1)
+
+
+# =============================================================================
+# SIMPLE MULTIVARIATE NORMAL PDF
+# =============================================================================
+def nmd(X, mu, Sigma):
+    """PDF of a multivariate normal at x; mu=mean vector, Sigma=covariance matrix.
+
+    Parameters
+    ----------
+    X : array-like
+        Point(s) at which to evaluate the PDF. Shape (n,) or (N, n).
+    mu : array-like
+        Mean vector, shape (n,).
+    Sigma : array-like
+        Covariance matrix, shape (n, n). For univariate (n=1), a 1x1 matrix or scalar variance.
+
+    Returns
+    -------
+    float or ndarray
+        PDF value(s). Scalar if x is 1D, array if x is 2D.
+    """
+    if isinstance(X, float):
+        value = norm.pdf(X, mu, Sigma)
+    else:
+        value = multinorm.pdf(X, mu, Sigma)
+
+    return value
 
 
 # =============================================================================
@@ -1582,8 +1611,6 @@ class ComposedMultiVariateNormal(object):
         else:
             raise ValueError("X must be a point (length nvars) or array of points (N x nvars)")
 
-        from scipy.stats import multivariate_normal as multinorm
-
         value = np.zeros(X.shape[0] if X.ndim == 2 else 1)
         for w, muvec, Sigma in zip(self.weights, self.mus, self.Sigmas):
             try:
@@ -1711,7 +1738,7 @@ class ComposedMultiVariateNormal(object):
         figsize : int, optional
             Size of each axis (default 2).
         sargs : dict, optional
-            Dictionary with options for the scatter plot. Ex. sargs=dict(color='r').
+            Dictionary with options for the scatter plot. Default: dict(s=0.5, edgecolor=None, color='b').
         hargs : dict, optional
             Dictionary with options for the hist2d function. Ex. hargs=dict(bins=50).
 
@@ -1753,7 +1780,7 @@ class ComposedMultiVariateNormal(object):
 
         # If not provided, use default scatter plot arguments
         if hargs is None and sargs is None:
-            sargs = dict(s=0.5, alpha=0.5)
+            sargs = dict(s=0.5, edgecolor=None, color="b")
 
         properties = dict()
         for i in range(self.nvars):
@@ -1866,7 +1893,180 @@ class ComposedMultiVariateNormal(object):
             {self.stdcorr.tolist()}"""
         return msg
 
-    def tabulate(self, sort_by="weight", return_df=True):
+    def _fmt_py_literal(self, arr, decimals=6):
+        """Format array as a Python list literal for source code."""
+        arr = np.asarray(arr)
+        if arr.ndim == 0:
+            return str(round(float(arr), decimals))
+        if arr.ndim == 1:
+            return "[" + ", ".join(str(round(float(x), decimals)) for x in arr) + "]"
+        return "[" + ", ".join(self._fmt_py_literal(row, decimals) for row in arr) + "]"
+
+    def _fmt_latex_array(self, arr, decimals=6):
+        """Format array as LaTeX \\begin{array}...\\end{array}."""
+        arr = np.asarray(arr)
+        if arr.ndim == 0:
+            return str(round(float(arr), decimals))
+        if arr.ndim == 1:
+            body = " \\\\\n        ".join(
+                str(round(float(x), decimals)) for x in arr
+            )
+            return "\\begin{array}{c}\n        " + body + "\n    \\end{array}"
+        # matrix
+        nrows, ncols = arr.shape
+        rows = [
+            " & ".join(str(round(float(arr[i, j]), decimals)) for j in range(ncols))
+            for i in range(nrows)
+        ]
+        body = " \\\\\n        ".join(rows)
+        colspec = "c" * ncols
+        return "\\begin{array}{" + colspec + "}\n        " + body + "\n    \\end{array}"
+
+    def get_function(self, print_code=True, decimals=6, type="python"):
+        """
+        Return the source code of ``cmnd(X)`` and an executable function (type='python'),
+        or LaTeX code with parameters in \\begin{array} (type='latex').
+
+        Parameters
+        ----------
+        print_code : bool, optional
+            If True (default), print the string to screen so it can be copied.
+        decimals : int, optional
+            Number of decimal places for numeric literals (default 6).
+        type : str, optional
+            - ``'python'`` (default): return Python source and callable.
+            - ``'latex'``: return LaTeX formula with explicit parameters and matrices in \\begin{array}.
+
+        Returns
+        -------
+        tuple (str, callable or None)
+            First element: source code (Python or LaTeX). Second: callable cmnd if type='python', else None.
+
+        Examples
+        --------
+        >>> code, cmnd = CMND.get_function()
+        >>> latex_str, _ = CMND.get_function(type='latex')
+        """
+        if self.Sigmas is None:
+            raise ValueError("Sigmas not set; cannot generate get_function()")
+        if type == "latex":
+            return self._get_function_latex(print_code=print_code, decimals=decimals)
+        # type == "python"
+        lines = ["from multimin import nmd", "", "def cmnd(X):", ""]
+        univariate = self.nvars == 1
+        for n in range(self.ngauss):
+            i = n + 1
+            w = round(float(self.weights[n]), decimals)
+            mu = self.mus[n]
+            Sigma = self.Sigmas[n]
+            if univariate:
+                mu_val = round(float(mu.ravel()[0]), decimals)
+                sigma_val = round(float(np.sqrt(Sigma.ravel()[0])), decimals)
+                lines.append("    mu{} = {}".format(i, mu_val))
+                lines.append("    sigma{} = {}".format(i, sigma_val))
+                lines.append("    n{} = nmd(X, mu{}, sigma{})".format(i, i, i))
+            else:
+                mu_str = self._fmt_py_literal(mu, decimals)
+                Sigma_str = self._fmt_py_literal(Sigma, decimals)
+                lines.append("    mu{} = {}".format(i, mu_str))
+                lines.append("    Sigma{} = {}".format(i, Sigma_str))
+                lines.append("    n{} = nmd(X, mu{}, Sigma{})".format(i, i, i))
+            lines.append("")
+        for n in range(self.ngauss):
+            i = n + 1
+            w = round(float(self.weights[n]), decimals)
+            lines.append("    w{} = {}".format(i, w))
+        lines.append("")
+        # Return on multiple lines: w1*n1 + w2*n2 + ...
+        return_terms = ["    return (", "        w1*n1"]
+        for n in range(1, self.ngauss):
+            return_terms.append("        + w{}*n{}".format(n + 1, n + 1))
+        return_terms.append("    )")
+        lines.extend(return_terms)
+        code = "\n".join(lines)
+        if print_code:
+            print(code)
+        # Execute the code to obtain the callable cmnd
+        namespace = {"__builtins__": __builtins__}
+        try:
+            exec(code, namespace)
+            func = namespace["cmnd"]
+        except Exception:
+            func = None
+        return code, func
+
+    def _get_function_latex(self, print_code=True, decimals=6):
+        """Build LaTeX string for the CMND PDF with parameters in \\begin{array}."""
+        parts = []
+        univariate = self.nvars == 1
+        if univariate:
+            # Univariate: plain x, \\mu, \\sigma (no bold); use \\sigma not \\Sigma
+            if self.ngauss == 1:
+                parts.append(
+                    "$$f(x) = w_1 \\, "
+                    "\\mathcal{N}(x; \\mu_1, \\sigma_1)$$"
+                )
+            else:
+                terms = [
+                    "w_{} \\, \\mathcal{{N}}(x; \\mu_{}, \\sigma_{})".format(k, k, k)
+                    for k in range(1, self.ngauss + 1)
+                ]
+                parts.append("$$f(x) = " + " + ".join(terms) + "$$")
+        else:
+            # Multivariate: \\mathbf{x}, \\boldsymbol{\\mu}, \\mathbf{\\Sigma}
+            if self.ngauss == 1:
+                parts.append(
+                    "$$f(\\mathbf{x}) = w_1 \\, "
+                    "\\mathcal{N}(\\mathbf{x}; \\boldsymbol{\\mu}_1, \\mathbf{\\Sigma}_1)$$"
+                )
+            else:
+                terms = [
+                    "w_{0} \\, \\mathcal{{N}}(\\mathbf{{x}}; \\boldsymbol{{\\mu}}_{0}, \\mathbf{{\\Sigma}}_{0})".format(
+                        k
+                    )
+                    for k in range(1, self.ngauss + 1)
+                ]
+                parts.append("$$f(\\mathbf{x}) = " + " + ".join(terms) + "$$")
+        parts.append("")
+        parts.append("where")
+        parts.append("")
+        for n in range(self.ngauss):
+            k = n + 1
+            w = round(float(self.weights[n]), decimals)
+            mu = self.mus[n]
+            Sigma = self.Sigmas[n]
+            if univariate:
+                mu_val = round(float(mu.ravel()[0]), decimals)
+                sigma_val = round(float(np.sqrt(Sigma.ravel()[0])), decimals)
+                parts.append("$w_{0} = {1}$, $\\mu_{0} = {2}$, $\\sigma_{0} = {3}$.".format(k, w, mu_val, sigma_val))
+            else:
+                parts.append("$w_{} = {}$".format(k, w))
+                mu_arr = self._fmt_latex_array(mu, decimals)
+                sig_arr = self._fmt_latex_array(Sigma, decimals)
+                parts.append("$\\boldsymbol{{\\mu}}_{} = \\left( {}\\right)$".format(k, mu_arr))
+                parts.append("$\\mathbf{{\\Sigma}}_{} = \\left( {}\\right)$".format(k, sig_arr))
+            parts.append("")
+        # Definition of the normal distribution
+        parts.append("Here the normal distribution is defined as:")
+        parts.append("")
+        if univariate:
+            parts.append(
+                "$$\\mathcal{N}(x; \\mu, \\sigma) = "
+                "\\frac{1}{\\sigma\\sqrt{2\\pi}} \\exp\\left(-\\frac{(x-\\mu)^2}{2\\sigma^2}\\right)$$"
+            )
+        else:
+            parts.append(
+                "$$\\mathcal{N}(\\mathbf{x}; \\boldsymbol{\\mu}, \\mathbf{\\Sigma}) = "
+                "\\frac{1}{\\sqrt{(2\\pi)^{{k}} \\det \\mathbf{\\Sigma}}} "
+                "\\exp\\left[-\\frac{1}{2}(\\mathbf{x}-\\boldsymbol{\\mu})^{\\top} "
+                "\\mathbf{\\Sigma}^{{-1}} (\\mathbf{x}-\\boldsymbol{\\mu})\\right]$$"
+            )
+        latex = "\n".join(parts).strip()
+        if print_code:
+            print(latex)
+        return latex, None
+
+    def tabulate(self, sort_by="weight", return_df=True, type="df"):
         """
         Build a table of CMND parameters: weights, means (mu_i), standard deviations (sigma_i),
         and correlations (rho_ij, i < j). Diagonal rho_ii are 1 by definition and omitted.
@@ -1880,13 +2080,16 @@ class ComposedMultiVariateNormal(object):
               (closest to origin first).
         return_df : bool, optional
             If True (default), return a pandas DataFrame. If False, print the table and return None.
+            Ignored when type='latex'.
+        type : str, optional
+            - ``'df'`` (default): return pandas DataFrame (or print and return None).
+            - ``'latex'``: return a LaTeX tabular string suitable for papers.
 
         Returns
         -------
-        pandas.DataFrame or None
-            Table with columns: w, mu_1, mu_2, ..., sigma_1, sigma_2, ..., rho_12, rho_13, ...
-            (rho_ij only for i < j; no diagonal). Index is component index (1-based).
-            Returns None if return_df is False.
+        pandas.DataFrame, str, or None
+            DataFrame when type='df' and return_df=True; LaTeX string when type='latex';
+            None when type='df' and return_df=False.
         """
         import pandas as pd
 
@@ -1930,12 +2133,45 @@ class ComposedMultiVariateNormal(object):
                 row += [np.nan] * Noff
             rows.append(row)
 
+        if type == "latex":
+            latex_output = self._tabulate_latex(cols, order, rows)
+            print(latex_output)
+            return latex_output
+
         df = pd.DataFrame(rows, columns=cols, index=np.array(order) + 1)
         df.index.name = "component"
         if not return_df:
             print(df.to_string())
             return None
         return df
+
+    def _tabulate_latex(self, cols, order, rows, decimals=4):
+        """Build LaTeX tabular string for the parameter table."""
+        colspec = "l" + "r" * (len(cols))
+        header_parts = ["$k$", "$w$"]
+        for i in range(self.nvars):
+            header_parts.append("$\\mu_{}$".format(i + 1))
+        for i in range(self.nvars):
+            header_parts.append("$\\sigma_{}$".format(i + 1))
+        for i in range(self.nvars):
+            for j in range(i + 1, self.nvars):
+                header_parts.append("$\\rho_{{{}}}$".format(str(i + 1) + str(j + 1)))
+        header = " & ".join(header_parts)
+        lines = [
+            "\\begin{table*}\n\\begin{tabular}{" + colspec + "}",
+            "\\hline",
+            header + " \\\\",
+            "\\hline",
+        ]
+        for idx, row in zip(np.array(order) + 1, rows):
+            fmt_row = [str(idx)] + [
+                "{:.{d}g}".format(x, d=decimals) if np.isfinite(x) else "---"
+                for x in row
+            ]
+            lines.append(" & ".join(fmt_row) + " \\\\")
+        lines.append("\\hline")
+        lines.append("\\end{tabular}\n\\end{table*}")
+        return "\n".join(lines)
 
 
 class FitCMND:
@@ -2235,7 +2471,13 @@ class FitCMND:
         self._update_prefix()
 
     def plot_fit(
-        self, N=10000, figsize=2, props=None, ranges=None, hargs=dict(), sargs=dict()
+        self,
+        N=10000,
+        figsize=2,
+        props=None,
+        ranges=None,
+        hargs=None,
+        sargs=None,
     ):
         """
         Plot the result of the fitting procedure.
@@ -2251,9 +2493,12 @@ class FitCMND:
         ranges : list, optional
             Array of ranges of the properties. Ex. ranges=[-3,3],[-5,5].
         hargs : dict, optional
-            Dictionary with options for the hist2d function. Ex. hargs=dict(bins=50).
+            Dictionary with options for the hist2d function (or 1D hist when nvars=1).
+            For univariate fits, if provided the sample is shown as a histogram; otherwise
+            the sample is shown as a scatter plot.
         sargs : dict, optional
-            Dictionary with options for the scatter plot. Ex. sargs=dict(color='r').
+            Dictionary with options for the scatter plot. Default: dict(s=0.5, edgecolor=None, color='b').
+            For univariate fits, used when hargs is not provided (fit is always shown as PDF).
 
         Returns
         -------
@@ -2264,22 +2509,45 @@ class FitCMND:
         --------
         >>> F = FitCMND(1, 3)
         >>> F.fit_data(data, verbose=0, tol=1e-3, options=dict(maxiter=100, disp=True))
-        >>> G = F.plot_fit(figsize=3, hargs=dict(bins=30, cmap='YlGn'), sargs=dict(s=0.5, edgecolor='None', color='r'))
+        >>> G = F.plot_fit(figsize=3, hargs=dict(bins=30, cmap='YlGn'), sargs=dict(s=0.5, edgecolor=None, color='r'))
         """
-        Xfits = self.cmnd.rvs(N)
+        if hargs is None:
+            hargs = dict()
+        if sargs is None:
+            sargs = dict(s=0.5, edgecolor=None, color="b")
         properties = dict()
         for i in range(self.nvars):
             symbol = string.ascii_letters[i] if props is None else props[i]
-            if ranges is not None:
-                rang = ranges[i]
-            else:
-                rang = None
-            properties[symbol] = dict(label=f"${symbol}$", range=rang)
+            rang = ranges[i] if ranges is not None else None
             properties[symbol] = dict(label=f"${symbol}$", range=rang)
 
         from matplotlib import pyplot as plt
 
-        if self.nvars == 1 or self.nvars > 2:
+        if self.nvars == 1:
+            # Univariate: show fitted PDF; show sample as histogram (if hargs) and/or scatter (if sargs or neither)
+            G = DensityPlot(properties, figsize=figsize)
+            ax = G.axs[0][0]
+            if hargs:
+                G.plot_hist(self.data, **hargs)
+            if sargs or (not hargs and not sargs):
+                G.scatter_plot(self.data, **sargs)
+            # Overlay fitted PDF (same axis when we have hist, else twin when only scatter)
+            x_min, x_max = self.data[:, 0].min(), self.data[:, 0].max()
+            margin = max(1e-6, 0.1 * (x_max - x_min))
+            x_curve = np.linspace(x_min - margin, x_max + margin, 300)
+            pdf_vals = self.cmnd.pdf(x_curve.reshape(-1, 1))
+            if hargs:
+                ax.plot(x_curve, pdf_vals, "k-", lw=2, label="fit PDF")
+            else:
+                ax_twin = ax.twinx()
+                ax_twin.plot(x_curve, pdf_vals, "k-", lw=2, label="fit PDF")
+                ax_twin.set_ylabel("PDF")
+                ax_twin.set_ylim(0, None)
+            G.fig.tight_layout()
+            self.fig = G.fig
+            return G
+        if self.nvars > 2:
+            Xfits = self.cmnd.rvs(N)
             G = DensityPlot(properties, figsize=figsize)
             G.plot_hist(Xfits, **hargs)
             G.scatter_plot(self.data, **sargs)
@@ -2288,6 +2556,7 @@ class FitCMND:
             return G
         else:
             # nvars == 2: 2D hist2d + scatter
+            Xfits = self.cmnd.rvs(N)
             keys = list(properties.keys())
             fig = plt.figure(figsize=(5, 5))
             ax = fig.gca()
