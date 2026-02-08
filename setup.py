@@ -118,7 +118,7 @@ setup(
     keywords="fitting multivariate-normal statistics optimization",
     license="AGPL-3.0-only",
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta",
         "Intended Audience :: Science/Research",
         "Topic :: Scientific/Engineering :: Astronomy",
         "Programming Language :: Python :: 3",
@@ -128,7 +128,7 @@ setup(
         "Programming Language :: Python :: 3.11",
         "Operating System :: OS Independent",
     ],
-    version='0.9.1',
+    version='0.6.6',
     package_dir={"": "src"},
     packages=find_packages(where="src"),
     test_suite="pytest",
