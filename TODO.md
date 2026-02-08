@@ -6,6 +6,10 @@ List of projects, improvements and ideas for future MultiMin development. No imp
 
 ## Functionality and API
 
+- [] **Fitting functions**
+  - Instead of fitting data, fit functions.
+  - Fitting functions in 1- and N-dimensions.
+
 - [ ] **Optimization and fitters**
   - Try other optimizers besides `scipy.optimize.minimize` (e.g. emcee, dynesty) for uncertainty estimation.
   - Option to use L-BFGS-B or gradient-free methods for large problems.
@@ -17,17 +21,7 @@ List of projects, improvements and ideas for future MultiMin development. No imp
 
 - [ ] **Initialization and fitting**
   - Automatic initialization of means/widths from K-means or initial mixture by components.
-  - Automatic search for number of components (BIC/AIC or cross-validation).
-  - In `savefit`: rename argument `objfile` to `prefix` for clarity.
-
-- [ ] **Orbital elements**
-  - Decide whether to introduce an in-house `Orbit` class or integrate an external package (rebound, poliastro, etc.).
-  - Allow arguments `W`, `w`, `M` (and other parametrizations) for the elements PDF.
-  - Compute elements before 4 orbital periods using rebound (or alternative).
-
-- [ ] **Units and constants**
-  - Define policy for physical units and constants (astronomical, SI) in data and outputs.
-
+  
 ---
 
 ## Visualization (DensityPlot and related)
@@ -35,8 +29,7 @@ List of projects, improvements and ideas for future MultiMin development. No imp
 - [ ] **Richer plots** (in line with “Richer density plots” in WHATSNEW)
   - Density contours overlaid on 2D panels.
   - Option for shared or per-panel colorbar in 2D histograms.
-  - Consistent legends and labels across plot types (univariate already improved).
-
+  
 - [ ] **Output and gallery**
   - Save multiple figures to `gallery` programmatically (e.g. helper or script).
   - Create `gallery` directory automatically on install or on first use of routines that save figures.
@@ -56,24 +49,13 @@ List of projects, improvements and ideas for future MultiMin development. No imp
   - Performance tutorial (fit times, sample size, number of components).
   - Full pipeline example: raw data → transform → fit → export (function/LaTeX).
 
-- [ ] **Tests**
-  - Routines to measure execution times and track performance regressions.
-
 ---
 
 ## Infrastructure and quality
 
-- [ ] **Data and storage**
-  - Improve data handling (I/O, formats, validation).
-  - Option for external repository (e.g. Google Drive) to store and share CMND fits.
-
 - [ ] **UX and feedback**
   - Integrate `tqdm` (or similar) in long-running tasks (fit, sampling, save).
   - Optional progress messages or logging in `fit_data` and heavy functions.
-
-- [ ] **Packaging and CI**
-  - Review and update `MANIFEST.in` / `pyproject.toml` for files that must be distributed.
-  - CI for tests, lint and (optionally) docs build on each push/PR.
 
 ---
 
@@ -91,7 +73,6 @@ List of projects, improvements and ideas for future MultiMin development. No imp
 
 ## Open ideas
 
-- [ ] Support for unnormalized weights (softmax or other parametrization) in the user interface.
 - [ ] High-level “fit from dataframe” interface (columns → variables, default options).
 - [ ] Post-fit diagnostic tools (residuals, QQ, histogram vs PDF comparison).
 - [ ] Option to use JAX or vectorized NumPy for log-likelihood and gradients in large problems.
