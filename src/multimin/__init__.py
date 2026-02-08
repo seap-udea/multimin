@@ -756,6 +756,46 @@ def multimin_watermark(ax, frac=1/4, alpha=1):
     return text
 
 
+def _props_to_properties(properties, nvars, ranges=None):
+    """Convert properties (list or DensityPlot-style dict) to properties dict for DensityPlot.
+
+    - If properties is a dict: use as-is (DensityPlot-style); each value must have 'label'
+      and optionally 'range'. Keys define variable names; first nvars keys are used.
+    - If properties is a list or sequence: use each element as variable name and as axis
+      label, with range=None unless ranges is provided (backward compatible).
+    - If properties is None: use ascii_letters and ranges from the ranges argument.
+    """
+    if properties is None:
+        return {
+            string.ascii_letters[i]: dict(
+                label=f"${string.ascii_letters[i]}$",
+                range=ranges[i] if ranges is not None and i < len(ranges) else None,
+            )
+            for i in range(nvars)
+        }
+    if hasattr(properties, "keys"):
+        keys = list(properties.keys())[:nvars]
+        out = {}
+        for i, k in enumerate(keys):
+            v = properties[k]
+            if isinstance(v, dict):
+                out[k] = dict(
+                    label=v.get("label", str(k)),
+                    range=v.get("range") if "range" in v else None,
+                )
+            else:
+                out[k] = dict(label=str(v), range=None)
+        return out
+    # list or sequence: use elements as names and labels, range from ranges
+    return {
+        (str(properties[i]) if i < len(properties) else string.ascii_letters[i]): dict(
+            label=str(properties[i]) if i < len(properties) else f"${string.ascii_letters[i]}$",
+            range=ranges[i] if ranges is not None and i < len(ranges) else None,
+        )
+        for i in range(nvars)
+    }
+
+
 class DensityPlot(object):
     """
     Create a grid of plots showing the projection of a N-dimensional data.
@@ -1969,7 +2009,7 @@ class ComposedMultiVariateNormal(object):
         self,
         data=None,
         N=10000,
-        props=None,
+        properties=None,
         ranges=None,
         figsize=2,
         sargs=None,
@@ -1984,10 +2024,12 @@ class ComposedMultiVariateNormal(object):
             Data to plot. If None it generate a sample.
         N : int, optional
             Number of points to generate the sample (default 10000).
-        props : list, optional
-            Array with the name of the properties. Ex. props=["x","y"].
+        properties : list or dict, optional
+            Property names or DensityPlot-style properties. List (e.g. properties=["x","y"]): each
+            element is used as axis label, range=None. Dict: same as DensityPlot, e.g.
+            properties=dict(x=dict(label=r"$x$", range=None), y=dict(label=r"$y$", range=[-1,1])).
         ranges : list, optional
-            Array of ranges of the properties. Ex. ranges=[-3,3],[-5,5].
+            Ranges per variable; used only when properties is a list or None. Ex. ranges=[[-3,3],[-5,5]].
         figsize : int, optional
             Size of each axis (default 2).
         sargs : dict, optional
@@ -2035,15 +2077,7 @@ class ComposedMultiVariateNormal(object):
         if hargs is None and sargs is None:
             sargs = dict(s=0.5, edgecolor=None, color="b")
 
-        properties = dict()
-        for i in range(self.nvars):
-            if props is None or i >= len(props):
-                symbol = string.ascii_letters[i]
-            else:
-                symbol = props[i]
-            rang = None if ranges is None else ranges[i]
-            properties[symbol] = dict(label=f"${symbol}$", range=rang)
-
+        properties = _props_to_properties(properties, self.nvars, ranges)
         G = DensityPlot(properties, figsize=figsize)
         ymax = -1e100
         if hargs is not None:
@@ -3289,7 +3323,7 @@ class FitCMND:
         self,
         N=10000,
         figsize=2,
-        props=None,
+        properties=None,
         ranges=None,
         hargs=None,
         sargs=None,
@@ -3303,10 +3337,11 @@ class FitCMND:
             number of points used to build a representation of the marginal distributions (default 10000).
         figsize : int, optional
             Size of each axis (default 2).
-        props : list, optional
-            Array with the name of the properties. Ex. props=["x","y"].
+        properties : list or dict, optional
+            Property names or DensityPlot-style properties. List: each element as axis label,
+            range=None. Dict: same as DensityPlot (keys with 'label' and optional 'range').
         ranges : list, optional
-            Array of ranges of the properties. Ex. ranges=[-3,3],[-5,5].
+            Ranges per variable; used only when properties is a list or None.
         hargs : dict, optional
             Dictionary with options for the hist2d function (or 1D hist when nvars=1).
             For univariate fits, if provided the sample is shown as a histogram; otherwise
@@ -3330,11 +3365,7 @@ class FitCMND:
             hargs = dict()
         if sargs is None:
             sargs = dict(s=0.5, edgecolor=None, color="b")
-        properties = dict()
-        for i in range(self.nvars):
-            symbol = string.ascii_letters[i] if props is None else props[i]
-            rang = ranges[i] if ranges is not None else None
-            properties[symbol] = dict(label=f"${symbol}$", range=rang)
+        properties = _props_to_properties(properties, self.nvars, ranges)
 
         from matplotlib import pyplot as plt
 

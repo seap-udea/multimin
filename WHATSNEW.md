@@ -9,6 +9,7 @@
 - **Versions 0.9.x**:
   - Beta versions.
   - All features working.
+  - Unifying option props in plotting routines.
 
 - **Versions 0.6.x**:
   - Include univariate distributions.

@@ -6,7 +6,7 @@ List of projects, improvements and ideas for future MultiMin development. No imp
 
 ## Functionality and API
 
-- [] **Fitting functions**
+- [ ] **Fitting functions**
   - Instead of fitting data, fit functions.
   - Fitting functions in 1- and N-dimensions.
 
@@ -18,6 +18,7 @@ List of projects, improvements and ideas for future MultiMin development. No imp
 - [ ] **Domains and truncation**
   - Explicit support for semi-infinite domains (e.g. \([a, +\infty)\)) in addition to finite intervals.
   - Documented, reusable utilities for mapping variables to unbounded domains (log, logit).
+  - When fitting in all-bound intervales, fit internally with the log-odds transformation and return the result in normal coordinates.
 
 - [ ] **Initialization and fitting**
   - Automatic initialization of means/widths from K-means or initial mixture by components.
