@@ -57,6 +57,11 @@ __url__ = "https://github.com/seap-udea/multimin"
 __license__ = "AGPL-3.0-only"
 __description__ = "MultiMin: Multivariate Gaussian fitting"
 
+# Global option: set to False to disable watermarks on all plots (DensityPlot, plot_sample, plot_fit).
+# Can be set after import: import multimin as mn; mn.show_watermark = False
+# Or via environment variable before import: MULTIMIN_NO_WATERMARK=1
+show_watermark = os.getenv("MULTIMIN_NO_WATERMARK", "").lower() not in ("1", "true", "yes")
+
 
 # Print a nice welcome message
 def welcome():
@@ -715,6 +720,8 @@ def multimin_watermark(ax, frac=1/4, alpha=1):
         ax: Class axes:
             Axe where the pryngles mark will be placed.
     """
+    if not show_watermark:
+        return None
     # Get the height of axe
     axh = (
         ax.get_window_extent()
@@ -1075,7 +1082,9 @@ class DensityPlot(object):
             self.set_ranges()
             self.set_tick_params()
             self.tight_layout()
-            multimin_watermark(ax)
+            if not getattr(self, "_watermark_added", False):
+                multimin_watermark(ax, frac=0.5)  # larger frac for single panel (match 2-panel size)
+                self._watermark_added = True
             return []
 
         hist = []
@@ -1141,7 +1150,7 @@ class DensityPlot(object):
         self.set_ranges()
         self.set_tick_params()
         self.tight_layout()
-        multimin_watermark(self.axs[0][0])
+        multimin_watermark(self.axs[0][0], frac=1/4*self.axs.shape[0])
         return hist
 
     def scatter_plot(self, data, **args):
@@ -1194,7 +1203,9 @@ class DensityPlot(object):
             self.set_ranges()
             self.set_tick_params()
             self.tight_layout()
-            multimin_watermark(ax)
+            if not getattr(self, "_watermark_added", False):
+                multimin_watermark(ax, frac=0.5)  # larger frac for single panel (match 2-panel size)
+                self._watermark_added = True
             return [sc]
 
         scatter = []
@@ -1210,7 +1221,7 @@ class DensityPlot(object):
         self.set_ranges()
         self.set_tick_params()
         self.tight_layout()
-        multimin_watermark(self.axs[0][0])
+        multimin_watermark(self.axs[0][0], frac=1/4*self.axs.shape[0])
         return scatter
 
 
@@ -2065,7 +2076,8 @@ class ComposedMultiVariateNormal(object):
             G.fig.subplots_adjust(top=0.88)  # room for legend above
         else:
             G.fig.tight_layout()
-        multimin_watermark(G.axs[0][0])
+        if not getattr(G, "_watermark_added", False):
+            multimin_watermark(G.axs[0][0], frac=0.5)  # univariate: larger watermark
         return G
 
     def _str_params(self):
@@ -3355,7 +3367,8 @@ class FitCMND:
                 ncol=len(handles), frameon=False
             )
             G.fig.subplots_adjust(top=0.88)  # room for legend above
-            multimin_watermark(G.axs[0][0])
+            if not getattr(G, "_watermark_added", False):
+                multimin_watermark(G.axs[0][0], frac=0.5)  # univariate: larger watermark
             self.fig = G.fig
             return G
         if self.nvars >= 2:
