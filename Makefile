@@ -2,7 +2,10 @@
 # multimin Makefile
 ##################################################################
 
-.PHONY: help install install-dev show test verify clean build docs push release env
+.PHONY: help install install-dev show test verify clean build docs push release env gallery
+
+NOTEBOOKS := examples/multimin_cmnd_quickstart.ipynb examples/multimin_cmnd_tutorial.ipynb examples/multimin_truncated_tutorial.ipynb examples/multimin_asteroids_application.ipynb
+GALLERY_TIMEOUT ?= 1200
 
 RELMODE=release
 PYTHON ?= python3
@@ -21,6 +24,7 @@ help:
 	@echo "  build        - Build distribution packages"
 	@echo ""
 	@echo "  docs         - Build documentation (installs docs requirements)"
+	@echo "  gallery     - Run example notebooks to regenerate images in examples/gallery"
 	@echo "  push         - Commit (all files) and push current branch"
 	@echo "  release      - Release a new version (usage: make release RELMODE=release VERSION=x.y.z)"
 	@echo "  env          - Create local dev environment (.multimin) and contrib directory"
@@ -78,6 +82,16 @@ clean:
 	
 build: clean
 	$(PYTHON) -m build
+
+gallery:
+	@echo "Regenerating gallery images by executing example notebooks..."
+	@mkdir -p examples/gallery
+	@for nb in $(NOTEBOOKS); do \
+		echo "Executing $$nb..."; \
+		cd examples && $(PYTHON) -m jupyter nbconvert --execute --to notebook --inplace \
+			--ExecutePreprocessor.timeout=$(GALLERY_TIMEOUT) "$$(basename $$nb)" && cd .. || exit 1; \
+	done
+	@echo "Gallery images updated in examples/gallery/"
 
 docs:
 	$(PYTHON) -m pip install -r docs/requirements.txt
