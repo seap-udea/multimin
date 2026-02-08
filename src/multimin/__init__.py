@@ -707,7 +707,7 @@ def _norm_const_box(mu, Sigma, a, b):
 # =============================================================================
 # VISUALIZATION
 # =============================================================================
-def multimin_watermark(ax, frac=1 / 6, alpha=0.5):
+def multimin_watermark(ax, frac=1/4, alpha=1):
     """Add a water mark to a 2d or 3d plot.
 
     Parameters:
@@ -2180,7 +2180,21 @@ class ComposedMultiVariateNormal(object):
             return "\\begin{array}{" + colspec + "} " + body + " \\end{array}"
         return "\\begin{array}{" + colspec + "}\n        " + body + "\n    \\end{array}"
 
-    def get_function(self, print_code=True, decimals=6, type="python"):
+    def _var_names(self, properties):
+        """Return list of variable names of length nvars. If properties is None, use '1','2',...; else use keys (dict) or elements (sequence)."""
+        if properties is None:
+            return [str(i + 1) for i in range(self.nvars)]
+        if hasattr(properties, "keys"):
+            names = list(properties.keys())
+        else:
+            names = list(properties)
+        if len(names) < self.nvars:
+            names = names + [str(i + 1) for i in range(len(names), self.nvars)]
+        elif len(names) > self.nvars:
+            names = names[: self.nvars]
+        return names
+
+    def get_function(self, print_code=True, decimals=6, type="python", properties=None):
         """
         Return the source code of ``cmnd(X)`` and an executable function (type='python'),
         or LaTeX code with parameters in \\begin{array} (type='latex').
@@ -2196,6 +2210,10 @@ class ComposedMultiVariateNormal(object):
             - ``'latex'``: return LaTeX formula with explicit parameters and matrices in \\begin{array}.
             LaTeX output is single-line per formula so it can be pasted into README or other
             RST-derived long descriptions without triggering PyPI/twine markup errors.
+        properties : dict or sequence, optional
+            If None (default), variable subscripts in parameters are numeric (mu_1, sigma_1, ...).
+            If a dict (e.g. from DensityPlot), its keys are used as variable names (mu_x, sigma_x, ...).
+            If a sequence, its elements are used in order. Length must match the number of variables.
 
         Returns
         -------
@@ -2210,8 +2228,11 @@ class ComposedMultiVariateNormal(object):
         if self.Sigmas is None:
             raise ValueError("Sigmas not set; cannot generate get_function()")
         if type == "latex":
-            return self._get_function_latex(print_code=print_code, decimals=decimals)
+            return self._get_function_latex(
+                print_code=print_code, decimals=decimals, properties=properties
+            )
         # type == "python"
+        var_names = self._var_names(properties)
         bounds = getattr(self, "_domain_bounds", None)
         has_finite_domain = (
             bounds is not None
@@ -2255,21 +2276,39 @@ class ComposedMultiVariateNormal(object):
                 Zk = self._normalization_constant(n)
                 Zk = round(float(Zk), decimals)
             if univariate:
+                vname = var_names[0]
                 mu_val = round(float(mu.ravel()[0]), decimals)
                 var_val = round(float(Sigma.ravel()[0]), decimals)
                 if has_finite_domain:
-                    lines.append("    mu{} = {}".format(i, mu_val))
-                    lines.append("    sigma{} = {}".format(i, var_val))
-                    lines.append("    n{} = tnmd(X, mu{}, sigma{}, a, b)".format(i, i, i))
+                    lines.append("    mu{}_{} = {}".format(i, vname, mu_val))
+                    lines.append("    sigma{}_{} = {}".format(i, vname, var_val))
+                    lines.append(
+                        "    n{} = tnmd(X, mu{}_{}, sigma{}_{}, a, b)".format(
+                            i, i, vname, i, vname
+                        )
+                    )
                 else:
                     sigma_val = round(float(np.sqrt(Sigma.ravel()[0])), decimals)
-                    lines.append("    mu{} = {}".format(i, mu_val))
-                    lines.append("    sigma{} = {}".format(i, sigma_val))
-                    lines.append("    n{} = nmd(X, mu{}, sigma{})".format(i, i, i))
+                    lines.append("    mu{}_{} = {}".format(i, vname, mu_val))
+                    lines.append("    sigma{}_{} = {}".format(i, vname, sigma_val))
+                    lines.append(
+                        "    n{} = nmd(X, mu{}_{}, sigma{}_{})".format(
+                            i, i, vname, i, vname
+                        )
+                    )
             else:
-                mu_str = self._fmt_py_literal(mu, decimals)
+                mu_parts = [
+                    "mu{}_{} = {}".format(
+                        i, var_names[v], round(float(mu.ravel()[v]), decimals)
+                    )
+                    for v in range(self.nvars)
+                ]
+                lines.extend("    " + p for p in mu_parts)
+                mu_list_str = ", ".join(
+                    "mu{}_{}".format(i, var_names[v]) for v in range(self.nvars)
+                )
+                lines.append("    mu{} = [{}]".format(i, mu_list_str))
                 Sigma_str = self._fmt_py_literal(Sigma, decimals)
-                lines.append("    mu{} = {}".format(i, mu_str))
                 lines.append("    Sigma{} = {}".format(i, Sigma_str))
                 if has_finite_domain:
                     lines.append("    Z{} = {}".format(i, Zk))
@@ -2300,9 +2339,10 @@ class ComposedMultiVariateNormal(object):
             func = None
         return code, func
 
-    def _get_function_latex(self, print_code=True, decimals=6):
+    def _get_function_latex(self, print_code=True, decimals=6, properties=None):
         """Build LaTeX string for the CMND PDF with parameters in \\begin{array}."""
         parts = []
+        var_names = self._var_names(properties)
         bounds = getattr(self, "_domain_bounds", None)
         has_finite_domain = (
             bounds is not None
@@ -2320,31 +2360,48 @@ class ComposedMultiVariateNormal(object):
             for j in range(self.nvars):
                 lo, hi = bounds[j][0], bounds[j][1]
                 if np.isfinite(lo) and np.isfinite(hi):
-                    idx = j + 1
-                    parts.append("- Variable $x_{}$ (index {}): domain $[{}, {}]$.".format(idx, idx, round(float(lo), decimals), round(float(hi), decimals)))
+                    vname = var_names[j]
+                    parts.append("- Variable $x_{{{}}}$ (index {}): domain $[{}, {}]$.".format(vname, j + 1, round(float(lo), decimals), round(float(hi), decimals)))
             parts.append("")
             parts.append("Truncation region: $A_T = \\{\\tilde{U} \\in \\mathbb{R}^k : a_i \\le \\tilde{U}_i \\le b_i \\;\\forall i \\in T\\}$, with $T$ the set of truncated indices.")
             parts.append("")
 
+        def _mu_sigma_sub(k):
+            """Subscript for mean/sigma: numeric 'k' or 'k,vname' when properties given."""
+            if properties is None:
+                return str(k), str(k)
+            v = var_names[0] if univariate else None
+            return (str(k) + "," + v) if v else str(k), (str(k) + "," + v) if v else str(k)
+
         if univariate:
             if has_finite_domain:
                 if self.ngauss == 1:
-                    parts.append("$$f(x) = w_1 \\, \\mathcal{TN}(x; \\mu_1, \\sigma_1, a, b)$$")
+                    msub, ssub = _mu_sigma_sub(1)
+                    parts.append(
+                        "$$f(x) = w_1 \\, \\mathcal{TN}(x; \\mu_{{{}}}, \\sigma_{{{}}}, a, b)$$".format(
+                            msub, ssub
+                        )
+                    )
                 else:
                     terms = [
-                        "w_{} \\, \\mathcal{{TN}}(x; \\mu_{}, \\sigma_{}, a, b)".format(k, k, k)
+                        "w_{} \\, \\mathcal{{TN}}(x; \\mu_{{{}}}, \\sigma_{{{}}}, a, b)".format(
+                            k, *_mu_sigma_sub(k)
+                        )
                         for k in range(1, self.ngauss + 1)
                     ]
                     parts.append("$$f(x) = " + " + ".join(terms) + "$$")
             else:
                 if self.ngauss == 1:
+                    msub, ssub = _mu_sigma_sub(1)
                     parts.append(
                         "$$f(x) = w_1 \\, "
-                        "\\mathcal{N}(x; \\mu_1, \\sigma_1)$$"
+                        "\\mathcal{N}(x; \\mu_{{{}}}, \\sigma_{{{}}})$$".format(msub, ssub)
                     )
                 else:
                     terms = [
-                        "w_{} \\, \\mathcal{{N}}(x; \\mu_{}, \\sigma_{})".format(k, k, k)
+                        "w_{} \\, \\mathcal{{N}}(x; \\mu_{{{}}}, \\sigma_{{{}}})".format(
+                            k, *_mu_sigma_sub(k)
+                        )
                         for k in range(1, self.ngauss + 1)
                     ]
                     parts.append("$$f(x) = " + " + ".join(terms) + "$$")
@@ -2396,14 +2453,23 @@ class ComposedMultiVariateNormal(object):
             Sigma = self.Sigmas[n]
             if univariate:
                 mu_val = round(float(mu.ravel()[0]), decimals)
+                msub, ssub = _mu_sigma_sub(k)
                 if has_finite_domain:
                     var_val = round(float(Sigma.ravel()[0]), decimals)
                     a0 = round(float(bounds[0][0]), decimals)
                     b0 = round(float(bounds[0][1]), decimals)
-                    parts.append("$$w_{0} = {1},\\quad \\mu_{0} = {2},\\quad \\sigma_{0}^2 = {3},\\quad a = {4},\\quad b = {5}$$".format(k, w, mu_val, var_val, a0, b0))
+                    parts.append(
+                        "$$w_{0} = {1},\\quad \\mu_{{{2}}} = {3},\\quad \\sigma_{{{4}}}^2 = {5},\\quad a = {6},\\quad b = {7}$$".format(
+                            k, w, msub, mu_val, ssub, var_val, a0, b0
+                        )
+                    )
                 else:
                     sigma_val = round(float(np.sqrt(Sigma.ravel()[0])), decimals)
-                    parts.append("$$w_{0} = {1},\\quad \\mu_{0} = {2},\\quad \\sigma_{0} = {3}$$".format(k, w, mu_val, sigma_val))
+                    parts.append(
+                        "$$w_{0} = {1},\\quad \\mu_{{{2}}} = {3},\\quad \\sigma_{{{4}}} = {5}$$".format(
+                            k, w, msub, mu_val, ssub, sigma_val
+                        )
+                    )
             else:
                 parts.append("$$w_{} = {}$$".format(k, w))
                 mu_arr = self._fmt_latex_array(mu, decimals)
@@ -2463,7 +2529,7 @@ class ComposedMultiVariateNormal(object):
             print(latex)
         return latex, None
 
-    def tabulate(self, sort_by="weight", return_df=True, type="df"):
+    def tabulate(self, sort_by="weight", return_df=True, type="df", properties=None):
         """
         Build a table of CMND parameters: weights, means (mu_i), standard deviations (sigma_i),
         and correlations (rho_ij, i < j). Diagonal rho_ii are 1 by definition and omitted.
@@ -2481,6 +2547,10 @@ class ComposedMultiVariateNormal(object):
         type : str, optional
             - ``'df'`` (default): return pandas DataFrame (or print and return None).
             - ``'latex'``: return a LaTeX tabular string suitable for papers.
+        properties : dict or sequence, optional
+            If None (default), column headers use numeric subscripts (mu_1, sigma_1, ...).
+            If a dict (e.g. from DensityPlot), its keys are used (mu_x, sigma_x, ...).
+            If a sequence, its elements are used in order.
 
         Returns
         -------
@@ -2490,13 +2560,14 @@ class ComposedMultiVariateNormal(object):
         """
         import pandas as pd
 
-        # Column names: w, mu_1..mu_nvars, sigma_1..sigma_nvars, rho_12, rho_13, ...
+        var_names = self._var_names(properties)
+        # Column names: w, mu_*.., sigma_*.., rho_*..
         cols = ["w"]
-        cols += [f"mu_{i+1}" for i in range(self.nvars)]
-        cols += [f"sigma_{i+1}" for i in range(self.nvars)]
+        cols += [f"mu_{name}" for name in var_names]
+        cols += [f"sigma_{name}" for name in var_names]
         for i in range(self.nvars):
             for j in range(i + 1, self.nvars):
-                cols.append(f"rho_{i+1}{j+1}")
+                cols.append(f"rho_{var_names[i]}{var_names[j]}")
 
         # Build rows (one per component)
         order = np.arange(self.ngauss)
@@ -2535,7 +2606,7 @@ class ComposedMultiVariateNormal(object):
             rows.append(row)
 
         if type == "latex":
-            latex_output = self._tabulate_latex(cols, order, rows)
+            latex_output = self._tabulate_latex(cols, order, rows, var_names=var_names)
             print(latex_output)
             return latex_output
 
@@ -2546,17 +2617,21 @@ class ComposedMultiVariateNormal(object):
             return None
         return df
 
-    def _tabulate_latex(self, cols, order, rows, decimals=4):
+    def _tabulate_latex(self, cols, order, rows, decimals=4, var_names=None):
         """Build LaTeX tabular string for the parameter table."""
+        if var_names is None:
+            var_names = [str(i + 1) for i in range(self.nvars)]
         colspec = "l" + "r" * (len(cols))
         header_parts = ["$k$", "$w$"]
-        for i in range(self.nvars):
-            header_parts.append("$\\mu_{}$".format(i + 1))
-        for i in range(self.nvars):
-            header_parts.append("$\\sigma_{}$".format(i + 1))
+        for name in var_names:
+            header_parts.append("$\\mu_{{{}}}$".format(name))
+        for name in var_names:
+            header_parts.append("$\\sigma_{{{}}}$".format(name))
         for i in range(self.nvars):
             for j in range(i + 1, self.nvars):
-                header_parts.append("$\\rho_{{{}}}$".format(str(i + 1) + str(j + 1)))
+                header_parts.append(
+                    "$\\rho_{{{}{}}}$".format(var_names[i], var_names[j])
+                )
         header = " & ".join(header_parts)
         lines = [
             "\\begin{table*}\n\\begin{tabular}{" + colspec + "}",
@@ -2758,6 +2833,123 @@ class FitCMND:
                         self.minparams[idx] = a + (i + 1) / (self.ngauss + 1) * (b - a)
         self.scales = np.array(scales)
         self.uparams = Util.t_if(self.minparams, self.scales, Util.f2u)
+        self._initial_params_set_by_user = False
+
+    def set_initial_params(self, mus=None, sigmas=None, rhos=None):
+        """
+        Set initial values for the minimization parameters (means, standard deviations, correlations).
+        Only the arguments provided are updated; the rest keep their current values.
+
+        Parameters
+        ----------
+        mus : array-like, optional
+            Initial means. Shape (ngauss, nvars) or (nvars,) to use the same means for all components.
+            Example: [0.2, 0.3] or [[0.2, 0.3], [0.8, 0.7]].
+        sigmas : array-like, optional
+            Initial standard deviations. Shape (ngauss, nvars) or (nvars,) to use the same for all components.
+        rhos : array-like, optional
+            Initial correlation coefficients (upper triangle). Shape (ngauss, Ncorr) or (Ncorr,) to use the same for all.
+            Ncorr = nvars*(nvars-1)/2.
+
+        Returns
+        -------
+        None
+
+        Examples
+        --------
+        >>> F = FitCMND(ngauss=2, nvars=2)
+        >>> F.set_initial_params(mus=[0.2, 0.3], sigmas=[0.1, 0.1])  # same for both components
+        >>> F.set_initial_params(mus=[[0.2, 0.3], [0.8, 0.7]], sigmas=[[0.1, 0.2], [0.1, 0.2]])
+        >>> F.fit_data(data)
+        """
+        mus = np.asarray(mus, dtype=float) if mus is not None else None
+        sigmas = np.asarray(sigmas, dtype=float) if sigmas is not None else None
+        rhos = np.asarray(rhos, dtype=float) if rhos is not None else None
+
+        def _broadcast_2d(arr, shape_2d, name, dims_desc):
+            """Broadcast to (ngauss, nvars) or (ngauss, Ncorr). If 1D, same row for all components."""
+            if arr is None:
+                return None
+            arr = np.atleast_1d(arr)
+            if arr.ndim == 1:
+                # Same values for all components
+                if arr.shape[0] != shape_2d[1]:
+                    raise ValueError(
+                        "{} 1D must have length {} ({}), got {}".format(
+                            name, shape_2d[1], dims_desc, arr.shape[0]
+                        )
+                    )
+                arr = np.tile(arr, (self.ngauss, 1))
+            else:
+                arr = np.atleast_2d(arr)
+                if arr.shape != shape_2d:
+                    raise ValueError(
+                        "{} must have shape {} or ({}), got {}".format(
+                            name, shape_2d, dims_desc, arr.shape
+                        )
+                    )
+            return arr
+
+        # minparams layout: [weights] + [mus] + [sigmas] + [1+rhos]
+        if self.ngauss > 1:
+            off_mu = self.ngauss
+            off_sig = self.ngauss + self.Ndim
+            off_rho = self.ngauss + 2 * self.Ndim
+        else:
+            off_mu = 0
+            off_sig = self.nvars
+            off_rho = self.nvars * 2
+
+        if mus is not None:
+            mus = _broadcast_2d(
+                mus, (self.ngauss, self.nvars), "mus", "nvars"
+            )
+            if self.ngauss > 1:
+                self.minparams[off_mu : off_mu + self.Ndim] = mus.ravel()
+            else:
+                self.minparams[off_mu : off_mu + self.nvars] = mus.ravel()
+
+        if sigmas is not None:
+            sigmas = _broadcast_2d(
+                sigmas, (self.ngauss, self.nvars), "sigmas", "nvars"
+            )
+            if self.ngauss > 1:
+                self.minparams[off_sig : off_sig + self.Ndim] = sigmas.ravel()
+            else:
+                self.minparams[off_sig : off_sig + self.nvars] = sigmas.ravel()
+
+        if rhos is not None:
+            rhos = _broadcast_2d(
+                rhos, (self.ngauss, self.Ncorr), "rhos", "Ncorr"
+            )
+            # Internally we store 1+rho so the unbound param is in a good range
+            if self.ngauss > 1:
+                self.minparams[off_rho : off_rho + self.ngauss * self.Ncorr] = (
+                    1.0 + rhos.ravel()
+                )
+            else:
+                self.minparams[off_rho : off_rho + self.Ncorr] = 1.0 + rhos.ravel()
+
+        self.uparams = Util.t_if(self.minparams, self.scales, Util.f2u)
+        self._initial_params_set_by_user = True
+
+    def _stdcorr_to_minparams(self, stdcorr):
+        """Inverse of pmap: stdcorr -> minparams (for use in normalized fit)."""
+        minparams = np.array(stdcorr[len(self.extrap) :], dtype=float)
+        if self.ngauss * self.Ncorr > 0:
+            minparams[-self.ngauss * self.Ncorr :] += 1
+        return minparams
+
+    def _stdcorr_from_weights_mus_sigmas_rhos(self, weights, mus, sigmas, rhos):
+        """Build stdcorr from unpacked arrays (rhos as correlations, not 1+rho).
+        Returns stdcorr without extrap (for use with cmnd.set_stdcorr).
+        To get FitCMND's stdcorr format (with extrap), prepend self.extrap."""
+        return np.concatenate([
+            np.asarray(weights).ravel(),
+            np.asarray(mus).ravel(),
+            np.asarray(sigmas).ravel(),
+            np.asarray(rhos).ravel(),
+        ])
 
     def _init_params_from_data_finite_domain(self, data):
         """When domain is finite, set initial mus from data percentiles and modest sigmas so the optimizer starts near the peaks."""
@@ -2837,7 +3029,7 @@ class FitCMND:
         )
         return log_l
 
-    def fit_data(self, data, verbose=0, advance=0, **args):
+    def fit_data(self, data, verbose=0, advance=0, normalize=False, **args):
         """
         Minimization procedure.
 
@@ -2851,6 +3043,10 @@ class FitCMND:
             Verbosity level for the sample_cmnd_likelihood routine (default 0).
         advance : int, optional
             If larger than 0 show advance each "advance" iterations (default 0).
+        normalize : bool, optional
+            If True and domain is finite, fit in normalized space (each variable scaled to [0, 1]
+            using the domain bounds). Improves conditioning when variables have very different
+            scales (e.g. [0, 1.3], [0, 1], [0, 180]) and can yield more stable, reproducible minima.
         **args : dict
             Options of the minimize routine (eg. tol=1e-6).
             A particularly interesting parameter is the minimization method.
@@ -2867,6 +3063,7 @@ class FitCMND:
         --------
         >>> F = FitCMND(1, 3)
         >>> F.fit_data(data, verbose=0, tol=1e-3, options=dict(maxiter=100, disp=True))
+        >>> F.fit_data(data, normalize=True)  # recommended when variable scales differ a lot
         """
         if advance:
             advance = int(advance)
@@ -2894,16 +3091,122 @@ class FitCMND:
             _advance = None
 
         self.data = np.copy(data)
+        data = np.asarray(data)
+        if data.ndim == 1:
+            data = data.reshape(-1, 1)
         self.cmnd._ignoreWarnings = self._ignoreWarnings
         self.minargs = dict(method="Powell")
         self.minargs.update(args)
 
         # When domain is finite, set bounds so mus stay inside the domain and sigmas stay > 0
-        has_finite_domain = getattr(self.cmnd, "_domain_bounds", None) is not None and any(
-            np.isfinite(self.cmnd._domain_bounds[j][0])
-            or np.isfinite(self.cmnd._domain_bounds[j][1])
+        bounds_orig = getattr(self.cmnd, "_domain_bounds", None)
+        has_finite_domain = bounds_orig is not None and any(
+            np.isfinite(bounds_orig[j][0]) or np.isfinite(bounds_orig[j][1])
             for j in range(self.nvars)
         )
+
+        # Optional: fit in normalized space [0,1] per variable for better conditioning
+        if normalize and has_finite_domain:
+            scale = np.zeros(self.nvars)
+            offset = np.zeros(self.nvars)
+            for j in range(self.nvars):
+                lo, hi = bounds_orig[j][0], bounds_orig[j][1]
+                if np.isfinite(lo) and np.isfinite(hi):
+                    offset[j], scale[j] = lo, hi - lo
+                else:
+                    offset[j] = np.nanmin(data[:, j])
+                    scale[j] = max(np.nanmax(data[:, j]) - offset[j], 1e-10)
+            data_fit = (data - offset) / scale
+            domain_norm = tuple([0.0, 1.0] for _ in range(self.nvars))
+            self.cmnd._domain_bounds = [tuple(x) for x in domain_norm]
+            # Transform current minparams to normalized space
+            stdcorr = self.pmap(self.minparams)
+            i = len(self.extrap)
+            # For ngauss==1 there are no weights in stdcorr after extrap; next are mus
+            w = (
+                np.array([1.0])
+                if self.ngauss == 1
+                else stdcorr[i : i + self.ngauss]
+            )
+            mus = stdcorr[i + (self.ngauss if self.ngauss > 1 else 0) : i + (self.ngauss if self.ngauss > 1 else 0) + self.Ndim].reshape(
+                self.ngauss, self.nvars
+            )
+            sigmas = stdcorr[
+                i + (self.ngauss if self.ngauss > 1 else 0) + self.Ndim : i + (self.ngauss if self.ngauss > 1 else 0) + 2 * self.Ndim
+            ].reshape(self.ngauss, self.nvars)
+            rhos = stdcorr[
+                i + (self.ngauss if self.ngauss > 1 else 0) + 2 * self.Ndim : i + (self.ngauss if self.ngauss > 1 else 0) + 2 * self.Ndim + self.ngauss * self.Ncorr
+            ].reshape(self.ngauss, self.Ncorr)
+            mus_norm = (mus - offset) / scale
+            sigmas_norm = sigmas / scale
+            stdcorr_norm_no_extrap = self._stdcorr_from_weights_mus_sigmas_rhos(
+                w, mus_norm, sigmas_norm, rhos
+            )
+            # For ngauss==1, minparams has no weight; for ngauss>1, use _stdcorr_to_minparams
+            if self.ngauss == 1:
+                # stdcorr_norm_no_extrap = [w, mus, sigmas, rhos] = [1, 3, 3, 3] = 10 elements
+                # minparams = [mus, sigmas, 1+rhos] = [3, 3, 3] = 9 elements
+                self.minparams = np.concatenate([
+                    stdcorr_norm_no_extrap[1:1+self.Ndim],  # mus
+                    stdcorr_norm_no_extrap[1+self.Ndim:1+2*self.Ndim],  # sigmas
+                    stdcorr_norm_no_extrap[1+2*self.Ndim:] + 1.0,  # 1+rhos
+                ])
+            else:
+                stdcorr_norm = np.concatenate([self.extrap, stdcorr_norm_no_extrap])
+                self.minparams = self._stdcorr_to_minparams(stdcorr_norm)
+            self.uparams = Util.t_if(self.minparams, self.scales, Util.f2u)
+            sigma_hi_norm = min(0.99 * self._sigmax, 2.0)
+            bounds_tuple = self.set_bounds(bounds=(1e-6, sigma_hi_norm))
+            self.minargs["bounds"] = bounds_tuple
+            if self.minargs.get("method") == "Powell":
+                self.minargs["method"] = "L-BFGS-B"
+            self.solution = minimize(
+                self.cmnd.sample_cmnd_likelihood,
+                self.uparams,
+                callback=_advance,
+                args=(data_fit, self.pmap, "stdcorr", self.scales, verbose),
+                **self.minargs,
+            )
+            if advance:
+                _advance(self.solution.x, show=True)
+            self.minparams = Util.t_if(self.solution.x, self.scales, Util.u2f)
+            stdcorr_norm = self.pmap(self.minparams)
+            i = len(self.extrap)
+            off = i + (self.ngauss if self.ngauss > 1 else 0)
+            w = (
+                np.array([1.0])
+                if self.ngauss == 1
+                else stdcorr_norm[i : i + self.ngauss]
+            )
+            mus_norm = stdcorr_norm[off : off + self.Ndim].reshape(
+                self.ngauss, self.nvars
+            )
+            sigmas_norm = stdcorr_norm[
+                off + self.Ndim : off + 2 * self.Ndim
+            ].reshape(self.ngauss, self.nvars)
+            rhos = stdcorr_norm[
+                off + 2 * self.Ndim : off + 2 * self.Ndim + self.ngauss * self.Ncorr
+            ].reshape(self.ngauss, self.Ncorr)
+            mus_orig = mus_norm * scale + offset
+            sigmas_orig = sigmas_norm * scale
+            stdcorr_orig = self._stdcorr_from_weights_mus_sigmas_rhos(
+                w, mus_orig, sigmas_orig, rhos
+            )
+            self.cmnd._domain_bounds = bounds_orig
+            self.cmnd.set_stdcorr(stdcorr_orig, self.nvars)
+            # Convert cmnd's stdcorr to FitCMND's minparams (for ngauss=1, minparams has no weight)
+            if self.ngauss == 1:
+                mus_flat = mus_orig.ravel()
+                sigmas_flat = sigmas_orig.ravel()
+                rhos_flat = (rhos + 1.0).ravel()
+                self.minparams = np.concatenate([mus_flat, sigmas_flat, rhos_flat])
+            else:
+                stdcorr_orig_with_extrap = np.concatenate([self.extrap, stdcorr_orig])
+                self.minparams = self._stdcorr_to_minparams(stdcorr_orig_with_extrap)
+            self.uparams = Util.t_if(self.minparams, self.scales, Util.f2u)
+            self._update_prefix()
+            return
+
         if has_finite_domain and "bounds" not in args:
             # bounds from domain; sigma: lower 1e-6 to avoid div by zero; upper limited so fit cannot go flat
             sigma_hi = 0.99 * self._sigmax
@@ -2920,8 +3223,9 @@ class FitCMND:
             self.minargs["bounds"] = bounds_tuple
             if self.minargs.get("method") == "Powell":
                 self.minargs["method"] = "L-BFGS-B"
-            # Data-based init: set initial mus (and sigmas) from data so optimizer starts near the peaks
-            self._init_params_from_data_finite_domain(data)
+            # Data-based init: set initial mus (and sigmas) from data unless user set them via set_initial_params
+            if not getattr(self, "_initial_params_set_by_user", False):
+                self._init_params_from_data_finite_domain(data)
 
         self.solution = minimize(
             self.cmnd.sample_cmnd_likelihood,
@@ -3029,7 +3333,7 @@ class FitCMND:
             multimin_watermark(G.axs[0][0])
             self.fig = G.fig
             return G
-        if self.nvars > 2:
+        if self.nvars >= 2:
             Xfits = self.cmnd.rvs(N)
             G = DensityPlot(properties, figsize=figsize)
             G.plot_hist(Xfits, **hargs)
