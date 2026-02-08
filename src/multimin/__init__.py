@@ -1064,6 +1064,14 @@ class DensityPlot(object):
             ax.hist(data[:, 0], **hargs_1d)
             ax.yaxis.set_label_position("left")
             ax.set_ylabel("density")
+            # Legend (univariate): if no twin yet, add legend for histogram only
+            handles, labels = ax.get_legend_handles_labels()
+            if handles and getattr(self, "_ax_twin", None) is None:
+                ax.legend(
+                    handles, labels, loc="lower center", bbox_to_anchor=(0.5, 1.02),
+                    ncol=len(handles), frameon=False
+                )
+                self.fig.subplots_adjust(top=0.88)
             self.set_ranges()
             self.set_tick_params()
             self.tight_layout()
@@ -1173,6 +1181,16 @@ class DensityPlot(object):
             prop_name = self.properties[0]
             ax_twin.set_ylabel("sample " + self.dproperties[prop_name]["label"], fontsize=self.fs)
             self._ax_twin = ax_twin  # store for reference
+            # Legend: combine primary ax (e.g. histogram) and twin (sample scatter)
+            handles, labels = ax.get_legend_handles_labels()
+            h2, l2 = ax_twin.get_legend_handles_labels()
+            handles, labels = handles + h2, labels + l2
+            if handles:
+                ax.legend(
+                    handles, labels, loc="lower center", bbox_to_anchor=(0.5, 1.02),
+                    ncol=len(handles), frameon=False
+                )
+                self.fig.subplots_adjust(top=0.88)  # room for legend above
             self.set_ranges()
             self.set_tick_params()
             self.tight_layout()
