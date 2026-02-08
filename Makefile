@@ -6,7 +6,7 @@
 
 RELMODE=release
 PYTHON ?= python3
-COMMIT_MSG ?= chore: sync tracked changes
+COMMIT_MSG ?= [FIX] Minor changes
 
 help:
 	@echo "MultiMin Development Makefile"
@@ -65,6 +65,7 @@ clean:
 	rm -rf .pytest_cache/
 	rm -rf .coverage
 	rm -rf htmlcov/
+	rm -rf tmp/*
 	find . -type d -name __pycache__ -exec rm -rf {} +
 	find . -type f -name '*.pyc' -delete
 	find . -type f -name '*.pyo' -delete
@@ -86,7 +87,12 @@ push:
 	@echo "Committing tracked changes (if any)..."
 	@if ! git diff --quiet || ! git diff --cached --quiet || [ -n "$$(git status --porcelain)" ]; then \
 		git add . && \
-		git commit -m "$(COMMIT_MSG)"; \
+		files="$$(git diff --cached --name-only | paste -sd', ' - || true)" && \
+		msg="$(COMMIT_MSG)" && \
+		if [ "$(origin COMMIT_MSG)" != "command line" ] && [ "$(origin COMMIT_MSG)" != "environment" ]; then \
+			if [ -n "$$files" ]; then msg="$$msg [$$files]"; fi; \
+		fi && \
+		git commit -m "$$msg"; \
 	else \
 		echo "Working tree is clean (tracked files); nothing to commit."; \
 	fi
