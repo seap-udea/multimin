@@ -331,10 +331,7 @@ $$
 where $\mathbf{1}_{A_T}$ is the indicator function of $A_T$ and the normalization constant is
 
 $$
-Z_T(\tilde\mu,\Sigma,\mathbf{a}_T,\mathbf{b}_T)=
-\int_{A_T}\mathcal{N}_k(\tilde T;\tilde\mu,\Sigma)\,d\tilde T
-=
-\mathbb{P}_{\tilde T\sim\mathcal{N}_k(\tilde\mu,\Sigma)}\left(\tilde T\in A_T\right).
+Z_T(\tilde\mu,\Sigma,\mathbf{a}_T,\mathbf{b}_T)= \int_{A_T}\mathcal{N}_k(\tilde T;\tilde\mu,\Sigma)\,d\tilde T = \mathbb{P}_{\tilde T\sim\mathcal{N}_k(\tilde\mu,\Sigma)}\left(\tilde T\in A_T\right).
 $$
 
 ### Example: univariate truncated mixture
