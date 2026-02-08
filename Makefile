@@ -98,3 +98,4 @@ release: clean push
 	@test -n "$(VERSION)" || (echo "ERROR: VERSION is required. Example: make release RELMODE=release VERSION=0.2.0" && exit 1)
 	@echo "Releasing a new version..."
 	@bash bin/release.sh $(RELMODE) $(VERSION)
+	@make push COMMIT_MSG="[REL] released version $(VERSION)"
