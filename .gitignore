@@ -173,3 +173,6 @@ src/multimin/tests/data/
 # Development
 dev
 tmp
+.github
+.cursorrules
+

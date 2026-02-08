@@ -2,7 +2,7 @@
 # multimin Makefile
 ##################################################################
 
-.PHONY: help install install-dev test verify clean build docs push release env
+.PHONY: help install install-dev show test verify clean build docs push release env
 
 RELMODE=release
 PYTHON ?= python3
@@ -14,6 +14,7 @@ help:
 	@echo "Available targets:"
 	@echo "  install      - Install the package"
 	@echo "  install-dev  - Install package in development mode with dev dependencies"
+	@echo "  show         - Show installed package version"
 	@echo "  test         - Run tests with pytest"
 	@echo "  verify       - Verify package installation"
 	@echo "  clean        - Remove build artifacts and cache files"
@@ -23,6 +24,10 @@ help:
 	@echo "  push         - Commit (all files) and push current branch"
 	@echo "  release      - Release a new version (usage: make release RELMODE=release VERSION=x.y.z)"
 	@echo "  env          - Create local dev environment (.multimin) and contrib directory"
+
+
+show:
+	@$(PYTHON) -m pip show multimin 2>/dev/null | awk '/^Version:/{print $$2}' | head -n 1 | grep -E '.' || (echo "multimin is not installed in this Python environment" >&2; exit 1)
 
 
 env:

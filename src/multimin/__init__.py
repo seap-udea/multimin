@@ -60,7 +60,7 @@ __description__ = "MultiMin: Multivariate Gaussian fitting"
 
 # Print a nice welcome message
 def welcome():
-    print(f"Welcome to MultiMin v{__version__}")
+    print(f"Welcome to MultiMin v{__version__}. ¡Al infinito y más allá!")
 
 
 if not os.getenv("MULTIMIN_NO_WELCOME"):
