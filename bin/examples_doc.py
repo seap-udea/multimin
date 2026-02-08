@@ -5,9 +5,38 @@ import shutil
 import json
 
 
+def fix_stream_outputs(nb):
+    """Ensure every stream output has 'name' (stdout/stderr) for nbsphinx validation."""
+    for cell in nb.get("cells", []):
+        for out in cell.get("outputs", []):
+            if out.get("output_type") == "stream" and "name" not in out:
+                out["name"] = "stdout"
+
+
+def fix_display_metadata(nb):
+    """Ensure display_data and execute_result outputs have 'metadata' for nbsphinx validation."""
+    for cell in nb.get("cells", []):
+        for out in cell.get("outputs", []):
+            if out.get("output_type") in ("display_data", "execute_result") and "metadata" not in out:
+                out["metadata"] = {}
+
+
+def fix_execute_result(nb):
+    """Ensure execute_result outputs have 'execution_count' for nbsphinx validation."""
+    for cell in nb.get("cells", []):
+        for out in cell.get("outputs", []):
+            if out.get("output_type") == "execute_result" and "execution_count" not in out:
+                out["execution_count"] = cell.get("execution_count", None)
+
+
 def process_notebook(src, dest):
     with open(src, "r") as f:
         nb = json.load(f)
+
+    # Fix outputs for nbsphinx validation
+    fix_stream_outputs(nb)
+    fix_display_metadata(nb)
+    fix_execute_result(nb)
 
     # Filter out footer cells
     new_cells = []

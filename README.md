@@ -179,7 +179,7 @@ hist = G.scatter_plot(data, **sargs)
 ```
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/seap-udea/multimin/master/examples/gallery/quickstart_data_density_scatter.png" alt="Data Scatter Plot" width="600"/>
+  <img src="https://raw.githubusercontent.com/seap-udea/multimin/master/examples/gallery/cmnd_data_density_scatter.png" alt="Data Scatter Plot" width="600"/>
 </div>
 
 ### 4. Initialize the Fitter and Run the Fit
@@ -209,7 +209,7 @@ G = F.plot_fit(
 ```
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/seap-udea/multimin/master/examples/gallery/quickstart_fit_result_3d.png" alt="Fit Result" width="600"/>
+  <img src="https://raw.githubusercontent.com/seap-udea/multimin/master/examples/gallery/cmnd_fit_result_3d.png" alt="Fit Result" width="600"/>
 </div>
 
 ### 6. Inspect Parameters and Get Explicit PDF Function
@@ -325,17 +325,47 @@ $$
 with the remaining coordinates $i\notin T$ unbounded. The partially-truncated multivariate normal distribution is defined by
 
 $$
-\mathcal{TN}_T(\tilde U;\tilde\mu,\Sigma,\mathbf{a}_T,\mathbf{b}_T) = \frac{\mathcal{N}(\tilde U;\tilde\mu,\Sigma)\,\mathbf{1}_{A_T}(\tilde U)}{Z_ (\tilde\mu,\Sigma,\mathbf{a}_T,\mathbf{b}_T)},
+\mathcal{TN}_T(\tilde U;\tilde\mu,\Sigma,\mathbf{a}_T,\mathbf{b}_T) = \frac{\mathcal{N}_k(\tilde U;\tilde\mu,\Sigma)\,\mathbf{1}_{A_T}(\tilde U)}{Z_ (\tilde\mu,\Sigma,\mathbf{a}_T,\mathbf{b}_T)},
 $$
 
 where $\mathbf{1}_{A_T}$ is the indicator function of $A_T$ and the normalization constant is
 
 $$
 Z_T(\tilde\mu,\Sigma,\mathbf{a}_T,\mathbf{b}_T)=
-\int_{A_T}\mathcal{N}(\tilde T;\tilde\mu,\Sigma)\,d\tilde T
+\int_{A_T}\mathcal{N}_k(\tilde T;\tilde\mu,\Sigma)\,d\tilde T
 =
-\mathbb{P}_{\tilde T\sim\mathcal{N}(\tilde\mu,\Sigma)}\left(\tilde T\in A_T\right).
+\mathbb{P}_{\tilde T\sim\mathcal{N}_k(\tilde\mu,\Sigma)}\left(\tilde T\in A_T\right).
 $$
+
+### Example: univariate truncated mixture
+
+Define a mixture of two Gaussians on the interval $[0, 1]$ with the **domain** parameter, generate data, and fit with `FitCMND(..., domain=[[0, 1]])`:
+
+```python
+import numpy as np
+import multimin as mn
+
+# Truncated mixture of 2 Gaussians on [0, 1]
+CMND_1d = mn.ComposedMultiVariateNormal(
+    mus=[0.2, 0.8],
+    weights=[0.5, 0.5],
+    Sigmas=[0.01, 0.03],
+    domain=[[0, 1]],
+)
+np.random.seed(1)
+data_1d = CMND_1d.rvs(5000)
+
+# Fit with same domain so likelihood and means respect [0, 1]
+F_1d = mn.FitCMND(ngauss=2, nvars=1, domain=[[0, 1]])
+F_1d.fit_data(data_1d, advance=True)
+G = F_1d.plot_fit(hargs=dict(bins=40), sargs=dict(s=0.5, alpha=0.6))
+```
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/seap-udea/multimin/master/examples/gallery/truncated_1d_fit.png" alt="Truncated 1D fit" width="500"/>
+</div>
+
+See [examples/multimin_truncated_tutorial.ipynb](examples/multimin_truncated_tutorial.ipynb) for 3D truncated examples and more detail.
 
 ## Citation
 

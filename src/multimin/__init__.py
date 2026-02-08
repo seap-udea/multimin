@@ -1060,6 +1060,7 @@ class DensityPlot(object):
                 hargs_1d["bins"] = min(50, max(10, len(data) // 20))
             if "density" not in hargs_1d:
                 hargs_1d["density"] = True
+            hargs_1d.setdefault("label", "sample histogram")
             ax.hist(data[:, 0], **hargs_1d)
             ax.yaxis.set_label_position("left")
             ax.set_ylabel("density")
@@ -1158,32 +1159,20 @@ class DensityPlot(object):
 
 
         """
-        # Univariate: fill plot with points (x vs y jitter in [0, y_axis_max])
+        # Univariate: scatter on a twin y-axis so data range is independent of PDF/density
         if getattr(self, "_univariate", False):
             ax = self.axs[0][0]
+            ax_twin = ax.twinx()
             x = data[:, 0]
-            if (
-                ax is None
-                or not hasattr(ax, "has_data")
-                or not ax.has_data()
-                or ax.get_ylim() is None
-                or np.allclose(ax.get_ylim(), (0.0, 1.0))
-            ):
-                y_axis_max = 1.0
-            else:
-                y_axis_max = ax.get_ylim()[1]
-            ax.set_ylim(0, y_axis_max)
-            
-            y_jitter = np.random.uniform(0, y_axis_max, size=len(x))
-            sc = ax.scatter(x, y_jitter, **args)
-            ax.set_yticks([])
-            # Y-label "sample <property name>" on the right (does not affect later plot_hist)
+            y_jitter = np.random.uniform(0, 1, size=len(x))
+            sargs_1d = dict(args)
+            sargs_1d.setdefault("label", "sample")
+            sc = ax_twin.scatter(x, y_jitter, **sargs_1d)
+            ax_twin.set_ylim(0, 1)
+            ax_twin.set_yticks([])
             prop_name = self.properties[0]
-            existing_ylabel = ax.get_ylabel()
-            if existing_ylabel:
-                ax.set_ylabel(existing_ylabel + " + sample " + self.dproperties[prop_name]["label"], fontsize=self.fs)
-            else:
-                ax.set_ylabel("sample " + self.dproperties[prop_name]["label"], fontsize=self.fs)
+            ax_twin.set_ylabel("sample " + self.dproperties[prop_name]["label"], fontsize=self.fs)
+            self._ax_twin = ax_twin  # store for reference
             self.set_ranges()
             self.set_tick_params()
             self.tight_layout()
@@ -2037,7 +2026,7 @@ class ComposedMultiVariateNormal(object):
             if self.nvars == 1:
                 ymax = max(ymax, G.axs[0][0].get_ylim()[1])
         
-        # When the distribution is univariate, add the PDF curve to the plot
+        # When the distribution is univariate, add the PDF curve and legend
         if self.nvars == 1:
             x_min, x_max = self.data[:, 0].min(), self.data[:, 0].max()
             margin = max(1e-6, 0.1 * (x_max - x_min))
@@ -2046,8 +2035,18 @@ class ComposedMultiVariateNormal(object):
             G.axs[0][0].plot(x_curve, pdf_vals, "k-", lw=2, label="PDF")
             ymax = max(ymax, pdf_vals.max())
             G.axs[0][0].set_ylim(0, ymax)
-
-        G.fig.tight_layout()
+            # Legend: combine primary ax (histogram, PDF) and twin (sample scatter)
+            handles, labels = G.axs[0][0].get_legend_handles_labels()
+            if getattr(G, "_ax_twin", None) is not None:
+                h2, l2 = G._ax_twin.get_legend_handles_labels()
+                handles, labels = handles + h2, labels + l2
+            G.axs[0][0].legend(
+                handles, labels, loc="lower center", bbox_to_anchor=(0.5, 1.02),
+                ncol=len(handles), frameon=False
+            )
+            G.fig.subplots_adjust(top=0.88)  # room for legend above
+        else:
+            G.fig.tight_layout()
         multimin_watermark(G.axs[0][0])
         return G
 
@@ -3323,13 +3322,21 @@ class FitCMND:
             x_curve = np.linspace(x_min - margin, x_max + margin, 300)
             pdf_vals = self.cmnd.pdf(x_curve.reshape(-1, 1))
             if hargs:
-                ax.plot(x_curve, pdf_vals, "k-", lw=2, label="fit PDF")
+                ax.plot(x_curve, pdf_vals, "k-", lw=2, label="PDF")
             else:
-                ax_twin = ax.twinx()
-                ax_twin.plot(x_curve, pdf_vals, "k-", lw=2, label="fit PDF")
-                ax_twin.set_ylabel("PDF")
-                ax_twin.set_ylim(0, None)
-            G.fig.tight_layout()
+                ax.plot(x_curve, pdf_vals, "k-", lw=2, label="PDF")
+                ax.set_ylabel("PDF")
+                ax.set_ylim(0, None)
+            # Legend: combine primary ax (histogram, PDF) and twin (sample scatter) if present
+            handles, labels = ax.get_legend_handles_labels()
+            if getattr(G, "_ax_twin", None) is not None:
+                h2, l2 = G._ax_twin.get_legend_handles_labels()
+                handles, labels = handles + h2, labels + l2
+            ax.legend(
+                handles, labels, loc="lower center", bbox_to_anchor=(0.5, 1.02),
+                ncol=len(handles), frameon=False
+            )
+            G.fig.subplots_adjust(top=0.88)  # room for legend above
             multimin_watermark(G.axs[0][0])
             self.fig = G.fig
             return G
