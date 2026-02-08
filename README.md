@@ -382,6 +382,87 @@ G = F_1d.plot_fit(hargs=dict(bins=40), sargs=dict(s=0.5, alpha=0.6))
   <img src="https://raw.githubusercontent.com/seap-udea/multimin/master/examples/gallery/truncated_1d_fit.png" alt="Truncated 1D fit" width="500"/>
 </div>
 
+You can also extract an explicit callable function for the fitted *truncated* PDF (including the bounds) and evaluate it safely outside the interval.
+
+```python
+function, cmnd = F_1d.cmnd.get_function()
+```
+
+Output (the printed code, which you can copy):
+
+```
+import numpy as np
+from multimin import tnmd
+
+def cmnd(X):
+
+    a = 0.0
+    b = 1.0
+
+    mu1_1 = 0.200467
+    sigma1_1 = 0.009683
+    n1 = tnmd(X, mu1_1, sigma1_1, a, b)
+
+    mu2_1 = 0.801063
+    sigma2_1 = 0.030392
+    n2 = tnmd(X, mu2_1, sigma2_1, a, b)
+
+    w1 = 0.504151
+    w2 = 0.495849
+
+    return (
+        w1*n1
+        + w2*n2
+    )
+```
+
+Evaluate the fitted PDF at a point inside the domain and outside the domain:
+
+```python
+cmnd(0.5), cmnd(-0.2)
+```
+
+Output:
+
+```
+(0.3128645172339761, 0.0)
+```
+
+For papers, you can also generate a LaTeX/Markdown description that includes the truncation information:
+
+```python
+function_str, _ = F_1d.cmnd.get_function(print_code=False, type='latex', decimals=4)
+print(function_str)
+```
+
+Output:
+
+Finite domain. The following variables are truncated (the rest are unbounded):
+
+- Variable $x_{1}$ (index 1): domain $[0.0, 1.0]$.
+
+Truncation region: $A_T = \{\tilde{U} \in \mathbb{R}^k : a_i \le \tilde{U}_i \le b_i \;\forall i \in T\}$, with $T$ the set of truncated indices.
+
+$$f(x) = w_1 \, \mathcal{TN}(x; \mu_{1}, \sigma_{1}, a, b) + w_2 \, \mathcal{TN}(x; \mu_{2}, \sigma_{2}, a, b)$$
+
+where
+
+$$w_1 = 0.5042,\quad \mu_{1} = 0.2005,\quad \sigma_{1}^2 = 0.0097,\quad a = 0.0,\quad b = 1.0$$
+
+$$w_2 = 0.4958,\quad \mu_{2} = 0.8011,\quad \sigma_{2}^2 = 0.0304,\quad a = 0.0,\quad b = 1.0$$
+
+Truncated normal. The unbounded normal is
+
+$$\mathcal{N}(x; \mu, \sigma) = \frac{1}{\sigma\sqrt{2\pi}} \exp\left(-\frac{(x-\mu)^2}{2\sigma^2}\right).$$
+
+The truncation region is $A_T = \{\tilde{U} \in \mathbb{R}^k : a_i \le \tilde{U}_i \le b_i \;\forall i \in T\}$. The partially truncated normal is
+
+$$\mathcal{TN}_T(\tilde{U}; \tilde{\mu}, \Sigma, \mathbf{a}_T, \mathbf{b}_T) = \frac{\mathcal{N}(\tilde{U}; \tilde{\mu}, \Sigma) \, \mathbf{1}_{A_T}(\tilde{U})}{Z_T(\tilde{\mu}, \Sigma, \mathbf{a}_T, \mathbf{b}_T)},$$
+
+where $\mathbf{1}_{A_T}$ is the indicator of $A_T$ and the normalization constant is
+
+$$Z_T(\tilde{\mu}, \Sigma, \mathbf{a}_T, \mathbf{b}_T) = \int_{A_T} \mathcal{N}(\tilde{T}; \tilde{\mu}, \Sigma) \, d\tilde{T} = \mathbb{P}_{\tilde{T} \sim \mathcal{N}(\tilde{\mu},\Sigma)}(\tilde{T} \in A_T).$$
+
 See [examples/multimin_truncated_tutorial.ipynb](examples/multimin_truncated_tutorial.ipynb) for 3D truncated examples and more detail.
 
 ## Citation
