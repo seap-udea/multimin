@@ -118,7 +118,7 @@ setup(
     keywords="fitting multivariate-normal statistics optimization",
     license="AGPL-3.0-only",
     classifiers=[
-        "Development Status :: 2 - Pre-Alpha",
+        "Development Status :: 3 - Alpha",
         "Intended Audience :: Science/Research",
         "Topic :: Scientific/Engineering :: Astronomy",
         "Programming Language :: Python :: 3",

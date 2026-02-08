@@ -6,6 +6,10 @@
 
 ## Version History
 
+- **Versions 0.9.x**:
+  - Beta versions.
+  - All features working.
+
 - **Versions 0.6.x**:
   - Include univariate distributions.
   - You can ask the CMND objects to show and return a simplified version of the function.
