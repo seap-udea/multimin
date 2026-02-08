@@ -119,6 +119,7 @@ push:
 	@git push -u origin HEAD
 
 # Example: make release RELMODE=release VERSION=0.2.0.2
+# Preferred: make release docs gallery VERSION=0.9.5 COMMIT_MSG="[FIX] Consistent option props and properties" && make push COMMIT_MSG="[REL] New version released"
 release: clean push
 	@test -n "$(VERSION)" || (echo "ERROR: VERSION is required. Example: make release RELMODE=release VERSION=0.2.0" && exit 1)
 	@echo "Releasing a new version..."
