@@ -26,19 +26,28 @@ These are the main features of `MultiMin`:
 - **Visualization**: Density plots and specific visualization utilities.
 - **Statistical Analysis**: Tools for handling covariance matrices and correlations.
 
-## Documentation
+## Resources
 
-Full API documentation is available at [https://multimin.readthedocs.io](https://multimin.readthedocs.io).
+- Documentation including examples and full API documentation: [https://multimin.readthedocs.io](https://multimin.readthedocs.io).
+- PyPI project page: [https://pypi.org/project/multimin/](https://pypi.org/project/multimin/).
+- Github repo: [https://github.com/seap-udea/multimin](https://github.com/seap-udea/multimin)
 
 ## Installation
 
 ### From PyPI
 
-`MultiMin` will be available on PyPI at https://pypi.org/project/multimin/. Once published, you can install it with:
+`MultiMin` is available on PyPI at [https://pypi.org/project/multimin/](https://pypi.org/project/multimin/). You can install it with:
 
 ```bash
 pip install -U multimin
 ```
+
+If you prefer, you can install the latest version of the developers taking it from the github repo:
+
+```bash
+pip install -U git+https://github.com/seap-udea/multimin
+```
+
 
 ### From Sources
 
@@ -62,7 +71,13 @@ pip install -e .
 If you use Google Colab, you can install `MultiMin` by executing:
 
 ```python
-!pip install -U multimin
+!pip install -Uq multimin
+```
+
+or
+
+```bash
+pip install -Uq git+https://github.com/seap-udea/multimin
 ```
 
 ## Theoretical Background
@@ -154,7 +169,7 @@ We generate 5000 random samples from this distribution to serve as our "observed
 
 ```python
 np.random.seed(1)
-data = CMND.rvs(5000)
+sample = CMND.rvs(5000)
 ```
 
 ### 3. Visualize the data
@@ -173,9 +188,12 @@ properties = dict(
 
 # Plot the density plot
 G = mn.DensityPlot(properties, figsize=3)
-hargs = dict(bins=30, cmap='Spectral_r')
-sargs = dict(s=1.2, edgecolor='None', color='r')
-hist = G.scatter_plot(data, **sargs)
+
+hargs=dict(bins=30,cmap='Spectral_r')
+histogram=G.plot_hist(sample,**hargs)
+
+sargs=dict(s=0.5,edgecolor='None',color='r')
+scatter=G.scatter_plot(sample,**sargs)
 ```
 
 <div align="center">
@@ -191,7 +209,7 @@ We initialize the `FitCMND` handler with the expected number of Gaussians (2) an
 F = mn.FitCMND(ngauss=2, nvars=3)
 
 # Run the fit (using advance=True for better convergence on complex models)
-F.fit_data(data, advance=True)
+F.fit_data(sample, advance=True)
 ```
 
 ### 5. Check and Plot Results
@@ -222,13 +240,13 @@ You can tabulate the fitted parameters and obtain an explicit Python function th
 F.cmnd.tabulate(sort_by='weight')
 ```
 
-Output (example):
+Output:
 
 ```
-             w  mu_1  mu_2  mu_3  sigma_1  sigma_2  sigma_3  rho_12   rho_13   rho_23
-component
-1          0.5  1.02  0.52 -0.59     1.07     1.51     2.08   -0.28    0.22   -0.57
-2          0.5  1.01 -0.50  0.53     0.79     0.24     3.23    0.56    0.02  -0.02
+                  w      mu_1      mu_2      mu_3   sigma_1   sigma_2   sigma_3    rho_12    rho_13    rho_23
+component                                                                                                    
+2          0.509108  1.019245 -0.480997  0.618821  0.794906  0.245786  3.327537  0.539417 -0.008936 -0.017769
+1          0.490892  0.957687  0.517584 -0.463392  1.039489  1.538029  2.116544 -0.209695  0.121184 -0.527142
 ```
 
 **Stage 2: Get the source code and a callable function**
@@ -244,16 +262,22 @@ from multimin import nmd
 
 def cmnd(X):
 
-    mu1 = [1.02, 0.52, -0.59]
-    Sigma1 = [[1.14, -0.38, 0.36], [-0.38, 2.28, -1.70], [0.36, -1.70, 4.35]]
+    mu1_1 = 0.957687
+    mu1_2 = 0.517584
+    mu1_3 = -0.463392
+    mu1 = [mu1_1, mu1_2, mu1_3]
+    Sigma1 = [[1.080538, -0.335252, 0.266619], [-0.335252, 2.365532, -1.716008], [0.266619, -1.716008, 4.479757]]
     n1 = nmd(X, mu1, Sigma1)
 
-    mu2 = [1.01, -0.50, 0.53]
-    Sigma2 = [[0.63, 0.11, 0.04], [0.11, 0.06, -0.01], [0.04, -0.01, 10.41]]
+    mu2_1 = 1.019245
+    mu2_2 = -0.480997
+    mu2_3 = 0.618821
+    mu2 = [mu2_1, mu2_2, mu2_3]
+    Sigma2 = [[0.631876, 0.10539, -0.023637], [0.10539, 0.060411, -0.014533], [-0.023637, -0.014533, 11.072504]]
     n2 = nmd(X, mu2, Sigma2)
 
-    w1 = 0.52
-    w2 = 0.48
+    w1 = 0.490892
+    w2 = 0.509108
 
     return (
         w1*n1
@@ -267,10 +291,10 @@ def cmnd(X):
 cmnd([1.0, 0.5, -0.5])
 ```
 
-Output (example):
+Output:
 
 ```
-0.12345678901234567
+0.011073778538439395
 ```
 
 **Stage 4: LaTeX output for papers**
@@ -282,23 +306,19 @@ latex_str, _ = F.cmnd.get_function(print_code=False, type='latex', decimals=4)
 print(latex_str)
 ```
 
-Example output:
+Output:
 
 $$f(\mathbf{x}) = w_1 \, \mathcal{N}(\mathbf{x}; \boldsymbol{\mu}_1, \mathbf{\Sigma}_1) + w_2 \, \mathcal{N}(\mathbf{x}; \boldsymbol{\mu}_2, \mathbf{\Sigma}_2)$$
 
 where
 
-$$w_1 = 0.502413$$
+$$w_1 = 0.4909$$
+$$\boldsymbol{\mu}_1 = \left( \begin{array}{c} 0.9577 \\ 0.5176 \\ -0.4634 \end{array}\right)$$
+$$\mathbf{\Sigma}_1 = \left( \begin{array}{ccc} 1.0805 & -0.3353 & 0.2666 \\ -0.3353 & 2.3655 & -1.716 \\ 0.2666 & -1.716 & 4.4798 \end{array}\right)$$
 
-$$\boldsymbol{\mu}_1 = \left( \begin{array}{c} 1.02777 \\ 0.501464 \\ -0.598576 \end{array}\right)$$
-
-$$\mathbf{\Sigma}_1 = \left( \begin{array}{ccc} 1.083742 & -0.358056 & 0.200127 \\ -0.358056 & 2.311214 & -1.74296 \\ 0.200127 & -1.74296 & 4.396044 \end{array}\right)$$
-
-$$w_2 = 0.497587$$
-
-$$\boldsymbol{\mu}_2 = \left( \begin{array}{c} 1.003249 \\ -0.504171 \\ 0.456568 \end{array}\right)$$
-
-$$\mathbf{\Sigma}_2 = \left( \begin{array}{ccc} 0.641322 & 0.106588 & 0.033927 \\ 0.106588 & 0.05814 & 0.006255 \\ 0.033927 & 0.006255 & 10.440096 \end{array}\right)$$
+$$w_2 = 0.5091$$
+$$\boldsymbol{\mu}_2 = \left( \begin{array}{c} 1.0192 \\ -0.481 \\ 0.6188 \end{array}\right)$$
+$$\mathbf{\Sigma}_2 = \left( \begin{array}{ccc} 0.6319 & 0.1054 & -0.0236 \\ 0.1054 & 0.0604 & -0.0145 \\ -0.0236 & -0.0145 & 11.0725 \end{array}\right)$$
 
 Here the normal distribution is defined as:
 
@@ -385,10 +405,11 @@ For a detailed list of changes and new features, see [WHATSNEW.md](WHATSNEW.md).
 
 ## Authors and Licensing
 
-This project is developed by the Solar, Earth and Planetary Physics Group (SEAP) at Universidad de Antioquia, Medellín, Colombia. The main developers are:
+This project is developed by the Solar, Earth and Planetary Physics Group (SEAP) at Universidad de Antioquia, Medellín, Colombia. The main developer is Prof. **Jorge I. Zuluaga** - jorge.zuluaga@udea.edu.co. 
 
-- **Jorge I. Zuluaga** - jorge.zuluaga@udea.edu.co
+Other beta testers and contributions from:
 
+- **Juanita A. Agudelo** - juanita.agudelo@udea.edu.co. Testing of the initial versions of the package in the context of NEAs research.
 
 This project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0) - see the [LICENSE](LICENSE) file for details.
 
