@@ -10,6 +10,8 @@
 [![license](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://github.com/seap-udea/multimin/blob/master/LICENSE)
 [![pythonver](https://img.shields.io/pypi/pyversions/multimin)](https://pypi.org/project/multimin/)
 [![downloads](https://img.shields.io/pypi/dw/multimin)](https://pypi.org/project/multimin/)
+[![docs](https://readthedocs.org/projects/multimin/badge/?version=latest)](https://multimin.readthedocs.io/)
+[![GitHub](https://img.shields.io/badge/GitHub-seap--udea%2Fmultimin-blue?logo=github)](https://github.com/seap-udea/multimin)
 [![Powered by SciPy](https://img.shields.io/badge/Powered%20by-SciPy-blue)](https://scipy.org/)
 
 <div align="center">
