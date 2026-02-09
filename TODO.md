@@ -9,6 +9,10 @@ List of projects, improvements and ideas for future MultiMin development. No imp
 - [ ] **Fitting functions**
   - Instead of fitting data, fit functions.
   - Fitting functions in 1- and N-dimensions.
+  - Create a diagnostics function to see where are the points in data where means can be located and how many normals could be required.
+  - Allow the mean of the gaussian to be outside the bounds of the variables to fit the tail.
+  - Make an example fitting data distributed as an exponential.
+  - Fit FISS data using multimin.
 
 - [ ] **Optimization and fitters**
   - Try other optimizers besides `scipy.optimize.minimize` (e.g. emcee, dynesty) for uncertainty estimation.

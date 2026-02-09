@@ -82,13 +82,13 @@ pip install -Uq git+https://github.com/seap-udea/multimin
 
 ## Theoretical Background
 
-The core of `MultiMin` is the **Composed Multivariate Normal Distribution (CMND)**. The theory behind it posits that any multivariate distribution function $p(\tilde U):\Re^{N}\rightarrow\Re$, where $\tilde U:(u_1,u_2,u_3,\ldots,u_N)$ are random variables, can be approximated with arbitrary precision by a normalized linear combination of $M$ Multivariate Normal Distributions (MND):
+The core of `MultiMin` is the **Composed Multivariate Normal Distribution (CMND)**. The theory behind it posits that any multivariate distribution function $p(\tilde U):\Re^{N}\rightarrow\Re$, where $\tilde U:(u_1,u_2,u_3,\ldots,u_N)$ are random variables, can be approximated with arbitrary precision by a normalized linear combination of $M$ Multivariate Normal Distributions or CMND:
 
 $$
 p(\tilde U) \approx \mathcal{C}_M(\tilde U; \{w_k\}_M, \{\mu_k\}_M, \{\Sigma_k\}_M) \equiv \sum_{i=1}^{M} w_i\mathcal{N}(\tilde U; \tilde \mu_i, \Sigma_i)
 $$
 
-where the multivariate normal $\mathcal{N}(\tilde U; \tilde \mu, \Sigma)$ with mean vector $\tilde \mu$ and covariance matrix $\Sigma$ is given by:
+where the multivariate normal distribution (MND) $\mathcal{N}(\tilde U; \tilde \mu, \Sigma)$ with mean vector $\tilde \mu$ and covariance matrix $\Sigma$ is given by:
 
 $$
 \mathcal{N}(\tilde U; \tilde \mu, \Sigma) = \frac{1}{\sqrt{(2\pi)^{k} \det \Sigma}} \exp\left[-\frac{1}{2}(\tilde U - \tilde \mu)^{\rm T} \Sigma^{-1} (\tilde U - \tilde \mu)\right]
@@ -490,9 +490,9 @@ For a detailed list of changes and new features, see [WHATSNEW.md](WHATSNEW.md).
 
 This project is developed by the Solar, Earth and Planetary Physics Group (SEAP) at Universidad de Antioquia, Medellín, Colombia. The main developer is Prof. **Jorge I. Zuluaga** - jorge.zuluaga@udea.edu.co. 
 
-Other beta testers and contributions from:
+Other beta testers and contributors:
 
-- **Juanita A. Agudelo** - juanita.agudelo@udea.edu.co. Testing of the initial versions of the package in the context of NEAs research.
+- **Juanita A. Agudelo** - juanita.agudelo@udea.edu.co. Testing of the initial versions of the package in the context of NEAs research. The idea of developíng the functionalities of truncated multinormals were inspared by questions that referees made to Juanita during the presentation of her undergraduate thesis.
 
 This project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0) - see the [LICENSE](LICENSE) file for details.
 

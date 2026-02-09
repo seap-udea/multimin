@@ -28,6 +28,8 @@ Usage
 For more information, visit: https://github.com/seap-udea/multimin
 """
 
+from asyncio import MultiLoopChildWatcher
+import inspect
 import os
 import math
 import string
@@ -74,6 +76,51 @@ if not os.getenv("MULTIMIN_NO_WELCOME"):
 ROOTDIR = os.path.dirname(os.path.abspath(__file__))
 
 
+def _docstring_summary(doc):
+    """
+    Extract the first line or paragraph of a docstring as summary.
+
+    Stops at common section headers (Parameters, Returns, etc.)
+    so that the description does not include parameter lists.
+
+    Parameters
+    ----------
+    doc : str or None
+        The docstring.
+
+    Returns
+    -------
+    str
+        One-line summary or empty string if no docstring.
+    """
+    if not doc or not doc.strip():
+        return ""
+    doc = doc.strip()
+    section_markers = (
+        "Parameters",
+        "Returns",
+        "Examples",
+        "Attributes",
+        "Notes",
+        "Methods",
+        "Raises",
+        "See Also",
+        "Warnings",
+    )
+    lines = doc.splitlines()
+    summary_lines = []
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            break
+        if any(stripped == marker or stripped.startswith(marker + " ") or
+               stripped == marker + ":" for marker in section_markers):
+            break
+        if stripped.endswith("---") or stripped.endswith("===="):
+            break
+        summary_lines.append(stripped)
+    return " ".join(summary_lines).strip() if summary_lines else ""
+
 class MultiMinBase:
     """
     Base class for MultiMin package.
@@ -84,6 +131,39 @@ class MultiMinBase:
 
     def __init__(self):
         pass
+
+    @classmethod
+    def describe(cls):
+        """
+        Show the list of public methods for this instance's class with their
+        short description taken from each method's docstring.
+
+        Can be called on an instance (e.g. obj.describe()) or on the class
+        (e.g. mn.DensityPlot.describe()). Intended for discovery of available
+        functionality on any MultiMinBase subclass (e.g. DensityPlot, CMND).
+        """
+        methods = []
+        for name in dir(cls):
+            if name.startswith("_"):
+                continue
+            obj = getattr(cls, name)
+            if not callable(obj):
+                continue
+            methods.append((name, obj))
+        methods.sort(key=lambda x: x[0])
+        lines = [f"\nAvailable methods for this object/class", "=" * (30 + len(cls.__name__))]
+        for name, meth in methods:
+            if name == "describe":
+                continue
+            doc = inspect.getdoc(meth)
+            summary = _docstring_summary(doc) if doc else "(sin descripción)"
+            summary = summary.replace("\n", " ").strip()
+            # if len(summary) > 70:
+            #     summary = summary[:67] + "..."
+            lines.append(f"  {name}()")
+            lines.append(f"    {summary}")
+            lines.append("")
+        print("\n".join(lines))
 
     def __str__(self):
         """String representation of the object."""
@@ -97,7 +177,7 @@ class MultiMinBase:
 # =============================================================================
 # UTILITIES
 # =============================================================================
-class Util(object):
+class Util(MultiMinBase):
     """
     This abstract class contains useful methods for the package.
 
@@ -123,6 +203,7 @@ class Util(object):
     def get_data(filename):
         """
         Get the full path of the `filename` which is one of the datafiles provided with the package.
+        Ex. get_data("nea_extended.json.gz")
 
         Parameters
         ----------
@@ -146,6 +227,7 @@ class Util(object):
     def f2u(x, s):
         """
         Convert from a finite interval [0,s] to an unbound one [-inf,inf].
+        Ex. f2u(0.5, 1.0)
 
         Parameters
         ----------
@@ -166,6 +248,7 @@ class Util(object):
     def u2f(t, s):
         """
         Convert from an unbound interval [-inf,inf] to a finite one [0,s].
+        Ex. u2f(0.0, 1.0)
 
         Parameters
         ----------
@@ -186,9 +269,9 @@ class Util(object):
     def t_if(p, s, f):
         """
         Transform a set of parameters using a transformation function f and scales s.
-
         This routine allows the conversion from a finite interval [0,s] to an unbound one [-inf,inf]
         (using f=Util.f2u) or vice versa (using f=Util.u2f).
+        Ex. Util.t_if(minparams, scales, Util.f2u)
 
         Parameters
         ----------
@@ -220,6 +303,7 @@ class Util(object):
     def true_anomaly_to_mean_anomaly(e, f):
         """
         Convert true anomaly to mean anomaly.
+        Ex. true_anomaly_to_mean_anomaly(0.1, 0.5)
 
         Parameters
         ----------
@@ -243,6 +327,7 @@ class Util(object):
     def error_msg(error, msg):
         """
         Add a custom message msg to an error handle.
+        Ex. error_msg(error, 'custom message')
 
         Parameters
         ----------
@@ -267,7 +352,8 @@ class Util(object):
         """
         Compute the time elapsed since last call of this routine.  The displayed time
         is preseneted in the more convenient unit, ns (nano seconds), us (micro seconds),
-        ms (miliseconds), s (seconds), min (minutes), h (hours), d (days)
+        ms (miliseconds), s (seconds), min (minutes), h (hours), d (days).
+        Ex. el_time(), el_time(verbose=0), el_time(start=True)
 
         Parameters
         ----------
@@ -309,6 +395,7 @@ class Util(object):
     def mantisa_exp(x):
         """
         Calculate the mantisa and exponent of a number.
+        Ex. m, e = Util.mantisa_exp(234.5)
 
         Parameters
         ----------
@@ -340,7 +427,7 @@ class Util(object):
         return man, exp
 
 
-class Stats(object):
+class Stats(MultiMinBase):
     """
     Abstract class with useful routines
 
@@ -353,10 +440,9 @@ class Stats(object):
     def gen_index(probs):
         """
         Given a set of (normalized) probabilities, randomly generate an index n following the
-        probabilities.
-
-        For instance if we have 3 events with probabilities 0.1, 0.7, 0.2, gen_index will generate
-        a number in the set (0,1,2) having those probabilities, ie. 1 will have 70% of probability.
+        probabilities. For instance if we have 3 events with probabilities 0.1, 0.7, 0.2, gen_index
+        will generate a number in the set (0,1,2) having those probabilities, ie. 1 will have 70%.
+        Ex. Stats.gen_index([0.1, 0.7, 0.2])
 
         Parameters
         ----------
@@ -384,7 +470,8 @@ class Stats(object):
 
     def set_matrix_off_diagonal(M, off):
         """
-        Set a matrix with the terms of the off diagonal
+        Set a matrix with the terms of the off diagonal.
+        Ex. Stats.set_matrix_off_diagonal(M, [0.1, 0.2, 0.3])
 
         Parameters
         ----------
@@ -418,6 +505,7 @@ class Stats(object):
     def calc_covariance_from_correlations(sigmas, rhos):
         """
         Compute covariance matrices from the standard deviations and correlations (rho).
+        Ex. Stats.calc_covariance_from_correlations(sigmas, rhos)
 
         Parameters
         ----------
@@ -484,6 +572,7 @@ class Stats(object):
         """
         Compute the standard deviations and corresponding correlation coefficients given a set of
         covariance matrices.
+        Ex. sigmas, rhos = Stats.calc_correlations_from_covariances(Sigmas)
 
         Parameters
         ----------
@@ -531,6 +620,7 @@ class Stats(object):
     def calc_covariance_from_rotation(sigmas, angles):
         """
         Compute covariance matrices from the stds and the angles.
+        Ex. Stats.calc_covariance_from_rotation(sigmas, angles)
 
         Parameters
         ----------
@@ -567,6 +657,7 @@ class Stats(object):
     def flatten_symmetric_matrix(M):
         """
         Given a symmetric matrix the routine returns the flatten version of the Matrix.
+        Ex. Stats.flatten_symmetric_matrix(M)
 
         Parameters
         ----------
@@ -591,6 +682,7 @@ class Stats(object):
     def unflatten_symmetric_matrix(F, M):
         """
         Given a flatten version of a matrix, returns the symmetric matrix.
+        Ex. Stats.unflatten_symmetric_matrix(F, M)
 
         Parameters
         ----------
@@ -623,6 +715,7 @@ class Stats(object):
 # =============================================================================
 def nmd(X, mu, Sigma):
     """PDF of a multivariate normal at x; mu=mean vector, Sigma=covariance matrix.
+    Ex. nmd(X, mu, Sigma)
 
     Parameters
     ----------
@@ -647,11 +740,10 @@ def nmd(X, mu, Sigma):
 
 
 def tnmd(X, mu, Sigma, a, b, Z=None):
-    """PDF of a truncated (multivariate) normal at X; single evaluation like nmd.
-
-    Uses scipy.stats.truncnorm for 1D (one call). For nD, returns normal PDF in the
-    box [a, b] divided by the normalization constant Z (one multinorm.pdf call;
-    Z must be provided or is computed once when Z is None).
+    """PDF of a truncated (multivariate) normal at X; single evaluation like nmd. Uses
+    scipy.stats.truncnorm for 1D (one call). For nD, returns normal PDF in the box [a, b]
+    divided by the normalization constant Z.
+    Ex. tnmd(X, mu, Sigma, a, b)
 
     Parameters
     ----------
@@ -796,7 +888,7 @@ def _props_to_properties(properties, nvars, ranges=None):
     }
 
 
-class DensityPlot(object):
+class DensityPlot(MultiMinBase):
     """
     Create a grid of plots showing the projection of a N-dimensional data.
 
@@ -962,6 +1054,7 @@ class DensityPlot(object):
     def set_tick_params(self, **args):
         """
         Set tick parameters.
+        Ex. set_tick_params(labelsize=10)
 
         Parameters
         ----------
@@ -999,6 +1092,7 @@ class DensityPlot(object):
     def set_labels(self, **args):
         """
         Set labels parameters.
+        Ex. set_labels(fontsize=12)
 
         Parameters
         ----------
@@ -1068,6 +1162,7 @@ class DensityPlot(object):
     def plot_hist(self, data, colorbar=False, **args):
         """
         Create a 2d-histograms of data on all panels of the DensityPlot.
+        Ex. G.plot_hist(data, bins=100, cmap='viridis')
 
         Parameters
         ----------
@@ -1196,6 +1291,7 @@ class DensityPlot(object):
     def scatter_plot(self, data, **args):
         """
         Scatter plot on all panels of the DensityPlot.
+        Ex. G.scatter_plot(data, s=0.2, color='r')
 
         Parameters
         ----------
@@ -1270,7 +1366,7 @@ class DensityPlot(object):
 # =============================================================================
 
 
-class ComposedMultiVariateNormal(object):
+class ComposedMultiVariateNormal(MultiMinBase):
     r"""
     The Composed Multivariate Normal Distribution (CMND).
 
@@ -1498,6 +1594,7 @@ class ComposedMultiVariateNormal(object):
     def set_domain(self, domain):
         """
         Set the support domain for each variable (finite or infinite).
+        Ex. set_domain([None, [0, 1], None])
 
         Parameters
         ----------
@@ -1550,9 +1647,8 @@ class ComposedMultiVariateNormal(object):
 
     def set_sigmas(self, Sigmas):
         """
-        Set the value of list of covariance matrices.
-
-        After setting Sigmas it update params and stdcorr.
+        Set the value of list of covariance matrices. After setting Sigmas it update params and stdcorr.
+        Ex. set_sigmas([[[1, 0.2], [0.2, 1]]])
 
         Parameters
         ----------
@@ -1575,9 +1671,9 @@ class ComposedMultiVariateNormal(object):
 
     def set_params(self, params, nvars):
         """
-        Set the properties of the CMND from flatten params.
-
-        After setting it generate flattend stdcorr and normalize weights.
+        Set the properties of the CMND from flatten params. After setting it generate flattend stdcorr
+        and normalize weights.
+        Ex. set_params(params, nvars=2)
 
         Parameters
         ----------
@@ -1599,9 +1695,9 @@ class ComposedMultiVariateNormal(object):
 
     def set_stdcorr(self, stdcorr, nvars):
         """
-        Set the properties of the CMND from flatten stdcorr.
-
-        After setting it generate flattened params and normalize weights.
+        Set the properties of the CMND from flatten stdcorr. After setting it generate flattened
+        params and normalize weights.
+        Ex. set_stdcorr(stdcorr, nvars=2)
 
         Parameters
         ----------
@@ -1819,6 +1915,7 @@ class ComposedMultiVariateNormal(object):
     def pdf(self, X):
         """
         Compute the PDF.
+        Ex. cmnd.pdf([1.0, 0.5])
 
         Parameters
         ----------
@@ -1884,10 +1981,10 @@ class ComposedMultiVariateNormal(object):
 
     def rvs(self, Nsam=1, max_tries=100000):
         """
-        Generate a random sample of points following this Multivariate distribution.
-
-        When domain is finite, samples are drawn inside the domain (rejection sampling
-        for multivariate; truncated normal for univariate).
+        Generate a random sample of points following this Multivariate distribution. When domain is
+        finite, samples are drawn inside the domain (rejection sampling for multivariate; truncated
+        normal for univariate).
+        Ex. cmnd.rvs(1000)
 
         Parameters
         ----------
@@ -1944,6 +2041,7 @@ class ComposedMultiVariateNormal(object):
     ):
         """
         Compute the negative value of the logarithm of the likelihood of a sample.
+        Ex. cmnd.sample_cmnd_likelihood(uparams, data=data, pmap=pmap)
 
         Parameters
         ----------
@@ -2017,6 +2115,7 @@ class ComposedMultiVariateNormal(object):
     ):
         """
         Plot a sample of the CMND.
+        Ex. plot_sample(N=1000, sargs=dict(s=0.5))
 
         Parameters
         ----------
@@ -2261,6 +2360,7 @@ class ComposedMultiVariateNormal(object):
         """
         Return the source code of ``cmnd(X)`` and an executable function (type='python'),
         or LaTeX code with parameters in \\begin{array} (type='latex').
+        Ex. code, cmnd = CMND.get_function()
 
         Parameters
         ----------
@@ -2596,6 +2696,7 @@ class ComposedMultiVariateNormal(object):
         """
         Build a table of CMND parameters: weights, means (mu_i), standard deviations (sigma_i),
         and correlations (rho_ij, i < j). Diagonal rho_ii are 1 by definition and omitted.
+        Ex. df = CMND.tabulate(sort_by='weight')
 
         Parameters
         ----------
@@ -2713,7 +2814,7 @@ class ComposedMultiVariateNormal(object):
         return "\n".join(lines)
 
 
-class FitCMND:
+class FitCMND(MultiMinBase):
     r"""
     CMND Fitting handler.
 
@@ -2846,9 +2947,9 @@ class FitCMND:
 
     def set_params(self, mu=0.5, sigma=1.0, rho=0.5):
         """
-        Set the value of the basic params (minparams, scales, etc.).
-
-        It updates minparams, scales and uprams.
+        Set the value of the basic params (minparams, scales, etc.). It updates minparams, scales
+        and uprams.
+        Ex. F.set_params(mu=0.5, sigma=1.0, rho=0.5)
 
         Parameters
         ----------
@@ -2902,6 +3003,7 @@ class FitCMND:
         """
         Set initial values for the minimization parameters (means, standard deviations, correlations).
         Only the arguments provided are updated; the rest keep their current values.
+        Ex. F.set_initial_params(mus=[[0.2, 0.3], [0.8, 0.7]], sigmas=[[0.1, 0.2], [0.1, 0.2]])
 
         Parameters
         ----------
@@ -3050,12 +3152,9 @@ class FitCMND:
 
     def pmap(self, minparams):
         """
-        Mapping routine used in sample_cmnd_likelihood.
-
-        Mapping may change depending on the complexity of the parameters to be minimized.
-        Here we assume that all parameters in the stdcorr vector is susceptible to be minimized
-        (with the exception of weights in the case of ngauss=1 when this parameter should not
-        be included).
+        Mapping routine used in sample_cmnd_likelihood. Mapping may change depending on the
+        complexity of the parameters to be minimized.
+        Ex. stdcorr = F.pmap(minparams)
 
         Parameters
         ----------
@@ -3075,6 +3174,7 @@ class FitCMND:
     def log_l(self, data):
         """
         Value of the -log(Likelihood).
+        Ex. F.log_l(data)
 
         Parameters
         ----------
@@ -3094,9 +3194,8 @@ class FitCMND:
 
     def fit_data(self, data, verbose=0, advance=0, normalize=False, **args):
         """
-        Minimization procedure.
-
-        It updates the solution attribute.
+        Minimization procedure. It updates the solution attribute.
+        Ex. F.fit_data(data, verbose=0, tol=1e-3)
 
         Parameters
         ----------
@@ -3330,6 +3429,7 @@ class FitCMND:
     ):
         """
         Plot the result of the fitting procedure.
+        Ex. F.plot_fit(figsize=3, hargs=dict(bins=30), sargs=dict(s=0.5, color='r'))
 
         Parameters
         ----------
@@ -3463,6 +3563,7 @@ class FitCMND:
     def save_fit(self, objfile=None, useprefix=True, myprefix=None):
         """
         Pickle the result of a fit.
+        Ex. F.save_fit(objfile='fit.pkl')
 
         Parameters
         ----------
@@ -3491,6 +3592,7 @@ class FitCMND:
     def set_bounds(self, boundw=None, bounds=None, boundr=None, boundsm=None):
         """
         Set the minimization parameters.
+        Ex. F.set_bounds(boundsm=((-2, 1), (-3, 0)))
 
         Parameters
         ----------
