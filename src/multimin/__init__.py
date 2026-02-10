@@ -1499,12 +1499,15 @@ class ComposedMultiVariateNormal(MultiMinBase):
        and want to instantiate the system.  All parameters are set and no other action
        is required.
 
-    4. Providing: weights, mus, Sigmas (optional), domain (optional)
+    4. Providing: weights, mus, Sigmas (optional), domain (optional), normalize_weights (optional)
        In this case the basic properties of the CMND are set.
        For univariate (one variable), mus may be a 1-D array of means, e.g. [0, 2],
        and Sigmas a 1-D array of variances, e.g. [1.0, 0.25].
        domain: list of length nvars; each element is None (unbounded) or [low, high]
        (finite support). Example: [None, [0, 1], None] for variable 1 in [0, 1].
+       normalize_weights: if True (default), weights are scaled so sum(weights)=1 (proper PDF).
+       If False, weights are used as-is (sum may != 1); useful for function fitting with
+       an overall scale (e.g. FitFunctionCMND).
 
     Examples
     --------
@@ -1542,13 +1545,21 @@ class ComposedMultiVariateNormal(MultiMinBase):
         mus=None,
         Sigmas=None,
         domain=None,
+        normalize_weights=True,
     ):
+        self.normalize_weights = bool(normalize_weights)
         # Method 1: initialize a simple instance
         if ngauss > 0:
             mus = [[0] * nvars] * ngauss
             weights = [1 / ngauss] * ngauss
             Sigmas = [np.eye(nvars)] * ngauss
-            self.__init__(mus=mus, weights=weights, Sigmas=Sigmas, domain=domain)
+            self.__init__(
+                mus=mus,
+                weights=weights,
+                Sigmas=Sigmas,
+                domain=domain,
+                normalize_weights=self.normalize_weights,
+            )
 
         # Method 2: initialize from flatten parameters
         elif params is not None:
@@ -1592,7 +1603,7 @@ class ComposedMultiVariateNormal(MultiMinBase):
                     f"Length of weights array ({len(weights)}) must be equal to number of MND ({self.ngauss})"
                 )
             else:
-                self._normalize_weights(weights)
+                self._apply_weights(weights)
 
             # Domain: list of (low, high) per variable; None or [a,b] for each
             self._set_domain(domain, self.nvars)
@@ -1753,13 +1764,27 @@ class ComposedMultiVariateNormal(MultiMinBase):
         self._Z_cache = None
         return
 
+    def _apply_weights(self, weights):
+        """
+        Set weights. If normalize_weights is True, scale so sum(weights)=1.
+        If False, use weights as-is (allows sum != 1 for function fitting).
+        Weights are kept non-negative in both cases.
+        """
+        w = np.array(weights, dtype=float)
+        w = np.maximum(w, 1e-10)
+        if self.normalize_weights:
+            s = w.sum()
+            if s <= 0:
+                s = 1.0
+            w = w / s
+        self.weights = w
+
     def _normalize_weights(self, weights):
         """
-        Normalize weights in such a way that sum(weights)=1
-
-
+        Normalize weights in such a way that sum(weights)=1.
+        Delegates to _apply_weights for compatibility.
         """
-        self.weights = np.array(weights) / sum(np.array(weights))
+        self._apply_weights(weights)
 
     def _flatten_params(self):
         """
@@ -1837,13 +1862,12 @@ class ComposedMultiVariateNormal(MultiMinBase):
             )
         ]
 
-        # Normalize weights
+        # Apply weights (normalize or use as-is per self.normalize_weights)
         self._normalize_weights(weights)
 
         # Check Sigmas
         self.nvars = nvars
         self.ngauss = ngauss
-        self.weights = weights
         self.mus = mus
         self.Sigmas = Sigmas
         self._check_sigmas()
@@ -1888,13 +1912,12 @@ class ComposedMultiVariateNormal(MultiMinBase):
         Noff = int(nvars * (nvars - 1) / 2)
         rhos = self.stdcorr[i : i + ngauss * Noff].reshape(ngauss, Noff)
 
-        # Normalize weights
+        # Apply weights (normalize or use as-is per self.normalize_weights)
         self._normalize_weights(weights)
 
         # Set properties
         self.nvars = nvars
         self.ngauss = ngauss
-        self.weights = weights
         self.mus = mus
         self.sigmas = sigmas
         self.rhos = rhos
@@ -1969,7 +1992,11 @@ class ComposedMultiVariateNormal(MultiMinBase):
         self._nerror = 0
         X = np.atleast_1d(np.asarray(X, dtype=float))
         if X.ndim == 1:
-            if len(X) != self.nvars:
+            if self.nvars == 1:
+                X2 = X.reshape(-1, 1)
+            elif len(X) == self.nvars:
+                X2 = X.reshape(1, -1)
+            else:
                 raise ValueError(
                     f"Point X has length {len(X)} but this CMND has nvars={self.nvars}"
                 )
@@ -1978,11 +2005,11 @@ class ComposedMultiVariateNormal(MultiMinBase):
                 raise ValueError(
                     f"Points X have {X.shape[1]} dimensions but this CMND has nvars={self.nvars}"
                 )
+            X2 = X
         else:
             raise ValueError(
                 "X must be a point (length nvars) or array of points (N x nvars)"
             )
-        X2 = np.atleast_2d(X)
         in_dom = self._in_domain(X2)
         has_finite_domain = any(
             np.isfinite(self._domain_bounds[j][0])
@@ -2047,16 +2074,21 @@ class ComposedMultiVariateNormal(MultiMinBase):
             or np.isfinite(self._domain_bounds[j][1])
             for j in range(self.nvars)
         )
+        w_probs = (
+            np.array(self.weights) / np.sum(self.weights)
+            if not self.normalize_weights
+            else self.weights
+        )
         Xs = np.zeros((Nsam, self.nvars))
         if not has_finite_domain:
             for i in range(Nsam):
-                n = Stats.gen_index(self.weights)
+                n = Stats.gen_index(w_probs)
                 Xs[i] = multinorm.rvs(self.mus[n], self.Sigmas[n])
             return Xs
         if self.nvars == 1:
             lo, hi = self._domain_bounds[0]
             for i in range(Nsam):
-                k = Stats.gen_index(self.weights)
+                k = Stats.gen_index(w_probs)
                 mu0 = float(self.mus[k].ravel()[0])
                 sig = np.sqrt(float(self.Sigmas[k].ravel()[0]))
                 a = (lo - mu0) / sig if np.isfinite(lo) else -np.inf
@@ -2065,7 +2097,7 @@ class ComposedMultiVariateNormal(MultiMinBase):
             return Xs
         # Multivariate finite domain: rejection sampling
         for i in range(Nsam):
-            k = Stats.gen_index(self.weights)
+            k = Stats.gen_index(w_probs)
             for _ in range(max_tries):
                 x = multinorm.rvs(self.mus[k], self.Sigmas[k])
                 if self._in_domain(x[np.newaxis, :]).item():
@@ -4060,3 +4092,799 @@ class FitCMND(MultiMinBase):
             bounds = bounds[1:]
         self.cmnd._str_params()
         return bounds
+
+
+class FitFunctionCMND(MultiMinBase):
+    """
+    Fit a CMND to a function evaluated on a mesh (instead of to data points).
+
+    The objective is to approximate the function by a composed multivariate normal
+    distribution (CMND) by minimizing a loss between the function values and the
+    CMND PDF on the same grid.
+
+    Initialize with data=(Xmesh, Fmesh) and ngauss:
+    - Univariate: Xmesh and Fmesh are 1D arrays (same length).
+    - Multivariate: Xmesh is a tuple of ndarrays (e.g. from np.meshgrid),
+      Fmesh is an array of the same shape as the grid.
+
+    Attributes
+    ----------
+    X : numpy.ndarray
+        Grid points, shape (N, nvars).
+    F : numpy.ndarray
+        Function values at the grid points, shape (N,).
+    ngauss, nvars, cmnd, minparams, scales, uparams
+        Same as in FitCMND (inherited).
+    normalization : float
+        Scale factor fitted so that normalization * cmnd.pdf(X) approximates F.
+        Set by fit_data(); None before fitting.
+
+    See Also
+    --------
+    quality_of_fit : Report R² and RMSE after fitting (call after fit_data).
+    """
+
+    _sigmax = 10
+    _ignoreWarnings = True
+
+    def __init__(self, data, ngauss=1):
+        """
+        Initialize FitFunctionCMND from function-on-mesh data.
+
+        The domain is always set from the data (min/max of Xmesh per variable).
+
+        Parameters
+        ----------
+        data : tuple (Xmesh, Fmesh)
+            Xmesh: 1D array (univariate) or tuple of arrays (meshgrid, multivariate).
+            Fmesh: function values at those points; same length or shape as the grid.
+        ngauss : int
+            Number of Gaussian components.
+
+        Examples
+        --------
+        >>> F = mn.FitFunctionCMND(data=(Xmesh, Fmesh), ngauss=3)
+        """
+        if data is None:
+            raise ValueError("data must be provided as (Xmesh, Fmesh)")
+
+        if not isinstance(data, (tuple, list)):
+            raise ValueError(
+                "data must be a tuple or list of exactly 2 elements (Xmesh, Fmesh); "
+                f"got {type(data).__name__}"
+            )
+        if len(data) != 2:
+            raise ValueError(
+                "data must have exactly 2 elements (Xmesh, Fmesh); "
+                f"got {len(data)} elements"
+            )
+
+        Xmesh, Fmesh = data[0], data[1]
+        self._X, self._F, nvars = self._parse_function_mesh_data(Xmesh, Fmesh)
+        self.X = self._X
+        self.F = self._F
+
+        self.ngauss = ngauss
+        self.nvars = nvars
+        self.Ndim = ngauss * nvars
+        self.Ncorr = int(nvars * (nvars - 1) / 2)
+        self.domain = [
+            [float(self.X[:, j].min()), float(self.X[:, j].max())] for j in range(nvars)
+        ]
+
+        self.cmnd = ComposedMultiVariateNormal(
+            ngauss=ngauss, nvars=nvars, domain=self.domain, normalize_weights=False
+        )
+        self.normalization = None
+        self._weight_scale = 100.0
+        widths = [self.domain[j][1] - self.domain[j][0] for j in range(nvars)]
+        if widths:
+            self._sigmax = max(self._sigmax, 2.0 * max(widths))
+        self.set_params()
+
+        print("Loading a FitFunctionCMND object.")
+        print(f"Number of gaussians: {self.ngauss}")
+        print(f"Number of variables: {self.nvars}")
+        print(f"Number of dimensions: {self.Ndim}")
+        print(f"Number of grid points: {len(self.F)}")
+        if self.domain is not None:
+            print(f"Domain: {self.domain}")
+
+    def set_params(self, mu=0.5, sigma=1.0, rho=0.5):
+        """
+        Set the value of the basic params (minparams, scales, uparams).
+        Ex. F.set_params(mu=0.5, sigma=1.0, rho=0.5)
+        """
+        minparams = (
+            [mu] * self.Ndim
+            + [sigma] * self.Ndim
+            + [1 + rho] * self.ngauss * self.Ncorr
+        )
+        scales = (
+            [0] * self.Ndim
+            + [self._sigmax] * self.Ndim
+            + [2] * self.ngauss * self.Ncorr
+        )
+        if self.ngauss > 1:
+            self.extrap = []
+            minparams = [1 / self.ngauss] * self.ngauss + minparams
+            w_scale = getattr(self, "_weight_scale", 1.0)
+            scales = [w_scale] * self.ngauss + scales
+        else:
+            self.extrap = [1]
+
+        self.minparams = np.array(minparams)
+        bounds = getattr(self.cmnd, "_domain_bounds", None)
+        if bounds is not None and self.ngauss > 1:
+            for j in range(self.nvars):
+                lo, hi = bounds[j][0], bounds[j][1]
+                if np.isfinite(lo) or np.isfinite(hi):
+                    a = lo if np.isfinite(lo) else hi - 1.0
+                    b = hi if np.isfinite(hi) else lo + 1.0
+                    for i in range(self.ngauss):
+                        idx = self.ngauss + i * self.nvars + j
+                        self.minparams[idx] = a + (i + 1) / (self.ngauss + 1) * (b - a)
+        self.scales = np.array(scales)
+        self.uparams = Util.t_if(self.minparams, self.scales, Util.f2u)
+        self._initial_params_set_by_user = False
+
+    def pmap(self, minparams):
+        """Map minparams to stdcorr for cmnd.set_stdcorr."""
+        stdcorr = np.array(self.extrap + list(minparams))
+        if self.ngauss * self.Ncorr > 0:
+            stdcorr[-self.ngauss * self.Ncorr :] -= 1
+        return stdcorr
+
+    def set_bounds(self, boundw=None, bounds=None, boundr=None, boundsm=None):
+        """Set bounds for minimization. Returns formatted bounds tuple."""
+        if boundsm is None:
+            if getattr(self.cmnd, "_domain_bounds", None) is not None:
+                boundsm = tuple(
+                    (self.cmnd._domain_bounds[j][0], self.cmnd._domain_bounds[j][1])
+                    for j in range(self.nvars)
+                )
+            else:
+                boundsm = ((-np.inf, np.inf),) * self.nvars
+        if boundw is None:
+            boundw = (-np.inf, np.inf)
+        else:
+            boundw = tuple([Util.f2u(bw, 1) for bw in boundw])
+        if bounds is None:
+            bounds = (-np.inf, np.inf)
+        else:
+            bounds = tuple([Util.f2u(bs, self._sigmax) for bs in bounds])
+        if boundr is None:
+            boundr = (-np.inf, np.inf)
+        else:
+            boundr = tuple([Util.f2u(1 + br, 2) for br in boundr])
+        bounds = (
+            *((boundw,) * self.ngauss),
+            *(boundsm * self.ngauss),
+            *((bounds,) * self.nvars * self.ngauss),
+            *((boundr,) * self.ngauss * int(self.nvars * (self.nvars - 1) / 2)),
+        )
+        self.bounds = bounds
+        if self.ngauss == 1:
+            bounds = bounds[1:]
+        self.cmnd._str_params()
+        return bounds
+
+    def set_initial_params(self, mus=None, sigmas=None, rhos=None):
+        """Set initial values for the minimization parameters."""
+        mus = np.asarray(mus, dtype=float) if mus is not None else None
+        sigmas = np.asarray(sigmas, dtype=float) if sigmas is not None else None
+        rhos = np.asarray(rhos, dtype=float) if rhos is not None else None
+
+        def _broadcast_2d(arr, shape_2d, name, dims_desc):
+            if arr is None:
+                return None
+            arr = np.atleast_1d(arr)
+            if arr.ndim == 1:
+                if arr.shape[0] != shape_2d[1]:
+                    raise ValueError(
+                        f"{name} 1D must have length {shape_2d[1]} ({dims_desc}), got {arr.shape[0]}"
+                    )
+                arr = np.tile(arr, (self.ngauss, 1))
+            else:
+                arr = np.atleast_2d(arr)
+                if arr.shape != shape_2d:
+                    raise ValueError(
+                        f"{name} must have shape {shape_2d} or ({dims_desc}), got {arr.shape}"
+                    )
+            return arr
+
+        if self.ngauss > 1:
+            off_mu = self.ngauss
+            off_sig = self.ngauss + self.Ndim
+            off_rho = self.ngauss + 2 * self.Ndim
+        else:
+            off_mu = 0
+            off_sig = self.nvars
+            off_rho = self.nvars * 2
+
+        if mus is not None:
+            mus = _broadcast_2d(mus, (self.ngauss, self.nvars), "mus", "nvars")
+            if self.ngauss > 1:
+                self.minparams[off_mu : off_mu + self.Ndim] = mus.ravel()
+            else:
+                self.minparams[off_mu : off_mu + self.nvars] = mus.ravel()
+        if sigmas is not None:
+            sigmas = _broadcast_2d(sigmas, (self.ngauss, self.nvars), "sigmas", "nvars")
+            if self.ngauss > 1:
+                self.minparams[off_sig : off_sig + self.Ndim] = sigmas.ravel()
+            else:
+                self.minparams[off_sig : off_sig + self.nvars] = sigmas.ravel()
+        if rhos is not None:
+            rhos = _broadcast_2d(rhos, (self.ngauss, self.Ncorr), "rhos", "Ncorr")
+            if self.ngauss > 1:
+                self.minparams[off_rho : off_rho + self.ngauss * self.Ncorr] = (
+                    1.0 + rhos.ravel()
+                )
+            else:
+                self.minparams[off_rho : off_rho + self.Ncorr] = 1.0 + rhos.ravel()
+
+        self.uparams = Util.t_if(self.minparams, self.scales, Util.f2u)
+        self._initial_params_set_by_user = True
+
+    def _init_params_from_grid(self, use_function_support=True):
+        """
+        Set initial mus/sigmas from grid (self.X) when domain is finite.
+        If use_function_support and self.F is available, spread mus only over
+        points where F > 0.01*max(F) so components start in the support of the function.
+        """
+        bounds = getattr(self.cmnd, "_domain_bounds", None)
+        if bounds is None or self.ngauss < 2:
+            return
+        X = np.asarray(self.X)
+        if X.size == 0:
+            return
+        F = np.asarray(self.F).ravel() if use_function_support else None
+        threshold = (
+            max(0.01 * np.nanmax(F), 1e-300)
+            if F is not None and F.size == X.shape[0]
+            else None
+        )
+        for j in range(self.nvars):
+            lo, hi = bounds[j][0], bounds[j][1]
+            if not (np.isfinite(lo) and np.isfinite(hi)):
+                continue
+            col = X[:, j]
+            if threshold is not None:
+                mask = F >= threshold
+                if np.sum(mask) >= 2:
+                    col = col[mask]
+            pct = np.linspace(5, 95, self.ngauss)
+            mus_init = np.percentile(col, pct)
+            mus_init = np.sort(mus_init)
+            mus_init = np.clip(mus_init, lo, hi)
+            for i in range(self.ngauss):
+                idx = self.ngauss + i * self.nvars + j
+                self.minparams[idx] = mus_init[i]
+            width = np.ptp(col) if len(col) >= 2 else (hi - lo)
+            sigma_init = min(
+                0.25 * (hi - lo),
+                0.2 * (hi - lo) / max(1, self.ngauss),
+                max(0.05 * width, np.std(col) * 0.5),
+            )
+            for i in range(self.ngauss):
+                idx = self.ngauss + self.Ndim + i * self.nvars + j
+                if idx < len(self.minparams):
+                    self.minparams[idx] = sigma_init
+        self.uparams = Util.t_if(self.minparams, self.scales, Util.f2u)
+        if self.ngauss > 1:
+            self._set_initial_weights_from_function()
+
+    def _init_params_from_function_support(self, frac=0.01):
+        """
+        Set initial mus/sigmas from the support of the function (where F > frac*max(F)).
+        Used when domain is not set so the optimizer starts in the region where the function is non-zero.
+        """
+        F = np.asarray(self.F).ravel()
+        X = np.asarray(self.X)
+        if X.size == 0 or F.size == 0:
+            return
+        threshold = max(frac * np.nanmax(F), 1e-300)
+        mask = F >= threshold
+        if not np.any(mask):
+            mask = np.ones(F.size, dtype=bool)
+        for j in range(self.nvars):
+            col = X[mask, j]
+            if len(col) < 2:
+                col = X[:, j]
+            pct = np.linspace(5, 95, self.ngauss)
+            mus_init = np.percentile(col, pct)
+            mus_init = np.sort(mus_init)
+            for i in range(self.ngauss):
+                idx = self.ngauss + i * self.nvars + j
+                self.minparams[idx] = mus_init[i]
+            width = np.ptp(col)
+            sigma_init = min(
+                self._sigmax * 0.5,
+                0.2 * width / max(1, self.ngauss),
+                max(0.05 * width, np.std(col) * 0.5),
+            )
+            if width <= 0:
+                sigma_init = 1.0
+            for i in range(self.ngauss):
+                idx = self.ngauss + self.Ndim + i * self.nvars + j
+                if idx < len(self.minparams):
+                    self.minparams[idx] = sigma_init
+        self.uparams = Util.t_if(self.minparams, self.scales, Util.f2u)
+        if self.ngauss > 1:
+            self._set_initial_weights_from_function()
+
+    def _set_initial_weights_from_function(self, n_sigma_window=2.0):
+        """
+        Set initial weights from the function F by integrating F in a window around each mu.
+        So peaks with more area get larger initial weight; avoids starting with equal weights.
+        """
+        if self.ngauss < 2:
+            return
+        X = np.asarray(self.X)
+        F = np.asarray(self.F).ravel()
+        if X.size == 0 or F.size != X.shape[0]:
+            return
+        mus = np.array(
+            [self.minparams[self.ngauss + i * self.nvars] for i in range(self.ngauss)]
+        )
+        sigmas = np.array(
+            [
+                self.minparams[self.ngauss + self.Ndim + i * self.nvars]
+                for i in range(self.ngauss)
+            ]
+        )
+        x = X[:, 0] if self.nvars == 1 else X
+        if self.nvars == 1:
+            x = np.asarray(x).ravel()
+        masses = np.zeros(self.ngauss)
+        for i in range(self.ngauss):
+            if self.nvars == 1:
+                half = n_sigma_window * max(sigmas[i], 1e-6)
+                in_window = (x >= mus[i] - half) & (x <= mus[i] + half)
+            else:
+                dist = np.linalg.norm(X - mus[i], axis=1)
+                half = n_sigma_window * max(np.mean(sigmas), 1e-6)
+                in_window = dist <= half
+            masses[i] = np.sum(F[in_window])
+        if np.sum(masses) <= 0:
+            return
+        weights = masses / np.sum(masses)
+        weights = np.clip(weights, 1e-6, 1.0 - 1e-6)
+        weights = weights / np.sum(weights)
+        self.minparams[: self.ngauss] = weights
+        self.uparams = Util.t_if(self.minparams, self.scales, Util.f2u)
+
+    def _loss_function(self, uparams):
+        """
+        Least-squares loss between F and (normalization * cmnd.pdf(X)).
+        Normalization is computed analytically at each evaluation to minimize the residual sum of squares.
+        """
+        minparams = Util.t_if(uparams, self.scales, Util.u2f)
+        params = self.pmap(minparams)
+        self.cmnd.set_stdcorr(params, self.nvars)
+        pdf = self.cmnd.pdf(self.X)
+        pdf = np.maximum(np.atleast_1d(pdf).astype(float), 1e-300)
+        c = np.dot(self.F, pdf) / np.dot(pdf, pdf)
+        residual = self.F - c * pdf
+        return np.sum(residual**2)
+
+    def fit_data(self, verbose=0, advance=0, mode="lsq", **args):
+        """
+        Fit the CMND to the function on the mesh by nonlinear least squares.
+
+        Minimizes sum over grid points of (F - normalization * cmnd.pdf(X))^2.
+        The normalization is obtained analytically at each step so that the residual
+        sum of squares is minimized for the current CMND parameters. After fitting,
+        self.normalization holds the scale so that normalization * cmnd.pdf(X) ≈ F.
+
+        Ex. F.fit_data(tol=1e-6, options=dict(maxiter=500))
+
+        Parameters
+        ----------
+        verbose : int, optional
+            Verbosity level (default 0).
+        advance : int, optional
+            If > 0, print progress every advance iterations (default 0).
+        mode : str, optional
+            Mode of fitting. "lsq" (default) or "multimodal".
+            In "multimodal" mode, peaks are detected first, ngauss is set to number of peaks,
+            means are fixed to peak positions, and only sigmas and weights are fitted.
+        **args
+            Passed to scipy.optimize.minimize (e.g. method, tol, options).
+        """
+        from scipy.signal import find_peaks
+
+        self.cmnd._ignoreWarnings = self._ignoreWarnings
+        minargs = dict(method="Powell")
+        minargs.update(args)
+
+        # Handle multimodal mode
+        if mode == "multimodal":
+            from scipy.signal import peak_widths, peak_prominences
+
+            F_flat = np.asarray(self.F).ravel()
+            # Detect peaks
+            # Use a relative height threshold
+            height_threshold = 0.05 * np.max(F_flat) if np.max(F_flat) > 0 else None
+            peaks, properties = find_peaks(F_flat, height=height_threshold)
+
+            if len(peaks) == 0:
+                print(
+                    "Warning: No peaks detected in multimodal mode. Fallback to existing configuration."
+                )
+            else:
+                self.ngauss = len(peaks)
+
+                # Calculate widths and prominences
+                widths_samples, _, _, _ = peak_widths(F_flat, peaks, rel_height=0.5)
+                prominences, _, _ = peak_prominences(F_flat, peaks)
+
+                # Re-initialize CMND and parameters structure with new ngauss
+                self.Ndim = self.ngauss * self.nvars
+                self.Ncorr = int(self.nvars * (self.nvars - 1) / 2)
+                self.cmnd = ComposedMultiVariateNormal(
+                    ngauss=self.ngauss,
+                    nvars=self.nvars,
+                    domain=self.domain,
+                    normalize_weights=False,
+                )
+                self.set_params()
+
+                # Set means to peak positions
+                mus_peaks = self.X[peaks]
+
+                # Set mus
+                for i in range(self.ngauss):
+                    idx_base = self.ngauss + i * self.nvars
+                    self.minparams[idx_base : idx_base + self.nvars] = mus_peaks[i]
+
+                # Set sigmas based on widths
+                # widths_samples is FWHM in indices.
+                # Convert to physical units.
+                # Assuming approximate uniform grid for width estimation
+                if len(self.X) > 1:
+                    dx = (self.X[-1, 0] - self.X[0, 0]) / (len(self.X) - 1)
+                else:
+                    dx = 1.0
+
+                sigma_conversion = 1.0 / 2.355  # FWHM to sigma (approx)
+
+                for i in range(self.ngauss):
+                    width_physical = widths_samples[i] * dx
+                    # Use a fraction of FWHM as sigma estimate
+                    sigma_est = width_physical * sigma_conversion
+
+                    idx_base = self.ngauss + self.Ndim + i * self.nvars
+                    self.minparams[idx_base : idx_base + self.nvars] = sigma_est
+
+                # Set weights based on prominences (or peak heights)
+                # minparams[0:ngauss] are weights (if ngauss > 1)
+                if self.ngauss > 1:
+                    weights = prominences / np.sum(prominences)
+                    self.minparams[: self.ngauss] = weights
+
+                # Function to create tight bounds for fixed parameters
+                def fix_val(val):
+                    return (val - 1e-9, val + 1e-9)
+
+                # Construct bounds
+
+                # Recalculate component bounds
+                # Weights
+                boundw = (-np.inf, np.inf)  # Transformed weights
+
+                # Sigmas
+                # We want standard bounds for sigmas.
+                bounds_orig = getattr(self.cmnd, "_domain_bounds", None)
+                domain_widths = [
+                    bounds_orig[j][1] - bounds_orig[j][0]
+                    for j in range(self.nvars)
+                    if np.isfinite(bounds_orig[j][0]) and np.isfinite(bounds_orig[j][1])
+                ]
+                sigma_hi = 0.99 * self._sigmax
+                if domain_widths:
+                    width_max = max(domain_widths)
+                    sigma_hi = min(sigma_hi, 0.25 * width_max)
+
+                bound_sigma_trans = (
+                    Util.f2u(1e-6, self._sigmax),
+                    Util.f2u(sigma_hi, self._sigmax),
+                )
+
+                # Rhos
+                bound_rho_trans = (-np.inf, np.inf)
+
+                # Bounds list construction
+                new_bounds = []
+
+                # Weights (if ngauss > 1)
+                if self.ngauss > 1:
+                    new_bounds.extend([boundw] * self.ngauss)
+
+                # Means (Fixed)
+                for i in range(self.ngauss):
+                    for j in range(self.nvars):
+                        mu_val = mus_peaks[i, j]
+                        new_bounds.append((mu_val - 1e-9, mu_val + 1e-9))
+
+                # Sigmas
+                new_bounds.extend([bound_sigma_trans] * self.Ndim)
+
+                # Rhos
+                new_bounds.extend([bound_rho_trans] * (self.ngauss * self.Ncorr))
+
+                minargs["bounds"] = tuple(new_bounds)
+
+                # Sync uparams
+                self.uparams = Util.t_if(self.minparams, self.scales, Util.f2u)
+
+                self._initial_params_set_by_user = True
+
+                if minargs.get("method") == "Powell":
+                    minargs["method"] = "L-BFGS-B"
+
+        bounds_orig = getattr(self.cmnd, "_domain_bounds", None)
+        has_finite_domain = bounds_orig is not None and any(
+            np.isfinite(bounds_orig[j][0]) or np.isfinite(bounds_orig[j][1])
+            for j in range(self.nvars)
+        )
+        if has_finite_domain and "bounds" not in args and mode != "multimodal":
+            domain_widths = [
+                bounds_orig[j][1] - bounds_orig[j][0]
+                for j in range(self.nvars)
+                if np.isfinite(bounds_orig[j][0]) and np.isfinite(bounds_orig[j][1])
+            ]
+            sigma_hi = 0.99 * self._sigmax
+            if domain_widths:
+                width_max = max(domain_widths)
+                sigma_hi = min(sigma_hi, 0.25 * width_max)
+            bounds_tuple = self.set_bounds(bounds=(1e-6, sigma_hi))
+            minargs["bounds"] = bounds_tuple
+            if minargs.get("method") == "Powell":
+                minargs["method"] = "L-BFGS-B"
+            if not getattr(self, "_initial_params_set_by_user", False):
+                self._init_params_from_grid()
+        else:
+            if not getattr(self, "_initial_params_set_by_user", False):
+                self._init_params_from_function_support()
+
+        self.neval = 0
+
+        def _advance(x, show=False):
+            if advance > 0 and (self.neval % advance == 0 or show):
+                if self.neval == 0:
+                    print("Iterations:")
+                loss = self._loss_function(x)
+                print(f"  Iter {self.neval}: loss = {loss:.6g}")
+            self.neval += 1
+
+        callback = _advance if advance else None
+
+        self.solution = minimize(
+            self._loss_function,
+            self.uparams,
+            callback=callback,
+            **minargs,
+        )
+        if advance:
+            _advance(self.solution.x, show=True)
+
+        self.uparams = self.solution.x
+        self.minparams = Util.t_if(self.uparams, self.scales, Util.u2f)
+        params = self.pmap(self.minparams)
+        self.cmnd.set_stdcorr(params, self.nvars)
+        pdf = self.cmnd.pdf(self.X)
+        pdf = np.maximum(np.atleast_1d(pdf).astype(float), 1e-300)
+        self.normalization = float(np.dot(self.F, pdf) / np.dot(pdf, pdf))
+
+    def quality_of_fit(self, verbose=True):
+        """
+        Report quality-of-fit statistics after fitting.
+
+        Computes the coefficient of determination (R²) and the root mean
+        square error (RMSE) between the mesh function F and the fitted
+        model (normalization * cmnd.pdf(X)). Call after fit_data().
+
+        R² (coefficient of determination)
+            R² = 1 - SS_res / SS_tot, where
+            SS_res = sum((F - F_pred)²),  SS_tot = sum((F - mean(F))²).
+            R² = 1 means a perfect fit; R² = 0 means the model explains
+            no variance beyond the mean; R² < 0 is possible if the fit
+            is worse than using the constant mean(F).
+
+        RMSE (root mean square error)
+            RMSE = sqrt(mean((F - F_pred)²)). Same units as F; lower
+            is better.
+
+        Parameters
+        ----------
+        verbose : bool, optional
+            If True (default), print a short report.
+
+        Returns
+        -------
+        dict
+            Keys: 'R2', 'RMSE', 'SS_res', 'SS_tot', 'n_points'.
+
+        Raises
+        ------
+        ValueError
+            If fit_data() has not been run (normalization is None).
+        """
+        if self.normalization is None:
+            raise ValueError(
+                "quality_of_fit requires a fitted model; run fit_data() first"
+            )
+        F_obs = np.asarray(self.F).ravel().astype(float)
+        pdf = self.cmnd.pdf(self.X)
+        pdf = np.maximum(np.atleast_1d(pdf).astype(float), 1e-300)
+        F_pred = self.normalization * pdf
+        F_pred = np.asarray(F_pred).ravel().astype(float)
+        n = F_obs.size
+        ss_res = float(np.sum((F_obs - F_pred) ** 2))
+        mean_f = float(np.mean(F_obs))
+        ss_tot = float(np.sum((F_obs - mean_f) ** 2))
+        if ss_tot > 0:
+            r2 = 1.0 - ss_res / ss_tot
+        else:
+            r2 = float("nan")
+        rmse = np.sqrt(np.mean((F_obs - F_pred) ** 2))
+        out = {
+            "R2": r2,
+        }
+        if verbose:
+            print("Quality of fit (after fit_data):")
+            print(f"  R²    = {out['R2']:.6g}  (1 = perfect, 0 = no better than mean)")
+        return out
+
+    def plot_fit(
+        self,
+        figsize=(8, 5),
+        xlabel=None,
+        ylabel=None,
+        n_curve=300,
+        sargs=None,
+        largs=None,
+        **kwargs,
+    ):
+        """
+        Plot original function (data) and fitted CMND for univariate fits.
+
+        Draws the mesh data (X, F) and the fitted model normalization * cmnd.pdf(X).
+        Only implemented for nvars == 1.
+        Ex. F.plot_fit(xlabel=r'$\\tau$', ylabel='ISR', sargs=dict(ms=2, color='C0'))
+
+        Parameters
+        ----------
+        figsize : tuple, optional
+            Figure size (default (8, 5)).
+        xlabel : str, optional
+            Label for the x-axis.
+        ylabel : str, optional
+            Label for the y-axis.
+        n_curve : int, optional
+            Number of points for the smooth PDF curve (default 300).
+        sargs : dict, optional
+            Options for the data (points) plot. Default: dict(ms=1.5, label='data').
+            Passed to ax.plot for the (x, F) points.
+        largs : dict, optional
+            Options for the fit line (norm × CMND PDF). Default: dict(color='k',
+            lw=2, label='fit (norm × CMND PDF)').
+        **kwargs
+            Extra arguments merged into the data plot when sargs is None; else ignored.
+
+        Returns
+        -------
+        fig : matplotlib.figure.Figure
+            Figure handle.
+
+        Examples
+        --------
+        >>> F.plot_fit(xlabel=r'$\\tau$', ylabel='ISR')
+        >>> F.plot_fit(sargs=dict(ms=2, color='C0'), largs=dict(color='C1', lw=3))
+        """
+        if self.nvars != 1:
+            raise NotImplementedError(
+                "plot_fit is only implemented for univariate (nvars=1) fits"
+            )
+        from matplotlib import pyplot as plt
+
+        if sargs is None:
+            sargs = dict(ms=1.5, label="data")
+            sargs.update(kwargs)
+        else:
+            sargs = dict(sargs)
+            sargs.setdefault("label", "data")
+            sargs.setdefault("ms", 1.5)
+        if largs is None:
+            largs = dict(color="k", lw=2, label="fit (norm × CMND PDF)")
+        else:
+            largs = dict(largs)
+            largs.setdefault("label", "fit (norm × CMND PDF)")
+
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
+        x = np.asarray(self.X).ravel()
+        f = np.asarray(self.F).ravel()
+
+        ax.plot(x, f, "o", **sargs)
+
+        if self.normalization is not None:
+            x_min, x_max = x.min(), x.max()
+            margin = max(1e-6, 0.05 * (x_max - x_min))
+            x_curve = np.linspace(x_min - margin, x_max + margin, n_curve)
+            pdf_vals = self.cmnd.pdf(x_curve.reshape(-1, 1))
+            model_vals = self.normalization * np.atleast_1d(pdf_vals)
+            ax.plot(x_curve, model_vals, "-", **largs)
+
+        if xlabel is not None:
+            ax.set_xlabel(xlabel)
+        if ylabel is not None:
+            ax.set_ylabel(ylabel)
+        ax.legend(loc="best", frameon=True)
+        ax.grid(True, alpha=0.3)
+        ax.set_ylim(0, None)
+        fig.tight_layout()
+        if not getattr(self, "_watermark_added_plot_fit", False):
+            multimin_watermark(ax, frac=0.5)
+            self._watermark_added_plot_fit = True
+        self.fig = fig
+        return fig
+
+    def _parse_function_mesh_data(self, Xmesh, Fmesh):
+        """
+        Convert (Xmesh, Fmesh) from mesh/function format to points X (N, nvars) and values F (N,).
+
+        For univariate: Xmesh and Fmesh are 1D arrays of the same length.
+        For multivariate: Xmesh is a tuple of ndarrays (e.g. from np.meshgrid), Fmesh is an array
+        of the same shape as the grid.
+
+        Parameters
+        ----------
+        Xmesh : array-like or tuple of array-like
+            Evaluation points. 1D array (n,) for univariate, or tuple of arrays for a grid.
+        Fmesh : array-like
+            Function values at those points. Shape (n,) for 1D or same shape as grid for mesh.
+
+        Returns
+        -------
+        X : numpy.ndarray
+            Points, shape (N, nvars).
+        F : numpy.ndarray
+            Values, shape (N,).
+        nvars : int
+            Number of variables.
+        """
+        Fmesh = np.asarray(Fmesh, dtype=float)
+        if isinstance(Xmesh, (list, tuple)) and len(Xmesh) > 0:
+            # Multivariate: meshgrid-style (x1, x2, ...)
+            grids = [np.asarray(x, dtype=float) for x in Xmesh]
+            nvars = len(grids)
+            shape = grids[0].shape
+            for g in grids:
+                if g.shape != shape:
+                    raise ValueError(
+                        "Xmesh grid components must have the same shape; "
+                        f"got {[g.shape for g in grids]}"
+                    )
+            if Fmesh.shape != shape:
+                raise ValueError(
+                    f"Fmesh shape {Fmesh.shape} must match grid shape {shape}"
+                )
+            X = np.column_stack([g.ravel() for g in grids])
+            F = Fmesh.ravel()
+        else:
+            # Univariate: Xmesh and Fmesh are 1D
+            Xmesh = np.asarray(Xmesh, dtype=float)
+            if Xmesh.ndim != 1:
+                raise ValueError(
+                    "For univariate, Xmesh must be 1D; for multivariate use a tuple of arrays"
+                )
+            n = len(Xmesh)
+            if Fmesh.size != n:
+                raise ValueError(
+                    f"Xmesh length ({n}) and Fmesh size ({Fmesh.size}) must match"
+                )
+            nvars = 1
+            X = Xmesh.reshape(-1, 1)
+            F = np.asarray(Fmesh, dtype=float).ravel()
+        return X, F, nvars

@@ -334,6 +334,32 @@ def test_truncated_3d_fit():
     # Fitted means for y should be close to 0.3 and 0.7 (order may swap)
 
 
+def test_univariate_function_fit():
+    """
+    Test FitFunctionCMND for univariate function fitting.
+
+    Fits an exponential decay with several Gaussians, as in
+    examples/multimin_functions_tutorial.ipynb (non-gaussian function section).
+    """
+    np.random.seed(42)
+    xs = np.linspace(0, 10, 100)
+    ys = np.exp(-xs)
+    F = mn.FitFunctionCMND(data=(xs, ys), ngauss=3)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message="divide by zero")
+        F.fit_data(advance=5, tol=1e-6, options=dict(maxiter=500), verbose=False)
+    assert F.normalization is not None, "fit_data should set normalization"
+    out = F.quality_of_fit(verbose=False)
+    assert np.isfinite(out["R2"]), "R² should be finite"
+    assert out["R2"] > 0.8, (
+        "Exponential approximated by 3 Gaussians should yield R² > 0.8"
+    )
+    assert F.X.size == 100, "Grid should have 100 points"
+    fig = F.plot_fit(figsize=(4, 3))
+    assert fig is not None, "plot_fit should return a figure"
+    plt.close(fig)
+
+
 def test_save_load_fit():
     """Test saving and loading a FitCMND object."""
     import tempfile

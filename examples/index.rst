@@ -2,3 +2,4 @@ multimin_cmnd_quickstart.ipynb
 multimin_cmnd_tutorial.ipynb
 multimin_truncated_tutorial.ipynb
 multimin_asteroids_application.ipynb
+multimin_functions_tutorial.ipynb
