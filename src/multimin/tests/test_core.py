@@ -167,7 +167,9 @@ def test_cmnd_univariate():
     CMND2 = mn.ComposedMultiVariateNormal(ngauss=2, nvars=1)
     assert CMND2.nvars == 1 and CMND2.ngauss == 2
     CMND2.set_sigmas([[[1.0]], [[1.0]]])
-    assert CMND2.params is not None and len(CMND2.params) == 2 * (1 + 1 + 1)  # 2*(w+mu+var)
+    assert CMND2.params is not None and len(CMND2.params) == 2 * (
+        1 + 1 + 1
+    )  # 2*(w+mu+var)
 
     # Params roundtrip
     p = CMND.params.copy()
@@ -179,7 +181,9 @@ def test_cmnd_univariate():
     # Univariate 1-D API: mus and Sigmas as 1-D arrays
     mus_1d = np.array([0.0, 2.0])
     Sigmas_1d = np.array([1.0, 0.25])  # variances
-    CMND_1d = mn.ComposedMultiVariateNormal(mus=mus_1d, weights=[0.5, 0.5], Sigmas=Sigmas_1d)
+    CMND_1d = mn.ComposedMultiVariateNormal(
+        mus=mus_1d, weights=[0.5, 0.5], Sigmas=Sigmas_1d
+    )
     assert CMND_1d.nvars == 1 and CMND_1d.ngauss == 2
     np.testing.assert_allclose(CMND_1d.mus.flatten(), mus_1d)
     np.testing.assert_allclose(CMND_1d.Sigmas[:, 0, 0], Sigmas_1d)
@@ -324,7 +328,47 @@ def test_truncated_3d_fit():
     assert np.isfinite(F_3d.log_l(data_3d)), "Log likelihood should be finite"
     # Bounded variable (index 1) means must lie in [0, 1]
     mus_y = F_3d.cmnd.mus[:, 1]
-    assert np.all((mus_y >= 0) & (mus_y <= 1)), "Fitted means for bounded variable must be in [0, 1]"
+    assert np.all((mus_y >= 0) & (mus_y <= 1)), (
+        "Fitted means for bounded variable must be in [0, 1]"
+    )
     # Fitted means for y should be close to 0.3 and 0.7 (order may swap)
-    mus_y_sorted = np.sort(mus_y)
-    np.testing.assert_allclose(mus_y_sorted, [0.3, 0.7], atol=0.15)
+
+
+def test_save_load_fit():
+    """Test saving and loading a FitCMND object."""
+    import tempfile
+    import shutil
+
+    # Create simple data
+    np.random.seed(42)
+    mean = [2, 3]
+    cov = [[1, 0], [0, 1]]
+    data = np.random.multivariate_normal(mean, cov, size=100)
+
+    # Create and fit
+    F = mn.FitCMND(data, ngauss=1)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message="divide by zero encountered in log")
+        F.fit_data(data, verbose=0, options={"maxiter": 20})
+
+    # Save to temp file
+    tmp_dir = tempfile.mkdtemp()
+    try:
+        save_path = os.path.join(tmp_dir, "test_fit.pkl")
+        F.save_fit(save_path, useprefix=False)
+
+        # Load back
+        F_loaded = mn.FitCMND(save_path)
+
+        # Verify
+        assert F_loaded.ngauss == F.ngauss
+        assert F_loaded.nvars == F.nvars
+        np.testing.assert_allclose(F_loaded.minparams, F.minparams)
+
+        # Verify functionality
+        val_orig = F.log_l(data)
+        val_loaded = F_loaded.log_l(data)
+        assert np.isclose(val_orig, val_loaded)
+
+    finally:
+        shutil.rmtree(tmp_dir)

@@ -5,3 +5,4 @@ spiceypy>=5.0.0
 pandas>=1.0.0
 plotly>=5.0.0
 pypandoc
+tqdm

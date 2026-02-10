@@ -26,15 +26,21 @@ _DIV_A_IMG_PAT = re.compile(
 
 def _preprocess_readme_for_rst(md_text: str) -> str:
     """Replace HTML image blocks with Markdown so pypandoc outputs .. figure:: / .. image:: (no raw)."""
+
     # Logo with link -> [![alt](imgurl)](href)
     def repl_logo(m):
         href, imgurl, alt = m.group(1), m.group(2), m.group(3)
-        return "\n\n[![{alt}]({imgurl})]({href})\n\n".format(alt=alt, imgurl=imgurl, href=href)
+        return "\n\n[![{alt}]({imgurl})]({href})\n\n".format(
+            alt=alt, imgurl=imgurl, href=href
+        )
+
     md_text = _DIV_A_IMG_PAT.sub(repl_logo, md_text)
+
     # Plain div+img -> ![alt](url)
     def repl(m):
         url, alt = m.group(1), m.group(2)
         return "\n\n![{alt}]({url})\n\n".format(alt=alt, url=url)
+
     return _DIV_IMG_PAT.sub(repl, md_text)
 
 
@@ -45,7 +51,9 @@ def _add_width_to_gallery_images(rst_text: str, width: str = "600") -> str:
     for line in lines:
         out.append(line)
         stripped = line.strip()
-        if not (stripped.startswith(".. image::") or stripped.startswith(".. figure::")):
+        if not (
+            stripped.startswith(".. image::") or stripped.startswith(".. figure::")
+        ):
             continue
         # Gallery figures (png) or header logo (webp)
         if ("gallery" in line and "png" in line) or ("docs" in line and "webp" in line):
@@ -63,12 +71,16 @@ def _strip_unsafe_rst_directives(rst_text: str) -> str:
         stripped = line.strip()
         if stripped == ".. container::":
             i += 1
-            while i < len(lines) and (lines[i].startswith(" ") or lines[i].strip() == ""):
+            while i < len(lines) and (
+                lines[i].startswith(" ") or lines[i].strip() == ""
+            ):
                 i += 1
             continue
         if stripped.startswith(".. raw::"):
             i += 1
-            while i < len(lines) and (lines[i].startswith(" ") or lines[i].strip() == ""):
+            while i < len(lines) and (
+                lines[i].startswith(" ") or lines[i].strip() == ""
+            ):
                 i += 1
             continue
         out.append(line)
@@ -81,9 +93,12 @@ _readme_path = os.path.join(os.path.dirname(__file__), "README.md")
 long_description_content_type = "text/markdown"
 try:
     import pypandoc
+
     with open(_readme_path, "r", encoding="utf-8") as _fh:
         _md = _fh.read()
-    _md = _preprocess_readme_for_rst(_md)  # HTML img -> ![alt](url) so RST has .. image:: (no raw)
+    _md = _preprocess_readme_for_rst(
+        _md
+    )  # HTML img -> ![alt](url) so RST has .. image:: (no raw)
     for _fmt in ("markdown+tex_math_dollars", "markdown"):
         try:
             long_description = pypandoc.convert_text(
@@ -128,7 +143,7 @@ setup(
         "Programming Language :: Python :: 3.11",
         "Operating System :: OS Independent",
     ],
-    version='0.9.6',
+    version="0.9.6",
     package_dir={"": "src"},
     packages=find_packages(where="src"),
     test_suite="pytest",
@@ -140,7 +155,8 @@ setup(
         "spiceypy>=5.0.0",
         "pandas>=1.0.0",
         "plotly>=5.0.0",
-        "pypandoc"
+        "pypandoc",
+        "tqdm",
     ],
     python_requires=">=3.8",
     include_package_data=True,

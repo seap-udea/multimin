@@ -28,7 +28,6 @@ Usage
 For more information, visit: https://github.com/seap-udea/multimin
 """
 
-from asyncio import MultiLoopChildWatcher
 import inspect
 import os
 import math
@@ -41,6 +40,7 @@ from scipy.optimize import minimize
 from matplotlib import pyplot as plt
 from scipy.stats import norm, multivariate_normal as multinorm
 from scipy.stats import truncnorm
+import matplotlib.pyplot as plt
 
 import numpy as np
 import spiceypy as spy
@@ -62,7 +62,11 @@ __description__ = "MultiMin: Multivariate Gaussian fitting"
 # Global option: set to False to disable watermarks on all plots (DensityPlot, plot_sample, plot_fit).
 # Can be set after import: import multimin as mn; mn.show_watermark = False
 # Or via environment variable before import: MULTIMIN_NO_WATERMARK=1
-show_watermark = os.getenv("MULTIMIN_NO_WATERMARK", "").lower() not in ("1", "true", "yes")
+show_watermark = os.getenv("MULTIMIN_NO_WATERMARK", "").lower() not in (
+    "1",
+    "true",
+    "yes",
+)
 
 
 # Print a nice welcome message
@@ -113,13 +117,18 @@ def _docstring_summary(doc):
         stripped = line.strip()
         if not stripped:
             break
-        if any(stripped == marker or stripped.startswith(marker + " ") or
-               stripped == marker + ":" for marker in section_markers):
+        if any(
+            stripped == marker
+            or stripped.startswith(marker + " ")
+            or stripped == marker + ":"
+            for marker in section_markers
+        ):
             break
         if stripped.endswith("---") or stripped.endswith("===="):
             break
         summary_lines.append(stripped)
     return " ".join(summary_lines).strip() if summary_lines else ""
+
 
 class MultiMinBase:
     """
@@ -151,7 +160,10 @@ class MultiMinBase:
                 continue
             methods.append((name, obj))
         methods.sort(key=lambda x: x[0])
-        lines = [f"\nAvailable methods for this object/class", "=" * (30 + len(cls.__name__))]
+        lines = [
+            f"\nAvailable methods for this object/class",
+            "=" * (30 + len(cls.__name__)),
+        ]
         for name, meth in methods:
             if name == "describe":
                 continue
@@ -765,7 +777,11 @@ def tnmd(X, mu, Sigma, a, b, Z=None):
     """
     mu = np.atleast_1d(np.asarray(mu, dtype=float))
     Sig = np.asarray(Sigma, dtype=float)
-    n_dim = 1 if mu.size == 1 and (Sig.size == 1 or (Sig.ndim == 2 and Sig.shape[0] == 1)) else (Sig.shape[0] if Sig.ndim >= 2 else int(mu.size))
+    n_dim = (
+        1
+        if mu.size == 1 and (Sig.size == 1 or (Sig.ndim == 2 and Sig.shape[0] == 1))
+        else (Sig.shape[0] if Sig.ndim >= 2 else int(mu.size))
+    )
     univariate = n_dim == 1
     X = np.asarray(X, dtype=float)
     if univariate:
@@ -804,7 +820,7 @@ def _norm_const_box(mu, Sigma, a, b):
 # =============================================================================
 # VISUALIZATION
 # =============================================================================
-def multimin_watermark(ax, frac=1/4, alpha=1):
+def multimin_watermark(ax, frac=1 / 4, alpha=1):
     """Add a water mark to a 2d or 3d plot.
 
     Parameters:
@@ -881,7 +897,9 @@ def _props_to_properties(properties, nvars, ranges=None):
     # list or sequence: use elements as names and labels, range from ranges
     return {
         (str(properties[i]) if i < len(properties) else string.ascii_letters[i]): dict(
-            label=str(properties[i]) if i < len(properties) else f"${string.ascii_letters[i]}$",
+            label=str(properties[i])
+            if i < len(properties)
+            else f"${string.ascii_letters[i]}$",
             range=ranges[i] if ranges is not None and i < len(ranges) else None,
         )
         for i in range(nvars)
@@ -962,7 +980,10 @@ class DensityPlot(MultiMinBase):
         # Univariate: single 1D panel
         if self._univariate:
             from matplotlib import pyplot as plt
-            self.fig, ax = plt.subplots(1, 1, constrained_layout=True, figsize=(self.fw * 1.5, self.fw))
+
+            self.fig, ax = plt.subplots(
+                1, 1, constrained_layout=True, figsize=(self.fw * 1.5, self.fw)
+            )
             self.axs = np.array([[ax]])
             self.constrained = True
             self.single = True
@@ -1210,15 +1231,21 @@ class DensityPlot(MultiMinBase):
             handles, labels = ax.get_legend_handles_labels()
             if handles and getattr(self, "_ax_twin", None) is None:
                 ax.legend(
-                    handles, labels, loc="lower center", bbox_to_anchor=(0.5, 1.02),
-                    ncol=len(handles), frameon=False
+                    handles,
+                    labels,
+                    loc="lower center",
+                    bbox_to_anchor=(0.5, 1.02),
+                    ncol=len(handles),
+                    frameon=False,
                 )
                 self.fig.subplots_adjust(top=0.88)
             self.set_ranges()
             self.set_tick_params()
             self.tight_layout()
             if not getattr(self, "_watermark_added", False):
-                multimin_watermark(ax, frac=0.5)  # larger frac for single panel (match 2-panel size)
+                multimin_watermark(
+                    ax, frac=0.5
+                )  # larger frac for single panel (match 2-panel size)
                 self._watermark_added = True
             return []
 
@@ -1285,7 +1312,7 @@ class DensityPlot(MultiMinBase):
         self.set_ranges()
         self.set_tick_params()
         self.tight_layout()
-        multimin_watermark(self.axs[0][0], frac=1/4*self.axs.shape[0])
+        multimin_watermark(self.axs[0][0], frac=1 / 4 * self.axs.shape[0])
         return hist
 
     def scatter_plot(self, data, **args):
@@ -1324,7 +1351,9 @@ class DensityPlot(MultiMinBase):
             ax_twin.set_ylim(0, 1)
             ax_twin.set_yticks([])
             prop_name = self.properties[0]
-            ax_twin.set_ylabel("sample " + self.dproperties[prop_name]["label"], fontsize=self.fs)
+            ax_twin.set_ylabel(
+                "sample " + self.dproperties[prop_name]["label"], fontsize=self.fs
+            )
             self._ax_twin = ax_twin  # store for reference
             # Legend: combine primary ax (e.g. histogram) and twin (sample scatter)
             handles, labels = ax.get_legend_handles_labels()
@@ -1332,15 +1361,21 @@ class DensityPlot(MultiMinBase):
             handles, labels = handles + h2, labels + l2
             if handles:
                 ax.legend(
-                    handles, labels, loc="lower center", bbox_to_anchor=(0.5, 1.02),
-                    ncol=len(handles), frameon=False
+                    handles,
+                    labels,
+                    loc="lower center",
+                    bbox_to_anchor=(0.5, 1.02),
+                    ncol=len(handles),
+                    frameon=False,
                 )
                 self.fig.subplots_adjust(top=0.88)  # room for legend above
             self.set_ranges()
             self.set_tick_params()
             self.tight_layout()
             if not getattr(self, "_watermark_added", False):
-                multimin_watermark(ax, frac=0.5)  # larger frac for single panel (match 2-panel size)
+                multimin_watermark(
+                    ax, frac=0.5
+                )  # larger frac for single panel (match 2-panel size)
                 self._watermark_added = True
             return [sc]
 
@@ -1357,7 +1392,7 @@ class DensityPlot(MultiMinBase):
         self.set_ranges()
         self.set_tick_params()
         self.tight_layout()
-        multimin_watermark(self.axs[0][0], frac=1/4*self.axs.shape[0])
+        multimin_watermark(self.axs[0][0], frac=1 / 4 * self.axs.shape[0])
         return scatter
 
 
@@ -1540,7 +1575,10 @@ class ComposedMultiVariateNormal(MultiMinBase):
                 try:
                     mus[0, 0]
                 except Exception as e:
-                    Util.error_msg(e, "Parameter 'mus' must be a vector (1-D) or matrix, e.g. mus=[0,1] or mus=[[0,0]]")
+                    Util.error_msg(
+                        e,
+                        "Parameter 'mus' must be a vector (1-D) or matrix, e.g. mus=[0,1] or mus=[[0,0]]",
+                    )
                     raise
                 self.mus = mus
                 self.ngauss = len(mus)
@@ -1585,9 +1623,7 @@ class ComposedMultiVariateNormal(MultiMinBase):
             else:
                 a, b = float(d[0]), float(d[1])
                 if a >= b:
-                    raise ValueError(
-                        f"domain[{i}] must have lower < upper, got {d}"
-                    )
+                    raise ValueError(f"domain[{i}] must have lower < upper, got {d}")
                 bounds.append((a, b))
         self._domain_bounds = bounds
 
@@ -1943,14 +1979,18 @@ class ComposedMultiVariateNormal(MultiMinBase):
                     f"Points X have {X.shape[1]} dimensions but this CMND has nvars={self.nvars}"
                 )
         else:
-            raise ValueError("X must be a point (length nvars) or array of points (N x nvars)")
+            raise ValueError(
+                "X must be a point (length nvars) or array of points (N x nvars)"
+            )
         X2 = np.atleast_2d(X)
         in_dom = self._in_domain(X2)
         has_finite_domain = any(
-            np.isfinite(self._domain_bounds[j][0]) or np.isfinite(self._domain_bounds[j][1])
+            np.isfinite(self._domain_bounds[j][0])
+            or np.isfinite(self._domain_bounds[j][1])
             for j in range(self.nvars)
         )
         from scipy.stats import multivariate_normal as multinorm
+
         value = np.zeros(X2.shape[0])
         if has_finite_domain:
             value[~in_dom] = 0.0
@@ -2001,8 +2041,10 @@ class ComposedMultiVariateNormal(MultiMinBase):
         self._check_params(self.params)
 
         from scipy.stats import multivariate_normal as multinorm
+
         has_finite_domain = any(
-            np.isfinite(self._domain_bounds[j][0]) or np.isfinite(self._domain_bounds[j][1])
+            np.isfinite(self._domain_bounds[j][0])
+            or np.isfinite(self._domain_bounds[j][1])
             for j in range(self.nvars)
         )
         Xs = np.zeros((Nsam, self.nvars))
@@ -2187,7 +2229,7 @@ class ComposedMultiVariateNormal(MultiMinBase):
             G.scatter_plot(self.data, **sargs)
             if self.nvars == 1:
                 ymax = max(ymax, G.axs[0][0].get_ylim()[1])
-        
+
         # When the distribution is univariate, add the PDF curve and legend
         if self.nvars == 1:
             x_min, x_max = self.data[:, 0].min(), self.data[:, 0].max()
@@ -2203,8 +2245,12 @@ class ComposedMultiVariateNormal(MultiMinBase):
                 h2, l2 = G._ax_twin.get_legend_handles_labels()
                 handles, labels = handles + h2, labels + l2
             G.axs[0][0].legend(
-                handles, labels, loc="lower center", bbox_to_anchor=(0.5, 1.02),
-                ncol=len(handles), frameon=False
+                handles,
+                labels,
+                loc="lower center",
+                bbox_to_anchor=(0.5, 1.02),
+                ncol=len(handles),
+                frameon=False,
             )
             G.fig.subplots_adjust(top=0.88)  # room for legend above
         else:
@@ -2397,15 +2443,18 @@ class ComposedMultiVariateNormal(MultiMinBase):
         # type == "python"
         var_names = self._var_names(properties)
         bounds = getattr(self, "_domain_bounds", None)
-        has_finite_domain = (
-            bounds is not None
-            and any(
-                np.isfinite(bounds[j][0]) or np.isfinite(bounds[j][1])
-                for j in range(self.nvars)
-            )
+        has_finite_domain = bounds is not None and any(
+            np.isfinite(bounds[j][0]) or np.isfinite(bounds[j][1])
+            for j in range(self.nvars)
         )
         if has_finite_domain:
-            lines = ["import numpy as np", "from multimin import tnmd", "", "def cmnd(X):", ""]
+            lines = [
+                "import numpy as np",
+                "from multimin import tnmd",
+                "",
+                "def cmnd(X):",
+                "",
+            ]
             if self.nvars == 1:
                 a0 = round(float(bounds[0][0]), decimals)
                 b0 = round(float(bounds[0][1]), decimals)
@@ -2475,7 +2524,11 @@ class ComposedMultiVariateNormal(MultiMinBase):
                 lines.append("    Sigma{} = {}".format(i, Sigma_str))
                 if has_finite_domain:
                     lines.append("    Z{} = {}".format(i, Zk))
-                    lines.append("    n{} = tnmd(X, mu{}, Sigma{}, a, b, Z=Z{})".format(i, i, i, i))
+                    lines.append(
+                        "    n{} = tnmd(X, mu{}, Sigma{}, a, b, Z=Z{})".format(
+                            i, i, i, i
+                        )
+                    )
                 else:
                     lines.append("    n{} = nmd(X, mu{}, Sigma{})".format(i, i, i))
             lines.append("")
@@ -2507,26 +2560,34 @@ class ComposedMultiVariateNormal(MultiMinBase):
         parts = []
         var_names = self._var_names(properties)
         bounds = getattr(self, "_domain_bounds", None)
-        has_finite_domain = (
-            bounds is not None
-            and any(
-                np.isfinite(bounds[j][0]) or np.isfinite(bounds[j][1])
-                for j in range(self.nvars)
-            )
+        has_finite_domain = bounds is not None and any(
+            np.isfinite(bounds[j][0]) or np.isfinite(bounds[j][1])
+            for j in range(self.nvars)
         )
         univariate = self.nvars == 1
 
         if has_finite_domain:
             # List variables with finite domain and their bounds
-            parts.append("Finite domain. The following variables are truncated (the rest are unbounded):")
+            parts.append(
+                "Finite domain. The following variables are truncated (the rest are unbounded):"
+            )
             parts.append("")
             for j in range(self.nvars):
                 lo, hi = bounds[j][0], bounds[j][1]
                 if np.isfinite(lo) and np.isfinite(hi):
                     vname = var_names[j]
-                    parts.append("- Variable $x_{{{}}}$ (index {}): domain $[{}, {}]$.".format(vname, j + 1, round(float(lo), decimals), round(float(hi), decimals)))
+                    parts.append(
+                        "- Variable $x_{{{}}}$ (index {}): domain $[{}, {}]$.".format(
+                            vname,
+                            j + 1,
+                            round(float(lo), decimals),
+                            round(float(hi), decimals),
+                        )
+                    )
             parts.append("")
-            parts.append("Truncation region: $A_T = \\{\\tilde{U} \\in \\mathbb{R}^k : a_i \\le \\tilde{U}_i \\le b_i \\;\\forall i \\in T\\}$, with $T$ the set of truncated indices.")
+            parts.append(
+                "Truncation region: $A_T = \\{\\tilde{U} \\in \\mathbb{R}^k : a_i \\le \\tilde{U}_i \\le b_i \\;\\forall i \\in T\\}$, with $T$ the set of truncated indices."
+            )
             parts.append("")
 
         def _mu_sigma_sub(k):
@@ -2534,7 +2595,9 @@ class ComposedMultiVariateNormal(MultiMinBase):
             if properties is None:
                 return str(k), str(k)
             v = var_names[0] if univariate else None
-            return (str(k) + "," + v) if v else str(k), (str(k) + "," + v) if v else str(k)
+            return (str(k) + "," + v) if v else str(k), (
+                str(k) + "," + v
+            ) if v else str(k)
 
         if univariate:
             if has_finite_domain:
@@ -2558,7 +2621,9 @@ class ComposedMultiVariateNormal(MultiMinBase):
                     msub, ssub = _mu_sigma_sub(1)
                     parts.append(
                         "$$f(x) = w_1 \\, "
-                        "\\mathcal{N}(x; \\mu_{{{}}}, \\sigma_{{{}}})$$".format(msub, ssub)
+                        "\\mathcal{N}(x; \\mu_{{{}}}, \\sigma_{{{}}})$$".format(
+                            msub, ssub
+                        )
                     )
                 else:
                     terms = [
@@ -2577,7 +2642,9 @@ class ComposedMultiVariateNormal(MultiMinBase):
                     )
                 else:
                     terms = [
-                        "w_{0} \\, \\mathcal{{TN}}_T(\\mathbf{{x}}; \\boldsymbol{{\\mu}}_{0}, \\mathbf{{\\Sigma}}_{0}, \\mathbf{{a}}_T, \\mathbf{{b}}_T)".format(k)
+                        "w_{0} \\, \\mathcal{{TN}}_T(\\mathbf{{x}}; \\boldsymbol{{\\mu}}_{0}, \\mathbf{{\\Sigma}}_{0}, \\mathbf{{a}}_T, \\mathbf{{b}}_T)".format(
+                            k
+                        )
                         for k in range(1, self.ngauss + 1)
                     ]
                     parts.append("$$f(\\mathbf{x}) = " + " + ".join(terms) + "$$")
@@ -2589,7 +2656,9 @@ class ComposedMultiVariateNormal(MultiMinBase):
                     )
                 else:
                     terms = [
-                        "w_{0} \\, \\mathcal{{N}}(\\mathbf{{x}}; \\boldsymbol{{\\mu}}_{0}, \\mathbf{{\\Sigma}}_{0})".format(k)
+                        "w_{0} \\, \\mathcal{{N}}(\\mathbf{{x}}; \\boldsymbol{{\\mu}}_{0}, \\mathbf{{\\Sigma}}_{0})".format(
+                            k
+                        )
                         for k in range(1, self.ngauss + 1)
                     ]
                     parts.append("$$f(\\mathbf{x}) = " + " + ".join(terms) + "$$")
@@ -2598,16 +2667,26 @@ class ComposedMultiVariateNormal(MultiMinBase):
         parts.append("")
         if has_finite_domain and not univariate:
             a_list = [
-                round(float(bounds[j][0]), decimals) if np.isfinite(bounds[j][0]) else "-\\infty"
+                round(float(bounds[j][0]), decimals)
+                if np.isfinite(bounds[j][0])
+                else "-\\infty"
                 for j in range(self.nvars)
             ]
             b_list = [
-                round(float(bounds[j][1]), decimals) if np.isfinite(bounds[j][1]) else "\\infty"
+                round(float(bounds[j][1]), decimals)
+                if np.isfinite(bounds[j][1])
+                else "\\infty"
                 for j in range(self.nvars)
             ]
             a_str = ", ".join(str(x) for x in a_list)
             b_str = ", ".join(str(x) for x in b_list)
-            parts.append("Bounds (vectors): $\\mathbf{a}_T = (" + a_str + ")^\\top$, $\\mathbf{b}_T = (" + b_str + ")^\\top$.")
+            parts.append(
+                "Bounds (vectors): $\\mathbf{a}_T = ("
+                + a_str
+                + ")^\\top$, $\\mathbf{b}_T = ("
+                + b_str
+                + ")^\\top$."
+            )
             parts.append("")
         for n in range(self.ngauss):
             k = n + 1
@@ -2637,8 +2716,12 @@ class ComposedMultiVariateNormal(MultiMinBase):
                 parts.append("$$w_{} = {}$$".format(k, w))
                 mu_arr = self._fmt_latex_array(mu, decimals)
                 sig_arr = self._fmt_latex_array(Sigma, decimals)
-                parts.append("$$\\boldsymbol{{\\mu}}_{} = \\left( {}\\right)$$".format(k, mu_arr))
-                parts.append("$$\\mathbf{{\\Sigma}}_{} = \\left( {}\\right)$$".format(k, sig_arr))
+                parts.append(
+                    "$$\\boldsymbol{{\\mu}}_{} = \\left( {}\\right)$$".format(k, mu_arr)
+                )
+                parts.append(
+                    "$$\\mathbf{{\\Sigma}}_{} = \\left( {}\\right)$$".format(k, sig_arr)
+                )
             parts.append("")
         # Definition of the (truncated) normal distribution
         if has_finite_domain:
@@ -2657,7 +2740,9 @@ class ComposedMultiVariateNormal(MultiMinBase):
                     "\\mathbf{\\Sigma}^{{-1}} (\\mathbf{x}-\\boldsymbol{\\mu})\\right].$$"
                 )
             parts.append("")
-            parts.append("The truncation region is $A_T = \\{\\tilde{U} \\in \\mathbb{R}^k : a_i \\le \\tilde{U}_i \\le b_i \\;\\forall i \\in T\\}$. The partially truncated normal is")
+            parts.append(
+                "The truncation region is $A_T = \\{\\tilde{U} \\in \\mathbb{R}^k : a_i \\le \\tilde{U}_i \\le b_i \\;\\forall i \\in T\\}$. The partially truncated normal is"
+            )
             parts.append("")
             parts.append(
                 "$$\\mathcal{TN}_T(\\tilde{U}; \\tilde{\\mu}, \\Sigma, \\mathbf{a}_T, \\mathbf{b}_T) = "
@@ -2665,7 +2750,9 @@ class ComposedMultiVariateNormal(MultiMinBase):
                 "{Z_T(\\tilde{\\mu}, \\Sigma, \\mathbf{a}_T, \\mathbf{b}_T)},$$"
             )
             parts.append("")
-            parts.append("where $\\mathbf{1}_{A_T}$ is the indicator of $A_T$ and the normalization constant is")
+            parts.append(
+                "where $\\mathbf{1}_{A_T}$ is the indicator of $A_T$ and the normalization constant is"
+            )
             parts.append("")
             parts.append(
                 "$$Z_T(\\tilde{\\mu}, \\Sigma, \\mathbf{a}_T, \\mathbf{b}_T) = "
@@ -2741,9 +2828,7 @@ class ComposedMultiVariateNormal(MultiMinBase):
             dist = np.linalg.norm(self.mus, axis=1)
             order = np.argsort(dist)
         else:
-            raise ValueError(
-                f"sort_by must be 'weight' or 'distance', got {sort_by!r}"
-            )
+            raise ValueError(f"sort_by must be 'weight' or 'distance', got {sort_by!r}")
 
         sigmas = getattr(self, "sigmas", None)
         rhos = getattr(self, "rhos", None)
@@ -2908,26 +2993,51 @@ class FitCMND(MultiMinBase):
     _sigmax = 10
     _ignoreWarnings = True
 
-    def __init__(self, objfile=None, ngauss=1, nvars=2, domain=None):
+    def __init__(self, data=None, ngauss=1, nvars=None, domain=None, objfile=None):
         """
         Initialize FitCMND object.
 
         Parameters
         ----------
-        objfile : str, optional
-            Path to a pickled fit to load.
+        data : numpy.ndarray, optional
+            Array with data (Nsam x nvars). If provided, nvars is inferred unless explicitly given.
         ngauss : int
             Number of Gaussian components.
-        nvars : int
-            Number of variables.
+        nvars : int, optional
+            Number of variables. If None and data is provided, inferred from data.
         domain : list, optional
             Domain for each variable: None (unbounded) or [low, high] per variable.
             Example: [None, [0, 1], None] for variable 1 bounded to [0, 1].
+        objfile : str, optional
+            Path to a pickled fit to load.
         """
 
         if objfile is not None:
             self._load_fit(objfile)
+        elif isinstance(data, str):
+            self._load_fit(data)
         else:
+            # Check data and infer nvars
+            self.data = None
+            if data is not None:
+                self.data = np.asarray(data)
+                if self.data.ndim != 2:
+                    raise ValueError(
+                        f"Data must be 2D array (Nsam x nvars), got shape {self.data.shape}"
+                    )
+
+                data_nvars = self.data.shape[1]
+                if nvars is None:
+                    nvars = data_nvars
+                elif nvars != data_nvars:
+                    raise ValueError(
+                        f"Provided nvars={nvars} does not match data dimension {data_nvars}"
+                    )
+
+            if nvars is None:
+                # If no data and no nvars, default to 2 (backward compatibility or default)
+                nvars = 2
+
             # Basic attributes
             self.ngauss = ngauss
             self.nvars = nvars
@@ -2936,10 +3046,28 @@ class FitCMND(MultiMinBase):
             self.domain = domain
 
             # Define the model cmnds
-            self.cmnd = ComposedMultiVariateNormal(ngauss=ngauss, nvars=nvars, domain=domain)
+            self.cmnd = ComposedMultiVariateNormal(
+                ngauss=ngauss, nvars=nvars, domain=domain
+            )
 
             # Set parameters
             self.set_params()
+
+        # Report
+        print("Loading a FitCMND object.")
+        print(f"Number of gaussians: {self.ngauss}")
+        print(f"Number of variables: {self.nvars}")
+        print(f"Number of dimensions: {self.Ndim}")
+        if self.data is not None:
+            print(f"Number of samples: {len(self.data)}")
+        else:
+            print("Number of samples: 0 (No data provided)")
+        if self.domain is not None:
+            print(f"Domain: {self.domain}")
+
+        # Compute the log-likelihood of the data
+        if self.data is not None:
+            print(f"Log-likelihood per point (-log L/N): {self.norm_log_l()}")
 
         # Other
         self.fig = None
@@ -3066,27 +3194,21 @@ class FitCMND(MultiMinBase):
             off_rho = self.nvars * 2
 
         if mus is not None:
-            mus = _broadcast_2d(
-                mus, (self.ngauss, self.nvars), "mus", "nvars"
-            )
+            mus = _broadcast_2d(mus, (self.ngauss, self.nvars), "mus", "nvars")
             if self.ngauss > 1:
                 self.minparams[off_mu : off_mu + self.Ndim] = mus.ravel()
             else:
                 self.minparams[off_mu : off_mu + self.nvars] = mus.ravel()
 
         if sigmas is not None:
-            sigmas = _broadcast_2d(
-                sigmas, (self.ngauss, self.nvars), "sigmas", "nvars"
-            )
+            sigmas = _broadcast_2d(sigmas, (self.ngauss, self.nvars), "sigmas", "nvars")
             if self.ngauss > 1:
                 self.minparams[off_sig : off_sig + self.Ndim] = sigmas.ravel()
             else:
                 self.minparams[off_sig : off_sig + self.nvars] = sigmas.ravel()
 
         if rhos is not None:
-            rhos = _broadcast_2d(
-                rhos, (self.ngauss, self.Ncorr), "rhos", "Ncorr"
-            )
+            rhos = _broadcast_2d(rhos, (self.ngauss, self.Ncorr), "rhos", "Ncorr")
             # Internally we store 1+rho so the unbound param is in a good range
             if self.ngauss > 1:
                 self.minparams[off_rho : off_rho + self.ngauss * self.Ncorr] = (
@@ -3109,12 +3231,14 @@ class FitCMND(MultiMinBase):
         """Build stdcorr from unpacked arrays (rhos as correlations, not 1+rho).
         Returns stdcorr without extrap (for use with cmnd.set_stdcorr).
         To get FitCMND's stdcorr format (with extrap), prepend self.extrap."""
-        return np.concatenate([
-            np.asarray(weights).ravel(),
-            np.asarray(mus).ravel(),
-            np.asarray(sigmas).ravel(),
-            np.asarray(rhos).ravel(),
-        ])
+        return np.concatenate(
+            [
+                np.asarray(weights).ravel(),
+                np.asarray(mus).ravel(),
+                np.asarray(sigmas).ravel(),
+                np.asarray(rhos).ravel(),
+            ]
+        )
 
     def _init_params_from_data_finite_domain(self, data):
         """When domain is finite, set initial mus from data percentiles and modest sigmas so the optimizer starts near the peaks."""
@@ -3171,36 +3295,65 @@ class FitCMND(MultiMinBase):
             stdcorr[-self.ngauss * self.Ncorr :] -= 1
         return stdcorr
 
-    def log_l(self, data):
+    def log_l(self, data=None):
         """
         Value of the -log(Likelihood).
         Ex. F.log_l(data)
 
         Parameters
         ----------
-        data : numpy.ndarray
-            Array with data (Nsam x nvars).
+        data : numpy.ndarray, optional
+            Array with data (Nsam x nvars). If None, uses self.data.
 
         Returns
         -------
         log_l : float
             Value of the -log(Likelihood).
         """
+        if data is None:
+            data = self.data
+        if data is None:
+            raise ValueError("No data provided")
 
         log_l = self.cmnd.sample_cmnd_likelihood(
             self.uparams, data=data, pmap=self.pmap, tset="stdcorr", scales=self.scales
         )
         return log_l
 
-    def fit_data(self, data, verbose=0, advance=0, normalize=False, **args):
+    def norm_log_l(self, data=None):
+        """
+        Calculate the normalized log-likelihood of the data.
+
+        Parameters
+        ----------
+        data : numpy.ndarray, optional
+            Data for which to calculate the log-likelihood. If None, uses self.data.
+
+        Returns
+        -------
+        float
+            Normalized log-likelihood per point (-log L/N).
+        """
+        if data is None:
+            data = self.data
+        if data is None:
+            raise ValueError("No data provided")
+
+        data = np.asarray(data)
+        log_likelihood = self.log_l(data) / len(data)
+        return log_likelihood
+
+    def fit_data(
+        self, data=None, verbose=0, advance=0, normalize=False, progress=False, **args
+    ):
         """
         Minimization procedure. It updates the solution attribute.
         Ex. F.fit_data(data, verbose=0, tol=1e-3)
 
         Parameters
         ----------
-        data : numpy.ndarray
-            Array with data (Nsam x nvars).
+        data : numpy.ndarray, optional
+            Array with data (Nsam x nvars). If None, uses self.data.
         verbose : int, optional
             Verbosity level for the sample_cmnd_likelihood routine (default 0).
         advance : int, optional
@@ -3209,6 +3362,10 @@ class FitCMND(MultiMinBase):
             If True and domain is finite, fit in normalized space (each variable scaled to [0, 1]
             using the domain bounds). Improves conditioning when variables have very different
             scales (e.g. [0, 1.3], [0, 1], [0, 180]) and can yield more stable, reproducible minima.
+        progress : str or bool, optional
+            - "tqdm" or True: show a tqdm progress bar (requires tqdm).
+            - "text": show text-based progress (equivalent to setting advance > 0).
+            - False: no progress output (unless advance is set).
         **args : dict
             Options of the minimize routine (eg. tol=1e-6).
             A particularly interesting parameter is the minimization method.
@@ -3227,27 +3384,53 @@ class FitCMND(MultiMinBase):
         >>> F.fit_data(data, verbose=0, tol=1e-3, options=dict(maxiter=100, disp=True))
         >>> F.fit_data(data, normalize=True)  # recommended when variable scales differ a lot
         """
-        if advance:
-            advance = int(advance)
+        if data is None:
+            data = self.data
+        if data is None:
+            raise ValueError("No data provided")
+
+        # Handle progress options
+        use_tqdm = False
+        if progress == "tqdm" or (isinstance(progress, bool) and progress):
+            use_tqdm = True
+        elif progress == "text":
+            if not advance:
+                advance = 1
+
+        pbar = None
+        if use_tqdm:
+            try:
+                from tqdm.auto import tqdm
+
+                maxiter = args.get("maxiter") or args.get("options", {}).get("maxiter")
+                pbar = tqdm(total=maxiter, desc="Minimizing")
+            except ImportError:
+                print("tqdm not installed, progress bar disabled.")
+
+        if advance or pbar is not None:
+            advance = int(advance) if advance else 0
             self.neval = 0
 
             def _advance(X, show=False):
-                if self.neval == 0:
-                    print(f"Iterations:")
-                if self.neval % advance == 0 or show:
-                    vars = np.array2string(
-                        X,
-                        separator=", ",
-                        precision=4,
-                        max_line_width=np.inf,
-                        formatter={"float_kind": lambda x: f"{x:.2g}"},
-                    )
-                    fun = self.cmnd.sample_cmnd_likelihood(
-                        X, data, self.pmap, "stdcorr", self.scales, verbose
-                    )
-                    print(
-                        f"Iter {self.neval}:\n\tVars: {vars}\n\tLogL/N: {fun / len(data)}"
-                    )
+                if pbar is not None:
+                    pbar.update(1)
+                if advance > 0:
+                    if self.neval == 0:
+                        print(f"Iterations:")
+                    if self.neval % advance == 0 or show:
+                        vars = np.array2string(
+                            X,
+                            separator=", ",
+                            precision=4,
+                            max_line_width=np.inf,
+                            formatter={"float_kind": lambda x: f"{x:.2g}"},
+                        )
+                        fun = self.cmnd.sample_cmnd_likelihood(
+                            X, data, self.pmap, "stdcorr", self.scales, verbose
+                        )
+                        print(
+                            f"Iter {self.neval}:\n\tVars: {vars}\n\tLogL/N: {fun / len(data)}"
+                        )
                 self.neval += 1
         else:
             _advance = None
@@ -3285,19 +3468,22 @@ class FitCMND(MultiMinBase):
             stdcorr = self.pmap(self.minparams)
             i = len(self.extrap)
             # For ngauss==1 there are no weights in stdcorr after extrap; next are mus
-            w = (
-                np.array([1.0])
-                if self.ngauss == 1
-                else stdcorr[i : i + self.ngauss]
-            )
-            mus = stdcorr[i + (self.ngauss if self.ngauss > 1 else 0) : i + (self.ngauss if self.ngauss > 1 else 0) + self.Ndim].reshape(
-                self.ngauss, self.nvars
-            )
+            w = np.array([1.0]) if self.ngauss == 1 else stdcorr[i : i + self.ngauss]
+            mus = stdcorr[
+                i + (self.ngauss if self.ngauss > 1 else 0) : i
+                + (self.ngauss if self.ngauss > 1 else 0)
+                + self.Ndim
+            ].reshape(self.ngauss, self.nvars)
             sigmas = stdcorr[
-                i + (self.ngauss if self.ngauss > 1 else 0) + self.Ndim : i + (self.ngauss if self.ngauss > 1 else 0) + 2 * self.Ndim
+                i + (self.ngauss if self.ngauss > 1 else 0) + self.Ndim : i
+                + (self.ngauss if self.ngauss > 1 else 0)
+                + 2 * self.Ndim
             ].reshape(self.ngauss, self.nvars)
             rhos = stdcorr[
-                i + (self.ngauss if self.ngauss > 1 else 0) + 2 * self.Ndim : i + (self.ngauss if self.ngauss > 1 else 0) + 2 * self.Ndim + self.ngauss * self.Ncorr
+                i + (self.ngauss if self.ngauss > 1 else 0) + 2 * self.Ndim : i
+                + (self.ngauss if self.ngauss > 1 else 0)
+                + 2 * self.Ndim
+                + self.ngauss * self.Ncorr
             ].reshape(self.ngauss, self.Ncorr)
             mus_norm = (mus - offset) / scale
             sigmas_norm = sigmas / scale
@@ -3308,11 +3494,15 @@ class FitCMND(MultiMinBase):
             if self.ngauss == 1:
                 # stdcorr_norm_no_extrap = [w, mus, sigmas, rhos] = [1, 3, 3, 3] = 10 elements
                 # minparams = [mus, sigmas, 1+rhos] = [3, 3, 3] = 9 elements
-                self.minparams = np.concatenate([
-                    stdcorr_norm_no_extrap[1:1+self.Ndim],  # mus
-                    stdcorr_norm_no_extrap[1+self.Ndim:1+2*self.Ndim],  # sigmas
-                    stdcorr_norm_no_extrap[1+2*self.Ndim:] + 1.0,  # 1+rhos
-                ])
+                self.minparams = np.concatenate(
+                    [
+                        stdcorr_norm_no_extrap[1 : 1 + self.Ndim],  # mus
+                        stdcorr_norm_no_extrap[
+                            1 + self.Ndim : 1 + 2 * self.Ndim
+                        ],  # sigmas
+                        stdcorr_norm_no_extrap[1 + 2 * self.Ndim :] + 1.0,  # 1+rhos
+                    ]
+                )
             else:
                 stdcorr_norm = np.concatenate([self.extrap, stdcorr_norm_no_extrap])
                 self.minparams = self._stdcorr_to_minparams(stdcorr_norm)
@@ -3322,13 +3512,17 @@ class FitCMND(MultiMinBase):
             self.minargs["bounds"] = bounds_tuple
             if self.minargs.get("method") == "Powell":
                 self.minargs["method"] = "L-BFGS-B"
-            self.solution = minimize(
-                self.cmnd.sample_cmnd_likelihood,
-                self.uparams,
-                callback=_advance,
-                args=(data_fit, self.pmap, "stdcorr", self.scales, verbose),
-                **self.minargs,
-            )
+            try:
+                self.solution = minimize(
+                    self.cmnd.sample_cmnd_likelihood,
+                    self.uparams,
+                    callback=_advance,
+                    args=(data_fit, self.pmap, "stdcorr", self.scales, verbose),
+                    **self.minargs,
+                )
+            finally:
+                if pbar is not None:
+                    pbar.close()
             if advance:
                 _advance(self.solution.x, show=True)
             self.minparams = Util.t_if(self.solution.x, self.scales, Util.u2f)
@@ -3343,9 +3537,9 @@ class FitCMND(MultiMinBase):
             mus_norm = stdcorr_norm[off : off + self.Ndim].reshape(
                 self.ngauss, self.nvars
             )
-            sigmas_norm = stdcorr_norm[
-                off + self.Ndim : off + 2 * self.Ndim
-            ].reshape(self.ngauss, self.nvars)
+            sigmas_norm = stdcorr_norm[off + self.Ndim : off + 2 * self.Ndim].reshape(
+                self.ngauss, self.nvars
+            )
             rhos = stdcorr_norm[
                 off + 2 * self.Ndim : off + 2 * self.Ndim + self.ngauss * self.Ncorr
             ].reshape(self.ngauss, self.Ncorr)
@@ -3389,13 +3583,17 @@ class FitCMND(MultiMinBase):
             if not getattr(self, "_initial_params_set_by_user", False):
                 self._init_params_from_data_finite_domain(data)
 
-        self.solution = minimize(
-            self.cmnd.sample_cmnd_likelihood,
-            self.uparams,
-            callback=_advance,
-            args=(data, self.pmap, "stdcorr", self.scales, verbose),
-            **self.minargs,
-        )
+        try:
+            self.solution = minimize(
+                self.cmnd.sample_cmnd_likelihood,
+                self.uparams,
+                callback=_advance,
+                args=(data, self.pmap, "stdcorr", self.scales, verbose),
+                **self.minargs,
+            )
+        finally:
+            if pbar is not None:
+                pbar.close()
         if advance:
             _advance(self.solution.x, show=True)
         self.uparams = self.solution.x
@@ -3417,6 +3615,198 @@ class FitCMND(MultiMinBase):
         for k in F.__dict__.keys():
             setattr(self, k, getattr(F, k))
         self._update_prefix()
+
+    def _gen_qsample(self, n_sim, resample=False):
+        """
+        Generate or reuse the synthetic sample for Q-Q plots and quality checks.
+        """
+        if resample or not hasattr(self, "_qsample") or self._qsample is None:
+            self._qsample = self.cmnd.rvs(n_sim)
+        # Check size consistency if we are reusing
+        elif len(self._qsample) != n_sim:
+            # If the requested size is different, we must regenerate
+            self._qsample = self.cmnd.rvs(n_sim)
+        return self._qsample
+
+    def quality_of_fit(
+        self,
+        data=None,
+        n_sim=None,
+        resample=False,
+        plot_qq=False,
+        figsize=5,
+        ax=None,
+        plot_line=True,
+        title="Q-Q Plot",
+        verbose=False,
+    ):
+        r"""
+        Calculate goodness-of-fit statistics using the Kolmogorov-Smirnov distance and the Coefficient of Determination (:math:`R^2`) relative to the identity line.
+
+        Optionally generates a Q-Q plot to visually assess the quality of the fit.
+
+        The **Kolmogorov-Smirnov Statistic** (:math:`D_{KS}`) measures the maximum absolute distance between the Cumulative Distribution Function (CDF) of the observed data and that of the model. It represents the "worst point" of local deviation.
+
+        .. math::
+
+            D_{KS} = \sup_{x} | F_{obs}(x) - F_{model}(x) |
+
+        The range of the statistic is :math:`D_{KS} \in [0, 1]`, where an acceptable value is :math:`D_{KS} \approx 0` (ideally < 0.05).
+
+        The **Q-Q plot** is a non-parametric visual diagnostic tool used to assess whether a set of observed data follows a specific theoretical distribution. It compares the distribution of the **Negative Log-Likelihood** (:math:`S = -2 \ln \mathcal{L}`) of the real data against the model's prediction.
+
+        If the fit is ideal, the points should align on the identity line :math:`y=x`. Deviations indicate:
+
+        *   **Curved ends**: tail deviations ("Heavy" or "Light" tails).
+        *   **Shift or slope change**: systematic errors in mean or variance.
+
+        The **Coefficient of Determination on Identity** (:math:`R^2`) measures the variance explained by the model with respect to the ideal line :math:`y=x`. It penalizes both dispersion and bias.
+
+        .. math::
+
+            R^2 = 1 - \frac{\sum (y_{obs} - x_{model})^2}{\sum (y_{obs} - \bar{y}_{obs})^2}
+
+        The range is :math:`R^2 \in (-\infty, 1]`, where an acceptable value is :math:`R^2 \approx 1` (ideally > 0.9).
+
+
+        Parameters
+        ----------
+        data : numpy.ndarray, optional
+            Observed data. If None, uses self.data.
+        n_sim : int, optional
+            Number of synthetic data points to generate. Default is 10 * len(data).
+        resample : bool, optional
+            If True, regenerate the synthetic sample even if one exists.
+        plot_qq : bool, optional
+            If True, generate the Q-Q plot. Default is False.
+        figsize : int or tuple, optional
+            Size of the figure (if creating a new one).
+        ax : matplotlib.axes.Axes, optional
+            Axes object to plot on. If None and plot_qq=True, creates a new figure.
+        plot_line : bool, optional
+            If True, plot the identity line y=x.
+        title : str, optional
+            Title of the plot.
+        verbose : bool, optional
+            If True, print the results.
+
+        Returns
+        -------
+        stats : dict
+            Dictionary containing:
+            - 'ks_dist': Kolmogorov-Smirnov distance between S_obs and S_sim (lower is better)
+            - 'ks_pval': p-value from KS test (note: not strictly valid as parameters are estimated)
+            - 'r2_identity': R-squared coefficient regarding identity line (closer to 1 is better)
+            - 'ax': The axes object if plot_qq=True, else None.
+
+        """
+        from scipy.stats import ks_2samp
+
+        if data is None:
+            data = self.data
+        if data is None:
+            raise ValueError("No data provided")
+
+        data = np.asarray(data)
+        n_samples = len(data)
+
+        if n_sim is None:
+            n_sim = 10 * n_samples
+
+        if verbose:
+            print(
+                f"Calculating fit quality statistics for {n_samples} observed points..."
+            )
+
+        # 1. Calculate S_obs = -2 * ln(L(x_obs))
+        pdf_vals_obs = self.cmnd.pdf(data)
+        pdf_vals_obs = np.maximum(pdf_vals_obs, 1e-300)
+        S_obs = -2 * np.log(pdf_vals_obs)
+        S_obs.sort()
+
+        # 2. Generate synthetic data and calculate S_sim
+        if verbose:
+            print(f"Generating {n_sim} synthetic points (resample={resample})...")
+        data_sim = self._gen_qsample(n_sim, resample=resample)
+        pdf_vals_sim = self.cmnd.pdf(data_sim)
+        pdf_vals_sim = np.maximum(pdf_vals_sim, 1e-300)
+        S_sim = -2 * np.log(pdf_vals_sim)
+        S_sim.sort()
+
+        # 3. Kolmogorov-Smirnov Statistic
+        d_ks, p_val = ks_2samp(S_obs, S_sim)
+
+        # 4. R2 relative to identity (y=x)
+        # Interpolate S_sim to match quantiles of S_obs for pairwise comparison
+        percentiles = np.linspace(0, 100, n_samples)
+        S_sim_interp = np.percentile(S_sim, percentiles)
+
+        # Residuals from identity line (y=x means S_obs = S_sim_interp)
+        residuos = S_obs - S_sim_interp
+        ss_res = np.sum(residuos**2)
+        # Total sum of squares of S_obs around its mean
+        ss_tot = np.sum((S_obs - np.mean(S_obs)) ** 2)
+
+        # Avoid division by zero if ss_tot is 0
+        if ss_tot == 0:
+            r2_identity = 0.0  # or nan
+        else:
+            r2_identity = 1 - (ss_res / ss_tot)
+
+        if verbose:
+            print(f"Fit Quality Results:")
+            print(f"  KS Distance (lower is better)     : {d_ks:.4f}")
+            print(f"  R2 vs Identity (closer to 1 is better): {r2_identity:.4f}")
+
+        # 5. Plot
+        ret_ax = None
+        if plot_qq:
+            from matplotlib import pyplot as plt
+
+            if ax is None:
+                if isinstance(figsize, int):
+                    figsize = (figsize, figsize)
+                fig, ax = plt.subplots(figsize=figsize)
+            else:
+                fig = ax.figure
+
+            self.fig_qq = fig
+            self.ax_qq = ax
+
+            label = f"Data vs Model ($R^2$={r2_identity:.4f})"
+            self.ax_qq.scatter(S_sim_interp, S_obs, alpha=0.5, label=label)
+
+            if plot_line:
+                # Identity line range
+                min_val = min(S_obs.min(), S_sim_interp.min())
+                max_val = max(S_obs.max(), S_sim_interp.max())
+                self.ax_qq.plot(
+                    [min_val, max_val],
+                    [min_val, max_val],
+                    "r--",
+                    label="Perfect Fit (y=x)",
+                )
+
+            self.ax_qq.set_xlabel("Theoretical Quantiles (-2 Log Likelihood)")
+            self.ax_qq.set_ylabel("Observed Quantiles (-2 Log Likelihood)")
+            self.ax_qq.set_title(title)
+            self.ax_qq.legend(loc="upper left")
+            self.ax_qq.grid(True, alpha=0.3)
+
+            # Add KS statistic to the plot
+            self.ax_qq.text(
+                0.95,
+                0.05,
+                rf"$D_{{KS}} = {d_ks:.3f}$",
+                transform=self.ax_qq.transAxes,
+                ha="right",
+                va="bottom",
+                bbox=dict(boxstyle="round", facecolor="white", alpha=0.8),
+            )
+
+            multimin_watermark(self.ax_qq)
+
+        return {"ks_dist": d_ks, "r2_identity": r2_identity}
 
     def plot_fit(
         self,
@@ -3494,12 +3884,18 @@ class FitCMND(MultiMinBase):
                 h2, l2 = G._ax_twin.get_legend_handles_labels()
                 handles, labels = handles + h2, labels + l2
             ax.legend(
-                handles, labels, loc="lower center", bbox_to_anchor=(0.5, 1.02),
-                ncol=len(handles), frameon=False
+                handles,
+                labels,
+                loc="lower center",
+                bbox_to_anchor=(0.5, 1.02),
+                ncol=len(handles),
+                frameon=False,
             )
             G.fig.subplots_adjust(top=0.88)  # room for legend above
             if not getattr(G, "_watermark_added", False):
-                multimin_watermark(G.axs[0][0], frac=0.5)  # univariate: larger watermark
+                multimin_watermark(
+                    G.axs[0][0], frac=0.5
+                )  # univariate: larger watermark
             self.fig = G.fig
             return G
         if self.nvars >= 2:
@@ -3556,9 +3952,10 @@ class FitCMND(MultiMinBase):
         >>> self.hash = md5(pickle.dumps(self.cmnd)).hexdigest()[:5]
         """
         self.hash = md5(pickle.dumps(self)).hexdigest()[:5]
+        prefix_str = ""
         if myprefix is not None:
-            myprefix = f"_{myprefix}"
-        self.prefix = f"{self.ngauss}cmnd{myprefix}_{self.hash}"
+            prefix_str = f"_{myprefix}"
+        self.prefix = f"{self.ngauss}cmnd{prefix_str}_{self.hash}"
 
     def save_fit(self, objfile=None, useprefix=True, myprefix=None):
         """
@@ -3587,6 +3984,17 @@ class FitCMND(MultiMinBase):
         if useprefix:
             parts = os.path.splitext(objfile)
             objfile = f"{parts[0]}-{self.prefix}{parts[1]}"
+
+        # Avoid saving the temporary sample
+        if hasattr(self, "_qsample"):
+            del self._qsample
+
+        # Avoid saving the Q-Q plot figures
+        if hasattr(self, "fig_qq"):
+            del self.fig_qq
+        if hasattr(self, "ax_qq"):
+            del self.ax_qq
+
         pickle.dump(self, open(objfile, "wb"))
 
     def set_bounds(self, boundw=None, bounds=None, boundr=None, boundsm=None):

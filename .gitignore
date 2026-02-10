@@ -171,6 +171,7 @@ contrib/
 src/multimin/tests/data/
 
 # Development
+**/bench
 dev
 tmp
 .github

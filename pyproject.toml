@@ -7,5 +7,5 @@
 # License: GNU Affero General Public License v3 (AGPL-3.0)        #
 ##################################################################
 [build-system]
-requires = ['setuptools', 'numpy', 'scipy', 'matplotlib', 'pypandoc']
+requires = ['setuptools', 'numpy', 'scipy', 'matplotlib', 'pypandoc', 'tqdm']
 build-backend = "setuptools.build_meta"

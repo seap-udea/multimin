@@ -210,10 +210,10 @@ We initialize the `FitCMND` handler with the expected number of Gaussians (2) an
 
 ```python
 # Initialize the fitter
-F = mn.FitCMND(ngauss=2, nvars=3)
+F = mn.FitCMND(data=sample, ngauss=2)
 
-# Run the fit (using advance=True for better convergence on complex models)
-F.fit_data(sample, advance=True)
+# Run the fit (using progress="text" for better convergence on complex models)
+F.fit_data(progress="text")
 ```
 
 ### 5. Check and Plot Results
@@ -377,8 +377,8 @@ np.random.seed(1)
 data_1d = CMND_1d.rvs(5000)
 
 # Fit with same domain so likelihood and means respect [0, 1]
-F_1d = mn.FitCMND(ngauss=2, nvars=1, domain=[[0, 1]])
-F_1d.fit_data(data_1d, advance=True)
+F_1d = mn.FitCMND(data=data_1d, ngauss=2, domain=[[0, 1]])
+F_1d.fit_data(progress="text")
 G = F_1d.plot_fit(hargs=dict(bins=40), sargs=dict(s=0.5, alpha=0.6))
 ```
 
