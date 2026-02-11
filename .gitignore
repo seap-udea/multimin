@@ -175,5 +175,5 @@ src/multimin/tests/data/
 dev
 tmp
 .github
-.cursorrules
+.cursor*
 
