@@ -20,17 +20,17 @@
 
 ## Introducing `MultiMin`
 
-`MultiMin` is a `Python` package designed to provide numerical tools for **fitting composed multivariate distributions** to data. It is particularly useful for modelling complex multimodal distributions in N-dimensions.
+`MultiMin` is a `Python` package designed to provide numerical tools for fitting data to **composed multivariate normal distributions** (seel below), that means that the package is able to receive a sample of n-variables and find a set of multivariate normal that better describe the sample. The package is also able to fit one-dimensional data (eg. numerical functions, time-series, etc.) to a composition of gaussians that better describe it. 
 
 These are the main features of `MultiMin`:
 
-- **Multivariate Fitting**: Tools for fitting composed multivariate normal distributions (CMND).
-- **Visualization**: Density plots and specific visualization utilities.
-- **Statistical Analysis**: Tools for handling covariance matrices and correlations.
+- **Tools for multivariate normal distribution**: Tools for defining single or composed multivariate normal distributions and for plotting and sampling these functions.
+- **Multivariate data visualization***: Tools for visualization of multivariate data, ie. corner plots of scatter and density diagrams.
+- **Multivariate data fitting**: Tools for fitting multivariate data to composed multivariate normal distributions (CMND). It includes fitting of simple data (time-series, numerical functions of one variable, spectra, etc.) to a composition of gaussians.
 
 ## Resources
 
-- Documentation including examples and full API documentation: [https://multimin.readthedocs.io](https://multimin.readthedocs.io).
+- Examples and API documentation: [https://multimin.readthedocs.io](https://multimin.readthedocs.io).
 - PyPI project page: [https://pypi.org/project/multimin/](https://pypi.org/project/multimin/).
 - Github repo: [https://github.com/seap-udea/multimin](https://github.com/seap-udea/multimin)
 
@@ -50,47 +50,15 @@ If you prefer, you can install the latest version of the developers taking it fr
 pip install -U git+https://github.com/seap-udea/multimin
 ```
 
-
-### From Sources
-
-You can also install from the [GitHub repository](https://github.com/seap-udea/multimin):
-
-```bash
-git clone https://github.com/seap-udea/multimin
-cd multimin
-pip install .
-```
-
-For development, use an editable installation:
-
-```bash
-cd multimin
-pip install -e .
-```
-
-### In Google Colab
-
-If you use Google Colab, you can install `MultiMin` by executing:
-
-```python
-!pip install -Uq multimin
-```
-
-or
-
-```bash
-pip install -Uq git+https://github.com/seap-udea/multimin
-```
-
 ## Theoretical Background
 
-The core of `MultiMin` is the **Composed Multivariate Normal Distribution (CMND)**. The theory behind it posits that any multivariate distribution function $p(\tilde U):\Re^{N}\rightarrow\Re$, where $\tilde U:(u_1,u_2,u_3,\ldots,u_N)$ are random variables, can be approximated with arbitrary precision by a normalized linear combination of $M$ Multivariate Normal Distributions or CMND:
+The core of `MultiMin` is the **Composed Multivariate Normal Distribution (CMND)** defined as:
 
 $$
-p(\tilde U) \approx \mathcal{C}_M(\tilde U; \{w_k\}_M, \{\mu_k\}_M, \{\Sigma_k\}_M) \equiv \sum_{i=1}^{M} w_i\mathcal{N}(\tilde U; \tilde \mu_i, \Sigma_i)
+\mathcal{C}_M(\tilde U; \{w_k\}_M, \{\mu_k\}_M, \{\Sigma_k\}_M) \equiv \sum_{i=1}^{M} w_i\mathcal{N}(\tilde U; \tilde \mu_i, \Sigma_i)
 $$
 
-where the multivariate normal distribution (MND) $\mathcal{N}(\tilde U; \tilde \mu, \Sigma)$ with mean vector $\tilde \mu$ and covariance matrix $\Sigma$ is given by:
+where $\tilde U:(u_1,u_2,u_3,\ldots,u_N)$ are random variables and the multivariate normal distribution (MND) $\mathcal{N}(\tilde U; \tilde \mu, \Sigma)$ with mean vector $\tilde \mu$ and covariance matrix $\Sigma$ is given by:
 
 $$
 \mathcal{N}(\tilde U; \tilde \mu, \Sigma) = \frac{1}{\sqrt{(2\pi)^{k} \det \Sigma}} \exp\left[-\frac{1}{2}(\tilde U - \tilde \mu)^{\rm T} \Sigma^{-1} (\tilde U - \tilde \mu)\right]
@@ -98,9 +66,12 @@ $$
 
 The covariance matrix $\Sigma$ elements are defined as $\Sigma_{ij} = \rho_{ij}\sigma_{i}\sigma_{j}$, where $\sigma_i$ is the standard deviation of $u_i$ and $\rho_{ij}$ is the correlation coefficient between variable $u_i$ and $u_j$ ($-1<\rho_{ij}<1$, $\rho_{ii}=1$).
 
-The normalization condition on $p(\tilde U)$ implies that the set of weights $\{w_k\}_M$ are also normalized, i.e., $\sum_i w_i=1$.
+The normalization condition implies that the set of weights $\{w_k\}_M$ are also normalized, i.e., $\sum_i w_i=1$.
+
 
 ### Fitting procedure
+
+The theory behind it posits that any multivariate distribution function $p(\tilde U):\Re^{N}\rightarrow\Re$, where $\tilde U:(u_1,u_2,u_3,\ldots,u_N)$ are random variables, can be approximated with arbitrary precision by a normalized linear combination of $M$ Multivariate Normal Distributions or CMND:
 
 To estimate the parameters of the CMND that best describe a given dataset ,
 we use the **Likelihood Statistics** method.
@@ -497,6 +468,39 @@ Other beta testers and contributors:
 - **Juanita A. Agudelo** - juanita.agudelo@udea.edu.co. Testing of the initial versions of the package in the context of NEAs research. The idea of developíng the functionalities of truncated multinormals were inspared by questions that referees made to Juanita during the presentation of her undergraduate thesis.
 
 This project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0) - see the [LICENSE](LICENSE) file for details.
+
+## Other installation metjods
+
+### From Sources
+
+You can also install from the [GitHub repository](https://github.com/seap-udea/multimin):
+
+```bash
+git clone https://github.com/seap-udea/multimin
+cd multimin
+pip install .
+```
+
+For development, use an editable installation:
+
+```bash
+cd multimin
+pip install -e .
+```
+
+### In Google Colab
+
+If you use Google Colab, you can install `MultiMin` by executing:
+
+```python
+!pip install -Uq multimin
+```
+
+or
+
+```bash
+pip install -Uq git+https://github.com/seap-udea/multimin
+```
 
 ## Contributing
 

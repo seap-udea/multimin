@@ -399,7 +399,6 @@ def test_set_initial_params_syncs_cmnd_fitcmnd():
         F.cmnd.rhos.ravel(), np.asarray(rhos, dtype=float), rtol=0, atol=1e-12
     )
 
-
 def test_cmnd_update_params_updates_mus_only():
     """update_params updates mus without altering Sigmas."""
     cmnd = mn.ComposedMultiVariateNormal(
@@ -420,7 +419,6 @@ def test_cmnd_update_params_updates_mus_only():
     assert np.allclose(cmnd.rhos, old_rhos)
     assert np.allclose(cmnd.Sigmas, old_Sigmas)
 
-
 def test_cmnd_update_params_updates_sigmas_and_rhos():
     """update_params updates sigmas/rhos and recomputes covariance matrices."""
     cmnd = mn.ComposedMultiVariateNormal(
@@ -436,7 +434,6 @@ def test_cmnd_update_params_updates_sigmas_and_rhos():
 
     expected = mn.Stats.calc_covariance_from_correlations(cmnd.sigmas, cmnd.rhos)
     assert np.allclose(cmnd.Sigmas, expected)
-
 
 def test_cmnd_update_params_broadcasting_and_shape_errors():
     """update_params enforces FitCMND-like shapes."""
