@@ -1652,6 +1652,111 @@ class ComposedMultiVariateNormal(MultiMinBase):
         self._set_domain(domain, self.nvars)
         self._Z_cache = None
 
+    def update_params(self, weights=None, mus=None, sigmas=None, rhos=None):
+        """Update CMND parameters in-place using FitCMND-like syntax.
+
+        This method updates the internal parameters of the composed distribution
+        (means, standard deviations, and correlations) using the same broadcasting
+        rules as :meth:`FitCMND.set_initial_params`.
+
+        Only arguments provided are updated; other parameters keep their current
+        values.
+
+        Parameters
+        ----------
+        weights : array-like, optional
+            Mixture weights. Must have length ``ngauss`` (or length 1 when
+            ``ngauss==1``). If ``normalize_weights`` is True (default), weights
+            are scaled so that ``sum(weights)=1``; in all cases weights are kept
+            non-negative.
+        mus : array-like, optional
+            Means. Shape ``(ngauss, nvars)`` or ``(nvars,)`` (same for all components).
+        sigmas : array-like, optional
+            Standard deviations. Shape ``(ngauss, nvars)`` or ``(nvars,)``.
+        rhos : array-like, optional
+            Correlation coefficients (upper triangle). Shape ``(ngauss, Ncorr)`` or
+            ``(Ncorr,)`` where ``Ncorr = nvars*(nvars-1)/2``.
+
+        Returns
+        -------
+        None
+        """
+        weights = np.asarray(weights, dtype=float) if weights is not None else None
+        mus = np.asarray(mus, dtype=float) if mus is not None else None
+        sigmas = np.asarray(sigmas, dtype=float) if sigmas is not None else None
+        rhos = np.asarray(rhos, dtype=float) if rhos is not None else None
+
+        def _broadcast_2d(arr, shape_2d, name, dims_desc):
+            """Broadcast to (ngauss, nvars) or (ngauss, Ncorr).
+
+            If 1D, repeats the same row for all components.
+            """
+            if arr is None:
+                return None
+            arr = np.atleast_1d(arr)
+            if arr.ndim == 1:
+                if arr.shape[0] != shape_2d[1]:
+                    raise ValueError(
+                        f"{name} 1D must have length {shape_2d[1]} ({dims_desc}), got {arr.shape[0]}"
+                    )
+                arr = np.tile(arr, (self.ngauss, 1))
+            else:
+                arr = np.atleast_2d(arr)
+                if arr.shape != shape_2d:
+                    raise ValueError(
+                        f"{name} must have shape {shape_2d} or ({dims_desc}), got {arr.shape}"
+                    )
+            return arr
+
+        if weights is not None:
+            w = np.asarray(weights, dtype=float).ravel()
+            if self.ngauss == 1 and w.size == 1:
+                self._apply_weights(w)
+            elif w.size != self.ngauss:
+                raise ValueError(
+                    f"weights must have length ngauss ({self.ngauss}), got {w.size}"
+                )
+            else:
+                self._apply_weights(w)
+
+        if getattr(self, "Sigmas", None) is not None:
+            # Ensure sigmas/rhos exist and are consistent.
+            self._check_sigmas()
+        else:
+            if sigmas is not None or rhos is not None:
+                raise ValueError(
+                    "Cannot reset sigmas/rhos because covariance matrices are not set; "
+                    "initialize the CMND with Sigmas or stdcorr first."
+                )
+
+        if mus is not None:
+            mus = _broadcast_2d(mus, (self.ngauss, self.nvars), "mus", "nvars")
+            self.mus = np.asarray(mus, dtype=float)
+
+        if sigmas is not None:
+            sigmas = _broadcast_2d(sigmas, (self.ngauss, self.nvars), "sigmas", "nvars")
+            self.sigmas = np.asarray(sigmas, dtype=float)
+
+        if rhos is not None:
+            rhos = _broadcast_2d(
+                rhos, (self.ngauss, self._n_offdiag()), "rhos", "Ncorr"
+            )
+            self.rhos = np.asarray(rhos, dtype=float)
+
+        if sigmas is not None or rhos is not None:
+            self.Sigmas = Stats.calc_covariance_from_correlations(
+                self.sigmas, self.rhos
+            )
+            self._check_sigmas()
+
+        self._flatten_params()
+        self._flatten_stdcorr()
+        self._Z_cache = None
+
+    def _n_offdiag(self):
+        """Number of off-diagonal correlation coefficients per component."""
+        return int(self.nvars * (self.nvars - 1) / 2)
+
     def _in_domain(self, X):
         """Return mask of points inside the domain box. X: (N x nvars) or (nvars,)."""
         X = np.atleast_2d(X)
@@ -2045,6 +2150,155 @@ class ComposedMultiVariateNormal(MultiMinBase):
                     )
                     self._nerror += 1
         return value.item() if value.size == 1 else value
+
+    def plot_pdf(
+        self,
+        properties=None,
+        ranges=None,
+        figsize=3,
+        grid_size=200,
+        cmap="Spectral_r",
+        colorbar=False,
+    ):
+        """Plot only the PDF of the CMND.
+
+        For univariate distributions (``nvars==1``) this produces a single curve.
+        For multivariate distributions (``nvars>=2``) this produces density panels
+        using :class:`DensityPlot`. For ``nvars>2`` the density shown in each panel
+        is a 2D *slice* of the full PDF, evaluated at the weighted mean for the
+        remaining variables.
+
+        Parameters
+        ----------
+        properties : list or dict, optional
+            Axis specification, same format accepted by :meth:`plot_sample`.
+        ranges : list, optional
+            Ranges per variable; used when ``properties`` is a list or None.
+        figsize : int, optional
+            Size of each axis (default 3).
+        grid_size : int, optional
+            Number of grid points per axis for density evaluation (default 200).
+        cmap : str, optional
+            Matplotlib colormap name (default ``'Spectral_r'``).
+        colorbar : bool, optional
+            Include a colorbar for the first density panel (default False).
+
+        Returns
+        -------
+        G : DensityPlot
+            Handle to the density plot grid.
+        """
+        self._check_params(self.params)
+        properties = _props_to_properties(properties, self.nvars, ranges)
+        G = DensityPlot(properties, figsize=figsize)
+
+        def _var_range(var_index, prop_key):
+            """Choose plotting range for a variable."""
+            if properties[prop_key].get("range") is not None:
+                return properties[prop_key]["range"]
+            bounds = getattr(self, "_domain_bounds", None)
+            if bounds is not None:
+                lo, hi = bounds[var_index]
+                if np.isfinite(lo) and np.isfinite(hi):
+                    return [float(lo), float(hi)]
+            mu_min = float(np.min(self.mus[:, var_index]))
+            mu_max = float(np.max(self.mus[:, var_index]))
+            sig_max = float(np.max(self.sigmas[:, var_index]))
+            nsig = 4.0
+            lo = mu_min - nsig * sig_max
+            hi = mu_max + nsig * sig_max
+            if not np.isfinite(lo) or not np.isfinite(hi) or lo == hi:
+                lo, hi = mu_min - 1.0, mu_max + 1.0
+            return [lo, hi]
+
+        prop_keys = list(properties.keys())[: self.nvars]
+
+        if self.nvars == 1:
+            prop0 = prop_keys[0]
+            x_min, x_max = _var_range(0, prop0)
+            x_grid = np.linspace(float(x_min), float(x_max), int(grid_size))
+            pdf_vals = np.asarray(self.pdf(x_grid.reshape(-1, 1)), dtype=float)
+            ax = G.axs[0][0]
+            ax.plot(x_grid, pdf_vals, "k-", lw=2, label="PDF")
+            if pdf_vals.size:
+                ax.set_ylim(0, float(np.max(pdf_vals)) * 1.05)
+            handles, labels = ax.get_legend_handles_labels()
+            if handles:
+                ax.legend(
+                    handles,
+                    labels,
+                    loc="lower center",
+                    bbox_to_anchor=(0.5, 1.02),
+                    ncol=len(handles),
+                    frameon=False,
+                )
+                G.fig.subplots_adjust(top=0.88)
+            G.set_ranges()
+            G.set_tick_params()
+            G.tight_layout()
+            if not getattr(G, "_watermark_added", False):
+                multimin_watermark(ax, frac=0.5)
+                G._watermark_added = True
+            return G
+
+        w = np.asarray(self.weights, dtype=float)
+        w_sum = float(np.sum(w))
+        if w_sum <= 0:
+            w = np.ones_like(w) / max(1, w.size)
+        else:
+            w = w / w_sum
+        base_point = np.average(self.mus, axis=0, weights=w)
+
+        first_im = None
+        for j in range(1, self.nvars):
+            for i in range(j):
+                propi = prop_keys[i]
+                propj = prop_keys[j]
+                ax = G.axp[propi][propj]
+
+                x_min, x_max = _var_range(i, propi)
+                y_min, y_max = _var_range(j, propj)
+
+                xs = np.linspace(float(x_min), float(x_max), int(grid_size))
+                ys = np.linspace(float(y_min), float(y_max), int(grid_size))
+                xx, yy = np.meshgrid(xs, ys, indexing="xy")
+                pts = np.column_stack([xx.ravel(), yy.ravel()])
+
+                X_full = np.tile(base_point, (pts.shape[0], 1))
+                X_full[:, i] = pts[:, 0]
+                X_full[:, j] = pts[:, 1]
+                zz = np.asarray(self.pdf(X_full), dtype=float).reshape(xx.shape)
+
+                im = ax.pcolormesh(xs, ys, zz, shading="auto", cmap=cmap)
+                if first_im is None:
+                    first_im = (ax, im)
+
+        if colorbar and first_im is not None:
+            ax0, im0 = first_im
+            from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+            divider = make_axes_locatable(ax0)
+            cax = divider.append_axes("top", size="9%", pad=0.1)
+            G.fig.add_axes(cax)
+            vmin = float(np.nanmin(im0.get_array()))
+            vmax = float(np.nanmax(im0.get_array()))
+            if np.isfinite(vmin) and np.isfinite(vmax) and vmin != vmax:
+                cticks = np.linspace(vmin, vmax, 8)[1:-1]
+            else:
+                cticks = None
+            G.fig.colorbar(im0, ax=ax0, cax=cax, orientation="horizontal", ticks=cticks)
+            cax.xaxis.set_tick_params(
+                labelsize=0.5 * G.fs, direction="in", pad=-0.8 * G.fs
+            )
+
+        G.set_labels()
+        G.set_ranges()
+        G.set_tick_params()
+        G.tight_layout()
+        if not getattr(G, "_watermark_added", False):
+            multimin_watermark(G.axs[0][0], frac=1 / 4 * G.axs.shape[0])
+            G._watermark_added = True
+        return G
 
     def rvs(self, Nsam=1, max_tries=100000):
         """
@@ -3025,6 +3279,60 @@ class FitCMND(MultiMinBase):
     _sigmax = 10
     _ignoreWarnings = True
 
+    def update_params(self, weights=None, mus=None, sigmas=None, rhos=None):
+        """
+        Update the parameters of the CMND.
+
+        Parameters
+        ----------
+        weights : array_like, optional
+            Weights of the gaussians.
+        mus : array_like, optional
+            Means of the gaussians.
+        sigmas : array_like, optional
+            Standard deviations of the gaussians.
+        rhos : array_like, optional
+            Correlation coefficients of the gaussians.
+        """
+        if weights is not None:
+            self.weights = np.array(weights)
+            if self.normalize_weights:
+                self.weights /= np.sum(self.weights)
+
+        if mus is not None:
+            mus = np.array(mus)
+            if mus.shape != self.mus.shape:
+                raise ValueError(
+                    f"Shape of mus {mus.shape} does not match current shape {self.mus.shape}"
+                )
+            self.mus = mus
+
+        update_cov = False
+        if sigmas is not None:
+            sigmas = np.array(sigmas)
+            if sigmas.shape != self.sigmas.shape:
+                raise ValueError(
+                    f"Shape of sigmas {sigmas.shape} does not match current shape {self.sigmas.shape}"
+                )
+            self.sigmas = sigmas
+            update_cov = True
+
+        if rhos is not None:
+            rhos = np.array(rhos)
+            if rhos.shape != self.rhos.shape:
+                raise ValueError(
+                    f"Shape of rhos {rhos.shape} does not match current shape {self.rhos.shape}"
+                )
+            self.rhos = rhos
+            update_cov = True
+
+        if update_cov:
+            self.Sigmas = Stats.calc_covariance_from_correlations(
+                self.sigmas, self.rhos
+            )
+
+        self.params = self.flatten_params()
+
     def __init__(self, data=None, ngauss=1, nvars=None, domain=None, objfile=None):
         """
         Initialize FitCMND object.
@@ -3251,6 +3559,9 @@ class FitCMND(MultiMinBase):
 
         self.uparams = Util.t_if(self.minparams, self.scales, Util.f2u)
         self._initial_params_set_by_user = True
+
+        params = self.pmap(self.minparams)
+        self.cmnd.set_stdcorr(params, self.nvars)
 
     def _stdcorr_to_minparams(self, stdcorr):
         """Inverse of pmap: stdcorr -> minparams (for use in normalized fit)."""
@@ -4164,6 +4475,14 @@ class FitFunctionCMND(MultiMinBase):
         self.X = self._X
         self.F = self._F
 
+        # Internal normalization for better numerical stability during optimization
+        self._Fmax = float(np.max(np.abs(self.F)))
+        if self._Fmax > 0:
+            self._Fnorm = self.F / self._Fmax
+        else:
+            self._Fnorm = self.F
+            self._Fmax = 1.0
+
         self.ngauss = ngauss
         self.nvars = nvars
         self.Ndim = ngauss * nvars
@@ -4326,6 +4645,9 @@ class FitFunctionCMND(MultiMinBase):
         self.uparams = Util.t_if(self.minparams, self.scales, Util.f2u)
         self._initial_params_set_by_user = True
 
+        params = self.pmap(self.minparams)
+        self.cmnd.set_stdcorr(params, self.nvars)
+
     def _init_params_from_grid(self, use_function_support=True):
         """
         Set initial mus/sigmas from grid (self.X) when domain is finite.
@@ -4458,17 +4780,18 @@ class FitFunctionCMND(MultiMinBase):
         """
         Least-squares loss between F and (normalization * cmnd.pdf(X)).
         Normalization is computed analytically at each evaluation to minimize the residual sum of squares.
+        Uses internally normalized F for better numerical stability.
         """
         minparams = Util.t_if(uparams, self.scales, Util.u2f)
         params = self.pmap(minparams)
         self.cmnd.set_stdcorr(params, self.nvars)
         pdf = self.cmnd.pdf(self.X)
         pdf = np.maximum(np.atleast_1d(pdf).astype(float), 1e-300)
-        c = np.dot(self.F, pdf) / np.dot(pdf, pdf)
-        residual = self.F - c * pdf
+        c = np.dot(self._Fnorm, pdf) / np.dot(pdf, pdf)
+        residual = self._Fnorm - c * pdf
         return np.sum(residual**2)
 
-    def fit_data(self, verbose=0, advance=0, mode="lsq", **args):
+    def fit_data(self, verbose=0, advance=0, mode="lsq", atol=None, rtol=None, maxgauss=50, wtol=1e-2, **args):
         """
         Fit the CMND to the function on the mesh by nonlinear least squares.
 
@@ -4486,9 +4809,35 @@ class FitFunctionCMND(MultiMinBase):
         advance : int, optional
             If > 0, print progress every advance iterations (default 0).
         mode : str, optional
-            Mode of fitting. "lsq" (default) or "multimodal".
-            In "multimodal" mode, peaks are detected first, ngauss is set to number of peaks,
-            means are fixed to peak positions, and only sigmas and weights are fitted.
+            Mode of fitting. Options: "lsq" (default), "multimodal", "noisy", "noisy_multimodal", or "adaptive".
+            - "lsq": Standard least-squares fit with all parameters free.
+            - "multimodal": Detects all peaks, sets ngauss to number of peaks found,
+              fixes means to peak positions, fits only sigmas and weights.
+            - "noisy": Smooths data first (~3% of points), detects peaks, selects
+              the ngauss most prominent peaks, uses them as initial values for means,
+              but leaves all parameters FREE to optimize. Best for noisy data.
+            - "noisy_multimodal": Smooths data first (~3% of points), detects ALL peaks,
+              sets ngauss to number of peaks found, fixes means at those positions,
+              fits only sigmas and weights. Like "multimodal" but with smoothing for noisy data.
+            - "adaptive": Incrementally increases ngauss from 1 until convergence criteria
+              are met (controlled by atol and rtol). Automatically finds optimal number
+              of Gaussians.
+        atol : float, optional
+            Absolute tolerance for R² in adaptive mode. Stops when R² >= atol (e.g. 0.99).
+            Only used when mode="adaptive".
+        rtol : float, optional
+            Relative tolerance for R² improvement in adaptive mode. Stops when
+            the average improvement over the last 3 ngauss values is less than rtol
+            (e.g. 0.01). Evaluates improvement trend to avoid stopping prematurely.
+            Only used when mode="adaptive".
+        maxgauss : int, optional
+            Maximum number of Gaussians to try in adaptive mode (default 50).
+            Only used when mode="adaptive".
+        wtol : float, optional
+            Weight tolerance for pruning spurious Gaussians in adaptive mode (default 1e-2).
+            After finding optimal ngauss, removes Gaussians with weights < wtol and
+            refits with remaining components. Helps eliminate spurious components.
+            Only used when mode="adaptive".
         **args
             Passed to scipy.optimize.minimize (e.g. method, tol, options).
         """
@@ -4497,6 +4846,138 @@ class FitFunctionCMND(MultiMinBase):
         self.cmnd._ignoreWarnings = self._ignoreWarnings
         minargs = dict(method="Powell")
         minargs.update(args)
+
+        # Handle adaptive mode
+        if mode == "adaptive":
+            if atol is None and rtol is None:
+                raise ValueError("adaptive mode requires at least one of 'atol' or 'rtol' to be specified")
+            
+            if verbose > 0:
+                print(f"Adaptive mode: starting with ngauss=1, maxgauss={maxgauss}")
+                if atol is not None:
+                    print(f"  Stop criterion: R² >= {atol}")
+                if rtol is not None:
+                    print(f"  Stop criterion: avg(ΔR²) over last 3 < {rtol}")
+            
+            r2_history = []  # Keep history of last 3 R² values
+            best_ngauss = 1
+            best_r2 = -np.inf
+            
+            for ng in range(1, maxgauss + 1):
+                # Re-initialize with new ngauss
+                self.ngauss = ng
+                self.Ndim = self.ngauss * self.nvars
+                self.Ncorr = int(self.nvars * (self.nvars - 1) / 2)
+                self.cmnd = ComposedMultiVariateNormal(
+                    ngauss=self.ngauss,
+                    nvars=self.nvars,
+                    domain=self.domain,
+                    normalize_weights=False,
+                )
+                self.set_params()
+                
+                # Fit with standard lsq mode (reuse code by calling fit_data recursively with mode="lsq")
+                # To avoid infinite recursion, we call the fitting code directly
+                if verbose > 0:
+                    print(f"\n  Trying ngauss={ng}...")
+                
+                # Initialize parameters if not set by user
+                if not getattr(self, "_initial_params_set_by_user", False):
+                    bounds_orig = getattr(self.cmnd, "_domain_bounds", None)
+                    has_finite_domain = bounds_orig is not None and any(
+                        np.isfinite(bounds_orig[j][0]) or np.isfinite(bounds_orig[j][1])
+                        for j in range(self.nvars)
+                    )
+                    if has_finite_domain:
+                        self._init_params_from_grid()
+                    else:
+                        self._init_params_from_function_support()
+                
+                # Perform optimization
+                self.neval = 0
+                def _advance_adaptive(x, show=False):
+                    if advance > 0 and (self.neval % advance == 0 or show):
+                        if self.neval == 0:
+                            print(f"    Iterations:")
+                        loss = self._loss_function(x)
+                        print(f"      Iter {self.neval}: loss = {loss:.6g}")
+                    self.neval += 1
+                
+                callback = _advance_adaptive if advance else None
+                
+                self.solution = minimize(
+                    self._loss_function,
+                    self.uparams,
+                    callback=callback,
+                    **minargs,
+                )
+                if advance:
+                    _advance_adaptive(self.solution.x, show=True)
+                
+                self.uparams = self.solution.x
+                self.minparams = Util.t_if(self.uparams, self.scales, Util.u2f)
+                params = self.pmap(self.minparams)
+                self.cmnd.set_stdcorr(params, self.nvars)
+                pdf = self.cmnd.pdf(self.X)
+                pdf = np.maximum(np.atleast_1d(pdf).astype(float), 1e-300)
+                self.normalization = float(np.dot(self.F, pdf) / np.dot(pdf, pdf))
+                
+                # Calculate R²
+                out = self.quality_of_fit(verbose=False)
+                r2_current = out["R2"]
+                
+                if verbose > 0:
+                    print(f"    R² = {r2_current:.6f}")
+                
+                # Add to history
+                r2_history.append(r2_current)
+                
+                # Update best
+                if r2_current > best_r2:
+                    best_r2 = r2_current
+                    best_ngauss = ng
+                
+                # Check stopping criteria
+                stop_atol = atol is not None and r2_current >= atol
+                
+                # Evaluate rtol based on average improvement over last 3 values
+                stop_rtol = False
+                if rtol is not None and len(r2_history) >= 3:
+                    # Get last 3 R² values
+                    last_3 = r2_history[-3:]
+                    # Calculate improvements between consecutive values
+                    improvements = [last_3[i+1] - last_3[i] for i in range(len(last_3)-1)]
+                    avg_improvement = np.mean(improvements)
+                    stop_rtol = avg_improvement < rtol
+                    
+                    if verbose > 1:
+                        print(f"      Last 3 R²: {last_3}")
+                        print(f"      Improvements: {improvements}")
+                        print(f"      Avg improvement: {avg_improvement:.6f}")
+                
+                if stop_atol or stop_rtol:
+                    if verbose > 0:
+                        if stop_atol:
+                            print(f"\n✅ Stopped: R² = {r2_current:.6f} >= atol = {atol}")
+                        if stop_rtol:
+                            last_3 = r2_history[-3:]
+                            improvements = [last_3[i+1] - last_3[i] for i in range(len(last_3)-1)]
+                            avg_improvement = np.mean(improvements)
+                            print(f"\n✅ Stopped: avg(ΔR²) over last 3 = {avg_improvement:.6f} < rtol = {rtol}")
+                        print(f"Final ngauss = {ng}")
+                    
+                    # Prune spurious Gaussians with small weights
+                    self._prune_and_refit_adaptive(wtol, verbose, advance, minargs)
+                    return
+            
+            # Reached maxgauss
+            if verbose > 0:
+                print(f"\n⚠️  Reached maxgauss = {maxgauss}")
+                print(f"Final R² = {best_r2:.6f} at ngauss = {best_ngauss}")
+            
+            # Prune spurious Gaussians with small weights
+            self._prune_and_refit_adaptive(wtol, verbose, advance, minargs)
+            return
 
         # Handle multimodal mode
         if mode == "multimodal":
@@ -4530,12 +5011,16 @@ class FitFunctionCMND(MultiMinBase):
                 )
                 self.set_params()
 
+                has_weights = self.ngauss > 1
+                off_mu = self.ngauss if has_weights else 0
+                off_sig = off_mu + self.Ndim
+
                 # Set means to peak positions
                 mus_peaks = self.X[peaks]
 
                 # Set mus
                 for i in range(self.ngauss):
-                    idx_base = self.ngauss + i * self.nvars
+                    idx_base = off_mu + i * self.nvars
                     self.minparams[idx_base : idx_base + self.nvars] = mus_peaks[i]
 
                 # Set sigmas based on widths
@@ -4543,7 +5028,7 @@ class FitFunctionCMND(MultiMinBase):
                 # Convert to physical units.
                 # Assuming approximate uniform grid for width estimation
                 if len(self.X) > 1:
-                    dx = (self.X[-1, 0] - self.X[0, 0]) / (len(self.X) - 1)
+                    dx = abs((self.X[-1, 0] - self.X[0, 0]) / (len(self.X) - 1))
                 else:
                     dx = 1.0
 
@@ -4552,14 +5037,15 @@ class FitFunctionCMND(MultiMinBase):
                 for i in range(self.ngauss):
                     width_physical = widths_samples[i] * dx
                     # Use a fraction of FWHM as sigma estimate
-                    sigma_est = width_physical * sigma_conversion
+                    sigma_est = float(width_physical * sigma_conversion)
+                    sigma_est = float(np.clip(sigma_est, 1e-6, 0.99 * self._sigmax))
 
-                    idx_base = self.ngauss + self.Ndim + i * self.nvars
+                    idx_base = off_sig + i * self.nvars
                     self.minparams[idx_base : idx_base + self.nvars] = sigma_est
 
                 # Set weights based on prominences (or peak heights)
                 # minparams[0:ngauss] are weights (if ngauss > 1)
-                if self.ngauss > 1:
+                if has_weights:
                     weights = prominences / np.sum(prominences)
                     self.minparams[: self.ngauss] = weights
 
@@ -4575,6 +5061,7 @@ class FitFunctionCMND(MultiMinBase):
 
                 # Sigmas
                 # We want standard bounds for sigmas.
+                # In multimodal mode: restrict sigma to 2 * domain_width
                 bounds_orig = getattr(self.cmnd, "_domain_bounds", None)
                 domain_widths = [
                     bounds_orig[j][1] - bounds_orig[j][0]
@@ -4584,7 +5071,7 @@ class FitFunctionCMND(MultiMinBase):
                 sigma_hi = 0.99 * self._sigmax
                 if domain_widths:
                     width_max = max(domain_widths)
-                    sigma_hi = min(sigma_hi, 0.25 * width_max)
+                    sigma_hi = min(sigma_hi, 2.0 * width_max)
 
                 bound_sigma_trans = (
                     Util.f2u(1e-6, self._sigmax),
@@ -4598,7 +5085,7 @@ class FitFunctionCMND(MultiMinBase):
                 new_bounds = []
 
                 # Weights (if ngauss > 1)
-                if self.ngauss > 1:
+                if has_weights:
                     new_bounds.extend([boundw] * self.ngauss)
 
                 # Means (Fixed)
@@ -4623,12 +5110,220 @@ class FitFunctionCMND(MultiMinBase):
                 if minargs.get("method") == "Powell":
                     minargs["method"] = "L-BFGS-B"
 
+        # Handle noisy mode (free means - uses peak positions as initial values)
+        if mode == "noisy":
+            from scipy.signal import peak_widths, peak_prominences
+            from scipy.ndimage import uniform_filter1d
+
+            if self.nvars != 1:
+                raise ValueError("mode='noisy' is only supported for univariate functions (nvars=1)")
+
+            F_flat = np.asarray(self.F).ravel()
+            
+            # Smooth the data using a window ~2-3% of points
+            n_points = len(F_flat)
+            window_size = max(7, int(n_points * 0.03))
+            if window_size % 2 == 0:
+                window_size += 1
+            
+            F_smooth = uniform_filter1d(F_flat, size=window_size, mode='nearest')
+            
+            # Detect peaks in smoothed data
+            height_threshold = 0.05 * np.max(F_smooth) if np.max(F_smooth) > 0 else None
+            prominence_threshold = 0.005 * np.max(F_smooth) if np.max(F_smooth) > 0 else None
+            peaks, properties = find_peaks(F_smooth, height=height_threshold, prominence=prominence_threshold)
+            
+            if len(peaks) == 0:
+                print("Warning: No peaks detected in noisy mode. Using default initialization.")
+            else:
+                # Select the ngauss most prominent peaks
+                widths_samples, _, _, _ = peak_widths(F_smooth, peaks, rel_height=0.5)
+                prominences, _, _ = peak_prominences(F_smooth, peaks)
+                
+                if len(peaks) < self.ngauss:
+                    print(
+                        f"Warning: Only {len(peaks)} peaks detected but ngauss={self.ngauss}. "
+                        f"Using all {len(peaks)} detected peaks."
+                    )
+                    num_peaks_to_use = len(peaks)
+                    selected_indices = np.arange(len(peaks))
+                else:
+                    num_peaks_to_use = self.ngauss
+                    # Sort by prominence and select top ngauss
+                    sorted_indices = np.argsort(prominences)[::-1]
+                    selected_indices = sorted_indices[:self.ngauss]
+                
+                selected_peaks = peaks[selected_indices]
+                selected_widths = widths_samples[selected_indices]
+                selected_prominences = prominences[selected_indices]
+                
+                # Sort selected peaks by position for consistency
+                position_order = np.argsort(selected_peaks)
+                selected_peaks = selected_peaks[position_order]
+                selected_widths = selected_widths[position_order]
+                selected_prominences = selected_prominences[position_order]
+                
+                # Set initial parameters based on detected peaks
+                has_weights = self.ngauss > 1
+                off_mu = self.ngauss if has_weights else 0
+                off_sig = off_mu + self.Ndim
+                
+                # Set means to peak positions (as INITIAL VALUES, not fixed)
+                mus_peaks = self.X[selected_peaks]
+                for i in range(num_peaks_to_use):
+                    idx_base = off_mu + i * self.nvars
+                    self.minparams[idx_base : idx_base + self.nvars] = mus_peaks[i]
+                
+                # Set sigmas based on widths
+                if len(self.X) > 1:
+                    dx = abs((self.X[-1, 0] - self.X[0, 0]) / (len(self.X) - 1))
+                else:
+                    dx = 1.0
+                
+                sigma_conversion = 1.0 / 2.355
+                for i in range(num_peaks_to_use):
+                    width_physical = selected_widths[i] * dx
+                    sigma_est = float(width_physical * sigma_conversion)
+                    sigma_est = float(np.clip(sigma_est, 1e-6, 0.99 * self._sigmax))
+                    idx_base = off_sig + i * self.nvars
+                    self.minparams[idx_base : idx_base + self.nvars] = sigma_est
+                
+                # Set weights based on prominences
+                if has_weights:
+                    weights = selected_prominences / np.sum(selected_prominences)
+                    self.minparams[: num_peaks_to_use] = weights
+                
+                # Update uparams and mark as user-set
+                self.uparams = Util.t_if(self.minparams, self.scales, Util.f2u)
+                self._initial_params_set_by_user = True
+
+        # Handle noisy_multimodal mode (fixed means at peak positions)
+        elif mode == "noisy_multimodal":
+            from scipy.signal import peak_widths, peak_prominences
+            from scipy.ndimage import uniform_filter1d
+
+            if self.nvars != 1:
+                raise ValueError("mode='noisy' is only supported for univariate functions (nvars=1)")
+
+            F_flat = np.asarray(self.F).ravel()
+            
+            # Smooth the data using a window ~2-3% of points for effective noise reduction
+            # while preserving multiple peaks
+            n_points = len(F_flat)
+            # Window size: approximately 3% of points (balance between smoothing and peak preservation)
+            window_size = max(7, int(n_points * 0.03))
+            if window_size % 2 == 0:  # Make it odd for symmetry
+                window_size += 1
+            
+            F_smooth = uniform_filter1d(F_flat, size=window_size, mode='nearest')
+            
+            # Detect peaks in smoothed data with balanced thresholds
+            # Height threshold: 5% of max to catch significant peaks
+            height_threshold = 0.05 * np.max(F_smooth) if np.max(F_smooth) > 0 else None
+            # Prominence threshold: 7% of max (balanced between catching real peaks and avoiding noise)
+            prominence_threshold = 0.07 * np.max(F_smooth) if np.max(F_smooth) > 0 else None
+            peaks, properties = find_peaks(F_smooth, height=height_threshold, prominence=prominence_threshold)
+            
+            if len(peaks) == 0:
+                print(
+                    "Warning: No peaks detected in noisy_multimodal mode. Fallback to existing configuration."
+                )
+            else:
+                # Use ALL detected peaks (like multimodal mode)
+                self.ngauss = len(peaks)
+                # Re-initialize with new ngauss
+                self.Ndim = self.ngauss * self.nvars
+                self.Ncorr = int(self.nvars * (self.nvars - 1) / 2)
+                self.cmnd = ComposedMultiVariateNormal(
+                    ngauss=self.ngauss,
+                    nvars=self.nvars,
+                    domain=self.domain,
+                    normalize_weights=False,
+                )
+                self.set_params()
+                
+                # Calculate widths and prominences
+                widths_samples, _, _, _ = peak_widths(F_smooth, peaks, rel_height=0.5)
+                prominences, _, _ = peak_prominences(F_smooth, peaks)
+                
+                has_weights = self.ngauss > 1
+                off_mu = self.ngauss if has_weights else 0
+                off_sig = off_mu + self.Ndim
+                
+                # Set means to peak positions
+                mus_peaks = self.X[peaks]
+                
+                for i in range(self.ngauss):
+                    idx_base = off_mu + i * self.nvars
+                    self.minparams[idx_base : idx_base + self.nvars] = mus_peaks[i]
+                
+                # Set sigmas based on widths
+                if len(self.X) > 1:
+                    dx = abs((self.X[-1, 0] - self.X[0, 0]) / (len(self.X) - 1))
+                else:
+                    dx = 1.0
+                
+                sigma_conversion = 1.0 / 2.355  # FWHM to sigma
+                
+                for i in range(self.ngauss):
+                    width_physical = widths_samples[i] * dx
+                    sigma_est = float(width_physical * sigma_conversion)
+                    sigma_est = float(np.clip(sigma_est, 1e-6, 0.99 * self._sigmax))
+                    idx_base = off_sig + i * self.nvars
+                    self.minparams[idx_base : idx_base + self.nvars] = sigma_est
+                
+                # Set weights based on prominences
+                if has_weights:
+                    weights = prominences / np.sum(prominences)
+                    self.minparams[: self.ngauss] = weights
+                
+                # Construct bounds (means fixed, sigmas and weights free)
+                boundw = (-np.inf, np.inf)
+                bounds_orig = getattr(self.cmnd, "_domain_bounds", None)
+                domain_widths = [
+                    bounds_orig[j][1] - bounds_orig[j][0]
+                    for j in range(self.nvars)
+                    if np.isfinite(bounds_orig[j][0]) and np.isfinite(bounds_orig[j][1])
+                ]
+                sigma_hi = 0.99 * self._sigmax
+                if domain_widths:
+                    width_max = max(domain_widths)
+                    sigma_hi = min(sigma_hi, 2.0 * width_max)
+                
+                bound_sigma_trans = (
+                    Util.f2u(1e-6, self._sigmax),
+                    Util.f2u(sigma_hi, self._sigmax),
+                )
+                bound_rho_trans = (-np.inf, np.inf)
+                
+                new_bounds = []
+                if has_weights:
+                    new_bounds.extend([boundw] * self.ngauss)
+                
+                # Fix means
+                for i in range(self.ngauss):
+                    for j in range(self.nvars):
+                        mu_val = mus_peaks[i, j]
+                        new_bounds.append((mu_val - 1e-9, mu_val + 1e-9))
+                
+                # Free sigmas
+                new_bounds.extend([bound_sigma_trans] * self.Ndim)
+                # Free rhos
+                new_bounds.extend([bound_rho_trans] * (self.ngauss * self.Ncorr))
+                
+                minargs["bounds"] = tuple(new_bounds)
+                self.uparams = Util.t_if(self.minparams, self.scales, Util.f2u)
+                self._initial_params_set_by_user = True
+                
+                if minargs.get("method") == "Powell":
+                    minargs["method"] = "L-BFGS-B"
+
         bounds_orig = getattr(self.cmnd, "_domain_bounds", None)
         has_finite_domain = bounds_orig is not None and any(
             np.isfinite(bounds_orig[j][0]) or np.isfinite(bounds_orig[j][1])
             for j in range(self.nvars)
         )
-        if has_finite_domain and "bounds" not in args and mode != "multimodal":
+        if has_finite_domain and "bounds" not in args and mode not in ["multimodal", "noisy_multimodal"]:
             domain_widths = [
                 bounds_orig[j][1] - bounds_orig[j][0]
                 for j in range(self.nvars)
@@ -4676,6 +5371,106 @@ class FitFunctionCMND(MultiMinBase):
         pdf = self.cmnd.pdf(self.X)
         pdf = np.maximum(np.atleast_1d(pdf).astype(float), 1e-300)
         self.normalization = float(np.dot(self.F, pdf) / np.dot(pdf, pdf))
+
+    def _prune_and_refit_adaptive(self, wtol, verbose, advance, minargs):
+        """
+        Prune Gaussians with small weights and refit with remaining components.
+        
+        Used in adaptive mode to eliminate spurious Gaussians after convergence.
+        
+        Parameters
+        ----------
+        wtol : float
+            Weight threshold. Gaussians with weight < wtol are removed.
+        verbose : int
+            Verbosity level.
+        advance : int
+            Print progress every advance iterations.
+        minargs : dict
+            Minimization arguments.
+        """
+        # Get current weights
+        weights = self.cmnd.weights.ravel()
+        
+        if verbose > 0:
+            print(f"\n🔍 Pruning Gaussians with weights < {wtol}:")
+            print(f"   Current weights: {weights}")
+        
+        # Identify Gaussians to keep (weight >= wtol)
+        keep_mask = weights >= wtol
+        n_keep = np.sum(keep_mask)
+        
+        if n_keep == self.ngauss:
+            if verbose > 0:
+                print(f"   ✅ All {self.ngauss} Gaussians have sufficient weight. No pruning needed.")
+            return
+        
+        if n_keep == 0:
+            if verbose > 0:
+                print(f"   ⚠️  All Gaussians have weight < {wtol}. Keeping at least 1.")
+            # Keep the Gaussian with largest weight
+            keep_mask = np.zeros_like(weights, dtype=bool)
+            keep_mask[np.argmax(weights)] = True
+            n_keep = 1
+        
+        # Extract parameters of Gaussians to keep
+        mus_keep = self.cmnd.mus[keep_mask]
+        sigmas_keep = self.cmnd.sigmas[keep_mask]
+        weights_keep = weights[keep_mask]
+        
+        if verbose > 0:
+            n_removed = self.ngauss - n_keep
+            print(f"   🗑️  Removing {n_removed} Gaussian(s) with small weights")
+            print(f"   ✅ Keeping {n_keep} Gaussian(s)")
+            print(f"   Refitting with pruned components...")
+        
+        # Re-initialize with reduced ngauss
+        self.ngauss = n_keep
+        self.Ndim = self.ngauss * self.nvars
+        self.Ncorr = int(self.nvars * (self.nvars - 1) / 2)
+        self.cmnd = ComposedMultiVariateNormal(
+            ngauss=self.ngauss,
+            nvars=self.nvars,
+            domain=self.domain,
+            normalize_weights=False,
+        )
+        self.set_params()
+        
+        # Set initial parameters from pruned components
+        self.set_initial_params(mus=mus_keep, sigmas=sigmas_keep)
+        
+        # Perform optimization with standard lsq
+        self.neval = 0
+        def _advance_prune(x, show=False):
+            if advance > 0 and (self.neval % advance == 0 or show):
+                if self.neval == 0:
+                    print(f"      Iterations:")
+                loss = self._loss_function(x)
+                print(f"        Iter {self.neval}: loss = {loss:.6g}")
+            self.neval += 1
+        
+        callback = _advance_prune if advance else None
+        
+        self.solution = minimize(
+            self._loss_function,
+            self.uparams,
+            callback=callback,
+            **minargs,
+        )
+        if advance:
+            _advance_prune(self.solution.x, show=True)
+        
+        self.uparams = self.solution.x
+        self.minparams = Util.t_if(self.uparams, self.scales, Util.u2f)
+        params = self.pmap(self.minparams)
+        self.cmnd.set_stdcorr(params, self.nvars)
+        pdf = self.cmnd.pdf(self.X)
+        pdf = np.maximum(np.atleast_1d(pdf).astype(float), 1e-300)
+        self.normalization = float(np.dot(self.F, pdf) / np.dot(pdf, pdf))
+        
+        if verbose > 0:
+            out = self.quality_of_fit(verbose=False)
+            print(f"   ✅ Refit complete: ngauss = {self.ngauss}, R² = {out['R2']:.6f}")
 
     def quality_of_fit(self, verbose=True):
         """

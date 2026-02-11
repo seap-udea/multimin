@@ -360,6 +360,174 @@ def test_univariate_function_fit():
     plt.close(fig)
 
 
+def test_univariate_function_fit_multimodal_single_peak():
+    """Regression: multimodal mode must work for a single detected peak.
+
+    Previously, when only one peak was detected, the multimodal initializer used
+    parameter offsets that assumed mixture weights were present, corrupting the
+    sigma slot and producing NaN loss at the first evaluation.
+    """
+    np.random.seed(42)
+    xs = np.linspace(600.0, 900.0, 1000)
+    mu0 = 750.0
+    sigma0 = 40.0
+    ys = np.exp(-0.5 * ((xs - mu0) / sigma0) ** 2)
+
+    F = mn.FitFunctionCMND(data=(xs, ys), ngauss=1)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message="divide by zero")
+        F.fit_data(mode="multimodal", options=dict(maxiter=200), verbose=False)
+
+    assert F.normalization is not None, "fit_data should set normalization"
+    out = F.quality_of_fit(verbose=False)
+    assert np.isfinite(out["R2"]), "R² should be finite"
+
+
+def test_set_initial_params_syncs_cmnd_fitcmnd():
+    """set_initial_params should keep F.cmnd in sync (FitCMND)."""
+    F = mn.FitCMND(ngauss=1, nvars=2)
+    mus = [1.0, -2.0]
+    sigmas = [0.4, 0.8]
+    rhos = [0.25]
+    F.set_initial_params(mus=mus, sigmas=sigmas, rhos=rhos)
+
+    np.testing.assert_allclose(F.cmnd.mus.ravel(), np.asarray(mus, dtype=float))
+    np.testing.assert_allclose(
+        F.cmnd.sigmas.ravel(), np.asarray(sigmas, dtype=float), rtol=0, atol=1e-12
+    )
+    np.testing.assert_allclose(
+        F.cmnd.rhos.ravel(), np.asarray(rhos, dtype=float), rtol=0, atol=1e-12
+    )
+
+
+def test_cmnd_update_params_updates_mus_only():
+    """update_params updates mus without altering Sigmas."""
+    cmnd = mn.ComposedMultiVariateNormal(
+        weights=[0.5, 0.5],
+        mus=[[0.0, 0.0], [1.0, 1.0]],
+        Sigmas=[np.eye(2), np.eye(2)],
+        domain=[[-10.0, 10.0], [-10.0, 10.0]],
+    )
+
+    old_sigmas = cmnd.sigmas.copy()
+    old_rhos = cmnd.rhos.copy()
+    old_Sigmas = cmnd.Sigmas.copy()
+
+    cmnd.update_params(mus=[2.0, 3.0])
+
+    assert np.allclose(cmnd.mus, np.array([[2.0, 3.0], [2.0, 3.0]]))
+    assert np.allclose(cmnd.sigmas, old_sigmas)
+    assert np.allclose(cmnd.rhos, old_rhos)
+    assert np.allclose(cmnd.Sigmas, old_Sigmas)
+
+
+def test_cmnd_update_params_updates_sigmas_and_rhos():
+    """update_params updates sigmas/rhos and recomputes covariance matrices."""
+    cmnd = mn.ComposedMultiVariateNormal(
+        weights=[0.2, 0.8],
+        mus=[[0.0, 0.0], [1.0, 1.0]],
+        Sigmas=[np.eye(2), np.eye(2)],
+        domain=[[-10.0, 10.0], [-10.0, 10.0]],
+    )
+
+    cmnd.update_params(sigmas=[2.0, 3.0], rhos=[0.25])
+    assert np.allclose(cmnd.sigmas, np.array([[2.0, 3.0], [2.0, 3.0]]))
+    assert np.allclose(cmnd.rhos, np.array([[0.25], [0.25]]))
+
+    expected = mn.Stats.calc_covariance_from_correlations(cmnd.sigmas, cmnd.rhos)
+    assert np.allclose(cmnd.Sigmas, expected)
+
+
+def test_cmnd_update_params_broadcasting_and_shape_errors():
+    """update_params enforces FitCMND-like shapes."""
+    cmnd = mn.ComposedMultiVariateNormal(
+        weights=[0.5, 0.5],
+        mus=[[0.0, 0.0], [1.0, 1.0]],
+        Sigmas=[np.eye(2), np.eye(2)],
+        domain=[[-10.0, 10.0], [-10.0, 10.0]],
+    )
+
+    with pytest.raises(ValueError):
+        cmnd.update_params(mus=[1.0])
+
+    with pytest.raises(ValueError):
+        cmnd.update_params(sigmas=[[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]])
+
+    with pytest.raises(ValueError):
+        cmnd.update_params(rhos=[0.1, 0.2])
+
+
+def test_cmnd_update_params_updates_weights_and_normalizes():
+    """update_params updates weights and normalizes when normalize_weights=True."""
+    cmnd = mn.ComposedMultiVariateNormal(
+        weights=[0.5, 0.5],
+        mus=[[0.0, 0.0], [1.0, 1.0]],
+        Sigmas=[np.eye(2), np.eye(2)],
+        domain=[[-10.0, 10.0], [-10.0, 10.0]],
+    )
+
+    cmnd.update_params(weights=[2.0, 1.0])
+    assert np.allclose(cmnd.weights, np.array([2.0 / 3.0, 1.0 / 3.0]))
+    assert np.isclose(cmnd.weights.sum(), 1.0)
+
+
+def test_cmnd_update_params_updates_weights_without_normalization():
+    """update_params keeps weights scale when normalize_weights=False."""
+    cmnd = mn.ComposedMultiVariateNormal(
+        weights=[0.5, 0.5],
+        mus=[[0.0, 0.0], [1.0, 1.0]],
+        Sigmas=[np.eye(2), np.eye(2)],
+        domain=[[-10.0, 10.0], [-10.0, 10.0]],
+        normalize_weights=False,
+    )
+
+    cmnd.update_params(weights=[2.0, 1.0])
+    assert np.allclose(cmnd.weights, np.array([2.0, 1.0]))
+
+
+def test_cmnd_plot_pdf_univariate_runs():
+    """plot_pdf should run for univariate CMND and return a DensityPlot."""
+    cmnd = mn.ComposedMultiVariateNormal(
+        mus=[0.0, 2.5],
+        Sigmas=[1.0, 0.25],
+        weights=[0.5, 0.5],
+    )
+    G = cmnd.plot_pdf(properties=["x"], figsize=2)
+    assert hasattr(G, "fig")
+    assert hasattr(G, "axs")
+
+
+def test_cmnd_plot_pdf_bivariate_runs():
+    """plot_pdf should run for 2D CMND and return a DensityPlot."""
+    cmnd = mn.ComposedMultiVariateNormal(
+        mus=[[0.0, 0.0], [1.0, 1.0]],
+        Sigmas=[np.eye(2), np.eye(2)],
+        weights=[0.5, 0.5],
+    )
+    props = dict(
+        x=dict(label=r"$x$", range=[-3, 3]),
+        y=dict(label=r"$y$", range=[-3, 3]),
+    )
+    G = cmnd.plot_pdf(properties=props, figsize=2, grid_size=30)
+    assert hasattr(G, "fig")
+    assert hasattr(G, "axs")
+
+
+def test_set_initial_params_syncs_cmnd_fitfunctioncmnd():
+    """set_initial_params should keep F.cmnd in sync (FitFunctionCMND)."""
+    xs = np.linspace(0.0, 1.0, 50)
+    ys = np.exp(-xs)
+    F = mn.FitFunctionCMND(data=(xs, ys), ngauss=1)
+    mu0 = 0.3
+    sigma0 = 0.2
+    F.set_initial_params(mus=mu0, sigmas=sigma0)
+
+    np.testing.assert_allclose(F.cmnd.mus.ravel(), np.asarray([mu0], dtype=float))
+    np.testing.assert_allclose(
+        F.cmnd.sigmas.ravel(), np.asarray([sigma0], dtype=float), rtol=0, atol=1e-12
+    )
+
+
 def test_save_load_fit():
     """Test saving and loading a FitCMND object."""
     import tempfile
