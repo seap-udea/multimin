@@ -142,13 +142,13 @@ properties = dict(
 )
 
 # Plot the density plot
-G = mn.DensityPlot(properties, figsize=3)
+G = mn.MultiPlot(properties, figsize=3)
+
+sargs = dict(s=0.5,edgecolor='None',color='r')
+scatter = G.sample_scatter(sample,**sargs)
 
 pargs=dict(cmap='Spectral_r')
 pdf = G.mog_pdf(MoG,**pargs)
-
-sargs = dict(s=0.5,edgecolor='None',color='r')
-scatter = G.scatter_plot(sample,**sargs)
 ```
 
 The same `properties` dict can be passed to `MoG.plot_sample` and `F.plot_fit` via the `properties` argument for consistent axis labels. You can also pass a simple list of names (e.g. `properties=["x","y","z"]`); then each name is used as the axis label and `range=None`.

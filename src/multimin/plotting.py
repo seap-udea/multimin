@@ -141,6 +141,7 @@ class MultiPlot(MultiMinBase):
         # Basic attributes
         self.dproperties = properties
         self.properties = list(properties.keys())
+        self.data = None
 
         # Secondary attributes
         self.N = len(properties)
@@ -288,6 +289,17 @@ class MultiPlot(MultiMinBase):
                 if self.dproperties[propj]["range"] is not None:
                     self.axp[propi][propj].set_ylim(self.dproperties[propj]["range"])
 
+    def reset_ranges(self):
+        """
+        Reset ranges to match the data limits.
+        """
+        if self.data is not None:
+            for i, prop in enumerate(self.properties):
+                dmin, dmax = self.data[:, i].min(), self.data[:, i].max()
+                # Force range to data limits (overriding default 4-sigma extents of PDF)
+                self.dproperties[prop]["range"] = [dmin, dmax]
+        self.set_ranges()
+
     def set_labels(self, **args):
         """
         Set labels parameters.
@@ -390,6 +402,7 @@ class MultiPlot(MultiMinBase):
 
 
         """
+        self.data = data
         opts = dict()
         opts.update(args)
 
@@ -521,6 +534,7 @@ class MultiPlot(MultiMinBase):
 
 
         """
+        self.data = data
         # Univariate: scatter on a twin y-axis so data range is independent of PDF/density
         if getattr(self, "_univariate", False):
             ax = self.axs[0][0]
