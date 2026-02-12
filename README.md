@@ -13,6 +13,15 @@
 [![docs](https://readthedocs.org/projects/multimin/badge/?version=latest)](https://multimin.readthedocs.io/)
 [![GitHub](https://img.shields.io/badge/GitHub-seap--udea%2Fmultimin-blue?logo=github)](https://github.com/seap-udea/multimin)
 [![Powered by SciPy](https://img.shields.io/badge/Powered%20by-SciPy-blue)](https://scipy.org/)
+[![Matplotlib](https://img.shields.io/badge/Powered%20by-Matplotlib-blue)](https://matplotlib.org/)
+[![NumPy](https://img.shields.io/badge/Powered%20by-NumPy-blue)](https://numpy.org/)
+[![Antigravity](https://img.shields.io/badge/Build%20with-Antigravity-FF6B6B)](https://antigravity.google/)
+[![Cursor](https://img.shields.io/badge/Build%20with-Cursor-000000)](https://cursor.com/)
+[![Visual Studio Code](https://img.shields.io/badge/Build%20with-VS%20Code-007ACC)](https://code.visualstudio.com/)
+[![Gemini](https://img.shields.io/badge/AI-Gemini%203%20Pro-8E75B2)](https://gemini.google.com/)
+[![ChatGPT](https://img.shields.io/badge/AI-ChatGPT%205.2-74aa9c)](https://chatgpt.com/)
+[![Sonet](https://img.shields.io/badge/AI-Sonet%204.5-D97757)](https://claude.com/)
+
 
 <div align="center">
 <p></p>
@@ -439,6 +448,14 @@ $$Z_T(\tilde{\mu}, \Sigma, \mathbf{a}_T, \mathbf{b}_T) = \int_{A_T} \mathcal{N}_
 
 See [examples/multimin_truncated_tutorial.ipynb](examples/multimin_truncated_tutorial.ipynb) for 3D truncated examples and more detail.
 
+## Comparison with scikit-learn
+
+`scikit-learn` includes a tool for fitting Mixture of Gaussians (known as GMM in that package). While this might seem to overlap significantly with `MultiMin`, the focus of `scikit-learn` is primarily on machine learning applications, particularly clustering and Gaussian processes.
+
+`MultiMin`, on the other hand, was developed with features specifically designed to provide a simplified numerical and analytical description of real physical systems (see for instance [this notebook](https://github.com/seap-udea/multimin/blob/main/examples/multimin_asteroids_application.ipynb)). Additionally, `MultiMin` extends MoG tools to single-valued functions, a capability with numerous specific applications in physics, astronomy, and other sciences (see for instance [this notebook](https://github.com/seap-udea/multimin/blob/main/examples/multimin_functions_tutorial.ipynb)).
+
+For a comparison between `MultiMin` and `scikit-learn` GMM, please refer to [this notebook](https://github.com/seap-udea/multimin/blob/main/examples/multimin_mog_gmm.ipynb).
+
 ## Citation
 
 The numerical tools and codes provided in this package have been developed and tested over several years of scientific research.
@@ -468,7 +485,19 @@ Other beta testers and contributors:
 
 This project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0) - see the [LICENSE](LICENSE) file for details.
 
-## Other installation metjods
+## Development and AI Co-authorship
+
+MultiMin began as a research project by its author in the field of Near Earth Asteroids (NEAs) and exoplanets. It evolved from a collection of useful routines into the core of the package it is today.
+
+Its current form has been significantly enhanced by the emergence of generative artificial intelligence, which allowed the author to "vibe code" some of the package's most complex components (such as the selection of initial conditions for fits, the plotting of PDFs in the original corner plots, the $\LaTeX$ representation of the mixture of gaussians, or the `adaptive` and `noisy` modes of `FitFunctionMoG.plot_fit`). The example notebooks are entirely human-made, with the exception of the one that compares `MultiMin` with `scikit-learn` GMM that was developed by the AI agent in **[Cursor](https://cursor.com/)**.
+
+In this sense, this package belongs to a new generation of tools that count artificial intelligences among their co-authors. The author is not ashamed to declare this. To the contrary, it would be naive to think that this assistance is not important. Few experienced developers today (as the author thinks about himself) are rejecting the incredible power these tools provide. To the contrary, many are embracing them as a way to enhance their productivity and creativity.
+
+However, the author must also state that a significant fraction of the package's code is of his own authorship, not to mention the many hours of interaction and guidance with programming agents in **[Cursor](https://cursor.com/)**, **[Antigravity](https://antigravity.google/)**, and **[Visual Studio Code](https://code.visualstudio.com/)**. It should also be noted that the architectural and design decisions are entirely human.
+
+Ah! The logo was designed with **[Nano Banana](https://nanobanana.ai/)** using as inputs the manuscript drafts of the papers that describe the package.
+
+## Other installation methods
 
 ### From Sources
 

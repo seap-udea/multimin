@@ -1139,23 +1139,23 @@ class FitMoG(MultiMinBase):
         if self.nvars >= 2:
             G = MultiPlot(properties, figsize=figsize)
 
-            # 1. Plot MoG PDF (default)
+            # 1. Plot Scatter of Data (if requested)
+            if sargs is not None:
+                G.sample_scatter(self.data, **sargs)
+
+            # 2. Plot MoG PDF (default)
             # Use pargs defaults if provided (which they are by default in this method)
             if pargs:
                 G.mog_pdf(self.mog, **pargs)
-
-            # 2. Plot MoG Contours (if requested)
-            if cargs is not None:
-                G.mog_contour(self.mog, **cargs)
 
             # 3. Plot Histogram of RVS (if requested)
             if hargs is not None:
                 Xfits = self.mog.rvs(N)
                 G.sample_hist(Xfits, **hargs)
 
-            # 4. Plot Scatter of Data (if requested)
-            if sargs is not None:
-                G.sample_scatter(self.data, **sargs)
+            # 4. Plot MoG Contours (if requested)
+            if cargs is not None:
+                G.mog_contour(self.mog, **cargs)
 
             # If no layers, maybe warn? But mog_pdf is default.
 
