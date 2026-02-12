@@ -8,7 +8,7 @@ NOTEBOOKS := examples/*.ipynb
 GALLERY_TIMEOUT ?= 1200
 
 RELMODE=release
-PYTHON ?= python3
+PYTHON ?= .multimin/bin/python3
 COMMIT_MSG ?= [FIX] Minor changes
 
 help:
@@ -128,3 +128,6 @@ release: clean push
 
 sleep:
 	@sleep 3
+
+show:
+	echo $(PYTHON)
