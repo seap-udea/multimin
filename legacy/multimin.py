@@ -701,7 +701,7 @@ class ComposedMultiVariateNormal(object):
                  matrix, array, Ngauss*(1+Nvars+Nvars*(Nvars+1)/2)
         
     Initialization:
-        There are several ways of initialize a CMND:
+        There are several ways of initialize a MoG:
         
         Providing: Ngauss and Nvars
             In this case the class is instantiated with zero means, unitary dispersion and 
@@ -718,7 +718,7 @@ class ComposedMultiVariateNormal(object):
             is required.
             
         Providing: weights, mus, Sigmas (optional)
-            In this case the basic properties of the CMND are set.
+            In this case the basic properties of the MoG are set.
             
     Methods:
         pdf(X):
@@ -730,7 +730,7 @@ class ComposedMultiVariateNormal(object):
                 
         rvs(Nsam):
             Parameters:
-                Nsam: Number of samples drawn from CMND
+                Nsam: Number of samples drawn from MoG
             
             Return:
                 Xs: Array with Nsam samples, array Nsam x Nvars
@@ -824,7 +824,7 @@ class ComposedMultiVariateNormal(object):
         
     def setParams(self,params,Nvars):
         """
-        Set the properties of the CMND from flatten params.
+        Set the properties of the MoG from flatten params.
         
         After setting it generate flattend stdcorr and normalize weights.
         """
@@ -836,7 +836,7 @@ class ComposedMultiVariateNormal(object):
 
     def setStdcorr(self,stdcorr,Nvars):
         """
-        Set the properties of the CMND from flatten stdcorr.
+        Set the properties of the MoG from flatten stdcorr.
         
         After setting it generate flattened params and normalize weights.
         """
@@ -1045,7 +1045,7 @@ class ComposedMultiVariateNormal(object):
             Xs[i]=multinorm.rvs(self.mus[n],self.Sigmas[n])
         return Xs
 
-    def sampleCMNDLikelihood(self,uparams,data=None,pmap=None,tset="stdcorr",scales=[],verbose=0):
+    def sampleMoGLikelihood(self,uparams,data=None,pmap=None,tset="stdcorr",scales=[],verbose=0):
         """
         Compute the negative value of the logarithm of the likelihood of a sample.
         
@@ -1067,26 +1067,26 @@ class ComposedMultiVariateNormal(object):
             
             scales = []: list of scales for transforming uparams (unbound) in minparams (natural scale).
             
-            verbose = 0: verbosity level (0, none, 1: input parameters, 2: full definition of the CMND)
+            verbose = 0: verbosity level (0, none, 1: input parameters, 2: full definition of the MoG)
         
         """
         #Map unbound minimization parameters into their right range
         minparams=np.array(Util.tIF(uparams,scales,Util.u2f))
 
-        #Map minimizaiton parameters into CMND parameters
+        #Map minimizaiton parameters into MoG parameters
         params=np.array(pmap(minparams))
 
         if verbose>=1:
             print("*"*80)
             print(f"Minimization parameters: {minparams.tolist()}")
-            print(f"CMND parameters: {params.tolist()}")
+            print(f"MoG parameters: {params.tolist()}")
 
-        #Update CMND parameters according to type of minimization parameters
+        #Update MoG parameters according to type of minimization parameters
         if tset=="params":self.setParams(params,self.Nvars)
         else:self.setStdcorr(params,self.Nvars)
 
         if verbose>=2:
-            print("CMND:")
+            print("MoG:")
             print(self)
 
         #Compute PDF for each point in data and sum
@@ -1102,7 +1102,7 @@ class ComposedMultiVariateNormal(object):
                    props=None,ranges=None,
                    figsize=2,sargs=dict(),hargs=None):
         """
-        Plot a sample of the CMND.
+        Plot a sample of the MoG.
         
         Parameters:
             data = None: Data to plot.  If None it generate a sample.
@@ -1125,15 +1125,15 @@ class ComposedMultiVariateNormal(object):
             
         Examples:
         
-            G=CMND.plotSample(N=10000,sargs=dict(s=1,c='r'))
-            G=CMND.plotSample(N=1000,sargs=dict(s=1,c='r'),hargs=dict(bins=20))
+            G=MoG.plotSample(N=10000,sargs=dict(s=1,c='r'))
+            G=MoG.plotSample(N=1000,sargs=dict(s=1,c='r'),hargs=dict(bins=20))
 
 
-            CMND=ComposedMultiVariateNormal(Ngauss=1,Nvars=2)
-            fig=CMND.plotSample(N=1000,hargs=dict(bins=20),sargs=dict(s=1,c='r'));
+            MoG=ComposedMultiVariateNormal(Ngauss=1,Nvars=2)
+            fig=MoG.plotSample(N=1000,hargs=dict(bins=20),sargs=dict(s=1,c='r'));
 
-            CMND=ComposedMultiVariateNormal(Ngauss=2,Nvars=3)
-            print(CMND)
+            MoG=ComposedMultiVariateNormal(Ngauss=2,Nvars=3)
+            print(MoG)
             mus=[[0,0],[1,1]]
             weights=[0.1,0.9]
             Sigmas=[[[1,0.2],[0,1]],[[1,0],[0,1]]]
@@ -1261,9 +1261,9 @@ class ComposedMultiVariateNormal(object):
             {self.stdcorr.tolist()}"""  
         return msg
 
-class FitCMND():
+class FitMoG():
     """
-    CMND Fitting handler
+    MoG Fitting handler
     
     Attributes:
         
@@ -1271,7 +1271,7 @@ class FitCMND():
         
         Nvars: Number of variables in each MND, int.
         
-        cmnd: Fitting object of the class CMND, ComposedMultiVariateNormal
+        mog: Fitting object of the class MoG, ComposedMultiVariateNormal
               This object will have the result of the fitting procedure.
         
         solution: Once the fitting is completed the solution object is returned.
@@ -1300,7 +1300,7 @@ class FitCMND():
         Objects of this class must be always initialized with the number of gaussians and the number
         of random variables.
         
-        Example: FitCMND(1,3)
+        Example: FitMoG(1,3)
         
     Basic methods:
     
@@ -1323,10 +1323,10 @@ class FitCMND():
         sigmas=[[1,1.2,2.3]]
         angles=[[10*Angle.Deg,30*Angle.Deg,20*Angle.Deg]]
         Sigmas=UtilStats.calcCovarianceFromRotation(sigmas,angles)
-        CMND=ComposedMultiVariateNormal(mus=mus,weights=weights,Sigmas=Sigmas)
-        data=CMND.rvs(10000)
-        F=FitCMND(Ngauss=CMND.Ngauss,Nvars=CMND.Nvars)
-        F.cmnd._fevfreq=200
+        MoG=ComposedMultiVariateNormal(mus=mus,weights=weights,Sigmas=Sigmas)
+        data=MoG.rvs(10000)
+        F=FitMoG(Ngauss=MoG.Ngauss,Nvars=MoG.Nvars)
+        F.mog._fevfreq=200
         bounds=None
         #bounds=F.setBounds(boundw=(0.1,0.9))
         #bounds=F.setBounds(boundr=(-0.9,0.9))
@@ -1337,7 +1337,7 @@ class FitCMND():
         #F.fitData(data,verbose=0,tol=1e-3,options=dict(maxiter=100,disp=True),bounds=bounds)
         F.fitData(data,verbose=0,tol=1e-3,options=dict(maxiter=100,disp=True),method=None,bounds=bounds)
         T=Util.elTime()
-        print(F.cmnd)
+        print(F.mog)
         G=F.plotFit(figsize=3,hargs=dict(bins=30,cmap='YlGn'),sargs=dict(s=0.5,edgecolor='None',color='r'))
         F.saveFit("/tmp/fit.pkl",useprefix=False)
         F._loadFit("/tmp/fit.pkl")
@@ -1362,8 +1362,8 @@ class FitCMND():
             self.Ndim=Ngauss*Nvars
             self.Ncorr=int(Nvars*(Nvars-1)/2)
 
-            #Define the model cmnds
-            self.cmnd=ComposedMultiVariateNormal(Ngauss=Ngauss,Nvars=Nvars)
+            #Define the model mogs
+            self.mog=ComposedMultiVariateNormal(Ngauss=Ngauss,Nvars=Nvars)
 
             #Set parameters
             self.setParams()
@@ -1402,7 +1402,7 @@ class FitCMND():
         
     def pmap(self,minparams):
         """
-        Mapping routine used in sampleCMNDLikelihood.  Mapping may change depending on the 
+        Mapping routine used in sampleMoGLikelihood.  Mapping may change depending on the 
         complexity of the parameters to be minimized.  Here we assume that all parameters in
         the stdcorr vector is susceptible to be minimized (with the exception of weights in the 
         case of Ngauss=1 when this parameter should not be included.)
@@ -1428,7 +1428,7 @@ class FitCMND():
             logL: value of the -log(Likelihood)
         """
         
-        logL=self.cmnd.sampleCMNDLikelihood(self.uparams,
+        logL=self.mog.sampleMoGLikelihood(self.uparams,
                                             data=data,
                                             pmap=self.pmap,
                                             tset="stdcorr",
@@ -1441,7 +1441,7 @@ class FitCMND():
         
         Parameters:
             data: Array with data, array, Nsam x Nvars
-            verbose=0 : verbosity level for the sampleCMNDLikelihood routine
+            verbose=0 : verbosity level for the sampleMoGLikelihood routine
             advance=0 : If larger than 0 show advance each "advance" iterations.
             **args: Options of the minimize routine (eg. tol=1e-6)
                     A particularly interesting parameter is the minimization method:
@@ -1456,7 +1456,7 @@ class FitCMND():
             It updates the solution attribute
             
         Examples:
-            F=FitCMND(1,3)
+            F=FitMoG(1,3)
             F.fitData(data,verbose=0,tol=1e-3,options=dict(maxiter=100,disp=True))
 
         """
@@ -1468,17 +1468,17 @@ class FitCMND():
                     print(f"Iterations:")
                 if self.neval%advance==0 or show:
                     vars = np.array2string(X, separator=', ', precision=4, max_line_width=np.inf, formatter={'float_kind':lambda x: f"{x:.2g}"})
-                    fun = self.cmnd.sampleCMNDLikelihood(X,data,self.pmap,"stdcorr",self.scales,verbose)
+                    fun = self.mog.sampleMoGLikelihood(X,data,self.pmap,"stdcorr",self.scales,verbose)
                     print(f"Iter {self.neval}:\n\tVars: {vars}\n\tLogL/N: {fun/len(data)}")
                 self.neval+=1
         else:
             _advance = None
 
         self.data=np.copy(data)
-        self.cmnd._ignoreWarnings=self._ignoreWarnings
+        self.mog._ignoreWarnings=self._ignoreWarnings
         self.minargs=dict(method="Powell")
         self.minargs.update(args)
-        self.solution=minimize(self.cmnd.sampleCMNDLikelihood,
+        self.solution=minimize(self.mog.sampleMoGLikelihood,
                                self.minparams,
                                callback=_advance,
                                args=(data,self.pmap,"stdcorr",self.scales,verbose),
@@ -1488,7 +1488,7 @@ class FitCMND():
         self.uparams=self.solution.x
 
         #Set the new params
-        self._invParams(self.cmnd.stdcorr)
+        self._invParams(self.mog.stdcorr)
         self._updatePrefix()
             
     def _loadFit(self,objfile):
@@ -1511,12 +1511,12 @@ class FitCMND():
             sargs = dict(): Dictionary with options for the scatter plot.  Ex. sargs=dict(color='r')
             
         Examples:
-            F=FitCMND(1,3)
+            F=FitMoG(1,3)
             F.fitData(data,verbose=0,tol=1e-3,options=dict(maxiter=100,disp=True))
             G=F.plotFit(figsize=3,hargs=dict(bins=30,cmap='YlGn'),sargs=dict(s=0.5,edgecolor='None',color='r'))
             
         """
-        Xfits=self.cmnd.rvs(N)
+        Xfits=self.mog.rvs(N)
         properties=dict()
         for i in range(self.Nvars):
             symbol=string.ascii_letters[i] if props is None else props[i]
@@ -1568,12 +1568,12 @@ class FitCMND():
             self.hash=md5(pickle.dumps([self.Ngauss,self.data])).hexdigest()[:5]
             self.hash=md5(pickle.dumps(self.__dict__)).hexdigest()[:5]
             self.hash=md5(pickle.dumps(self.minparams)).hexdigest()[:5]
-            self.hash=md5(pickle.dumps(self.cmnd)).hexdigest()[:5]
+            self.hash=md5(pickle.dumps(self.mog)).hexdigest()[:5]
         """
         self.hash=md5(pickle.dumps(self)).hexdigest()[:5]
         if myprefix is not None:
             myprefix=f"_{myprefix}"
-        self.prefix=f"{self.Ngauss}cmnd{myprefix}_{self.hash}"
+        self.prefix=f"{self.Ngauss}mog{myprefix}_{self.hash}"
         
     def saveFit(self,objfile=None,useprefix=True,myprefix=None):
         """
@@ -1581,17 +1581,17 @@ class FitCMND():
         
         Parameteres:
             objfile=None: name of the file where the fit will be stored, string.  If none the name is set 
-                          by the routine as FitCMND.pkl
+                          by the routine as FitMoG.pkl
                           
             useprefix=True: use a prefix in the filename of the pickle file.  The prefix is normally 
-                            {Ngauss}cmnd_{hash}
+                            {Ngauss}mog_{hash}
                             
                             Example: If objfile="fit.pkl" the final filename will be fit-1mnd_asa33.pkl
         """
         self.fig=None
         self._updatePrefix(myprefix)
         if objfile is None:
-            objfile=f"/tmp/FitCMND.pkl"
+            objfile=f"/tmp/FitMoG.pkl"
         if useprefix:
             parts=os.path.splitext(objfile)
             objfile=f"{parts[0]}-{self.prefix}{parts[1]}"

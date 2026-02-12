@@ -42,11 +42,11 @@ class MultiMinBase:
 
         Can be called on an instance (e.g. obj.describe()) or on the class
         (e.g. mn.DensityPlot.describe()). Intended for discovery of available
-        functionality on any MultiMinBase subclass (e.g. DensityPlot, CMND).
+        functionality on any MultiMinBase subclass (e.g. DensityPlot, MoG).
         """
         # Local import to avoid circular dependency
         from .util import Util
-        
+
         methods = []
         for name in dir(cls):
             if name.startswith("_"):

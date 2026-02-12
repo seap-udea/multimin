@@ -11,12 +11,12 @@
 """
 MultiMin: Multivariate Gaussian fitting
 
-This package provides tools for fitting composed multivariate normal
-distributions (CMND) and other statistical utilities.
+This package provides tools for fitting Mixture of Gaussians
+(MoG) and other statistical utilities.
 
 Main Features
 -------------
-- Multivariate fitting (CMND)
+- Multivariate fitting (MoG)
 - Visualization tools (Density plots)
 - Statistical utilities
 
@@ -51,9 +51,11 @@ show_watermark = os.getenv("MULTIMIN_NO_WATERMARK", "").lower() not in (
     "yes",
 )
 
+
 # Print a nice welcome message
 def welcome():
     print(f"Welcome to MultiMin v{__version__}. ¡Al infinito y más allá!")
+
 
 if not os.getenv("MULTIMIN_NO_WELCOME"):
     welcome()
@@ -71,11 +73,11 @@ from .util import Util, Stats
 # Plotting and visualization
 from .plotting import DensityPlot, multimin_watermark
 
-# CMND class
-from .cmnd import ComposedMultiVariateNormal
+# MoG class
+from .mog import MixtureOfGaussians
 
 # Fitting classes
-from .fitting import FitCMND, FitFunctionCMND
+from .fitting import FitMoG, FitFunctionMoG
 
 # =============================================================================
 # PUBLIC API
@@ -100,9 +102,8 @@ __all__ = [
     # Plotting
     "DensityPlot",
     "multimin_watermark",
-    # CMND
-    "ComposedMultiVariateNormal",
-    # Fitting
-    "FitCMND",
-    "FitFunctionCMND",
+    # MoG
+    "MixtureOfGaussians",
+    "FitMoG",
+    "FitFunctionMoG",
 ]

@@ -26,7 +26,7 @@ These are the main features of `MultiMin`:
 
 - **Tools for multivariate normal distribution**: Tools for defining single or composed multivariate normal distributions and for plotting and sampling these functions.
 - **Multivariate data visualization***: Tools for visualization of multivariate data, ie. corner plots of scatter and density diagrams.
-- **Multivariate data fitting**: Tools for fitting multivariate data to composed multivariate normal distributions (CMND). It includes fitting of simple data (time-series, numerical functions of one variable, spectra, etc.) to a composition of gaussians.
+- **Multivariate data fitting**: Tools for fitting multivariate data to composed multivariate normal distributions (MoG). It includes fitting of simple data (time-series, numerical functions of one variable, spectra, etc.) to a composition of gaussians.
 
 ## Resources
 
@@ -52,7 +52,7 @@ pip install -U git+https://github.com/seap-udea/multimin
 
 ## Theoretical Background
 
-The core of `MultiMin` is the **Composed Multivariate Normal Distribution (CMND)** defined as:
+The core of `MultiMin` is the **Mixture of Gaussians (MoG)** defined as:
 
 $$
 \mathcal{C}_M(\tilde U; \{w_k\}_M, \{\mu_k\}_M, \{\Sigma_k\}_M) \equiv \sum_{i=1}^{M} w_i\mathcal{N}(\tilde U; \tilde \mu_i, \Sigma_i)
@@ -71,13 +71,13 @@ The normalization condition implies that the set of weights $\{w_k\}_M$ are also
 
 ### Fitting procedure
 
-The theory behind it posits that any multivariate distribution function $p(\tilde U):\Re^{N}\rightarrow\Re$, where $\tilde U:(u_1,u_2,u_3,\ldots,u_N)$ are random variables, can be approximated with arbitrary precision by a normalized linear combination of $M$ Multivariate Normal Distributions or CMND:
+The theory behind it posits that any multivariate distribution function $p(\tilde U):\Re^{N}\rightarrow\Re$, where $\tilde U:(u_1,u_2,u_3,\ldots,u_N)$ are random variables, can be approximated with arbitrary precision by a normalized linear combination of $M$ Multivariate Normal Distributions or MoG:
 
-To estimate the parameters of the CMND that best describe a given dataset ,
+To estimate the parameters of the MoG that best describe a given dataset ,
 we use the **Likelihood Statistics** method.
 
 Given a dataset of $S$ objects with state vectors $\{\tilde U_k\}_{k=1}^S$, the likelihood $\mathcal{L}$ of the
-CMND parameters is defined as the product of the probability densities evaluated at each data point:
+MoG parameters is defined as the product of the probability densities evaluated at each data point:
 
 $$
 \mathcal{L} = \prod_{i=1}^{S} \mathcal{C}_M(\tilde U_i)
@@ -91,7 +91,7 @@ $$
 $$
 
 This approach allows us to fit the distribution without making strong assumptions about the underlying
-normality of the data, effectively treating the CMND as a series expansion of the true probability density function.
+normality of the data, effectively treating the MoG as a series expansion of the true probability density function.
 
 In `MultiMin`, we use the `scipy.optimize.minimize` function to find the set of parameters that minimize the negative normalized log-likelihood.
 
@@ -113,7 +113,7 @@ Here is a basic example of how to use `MultiMin` to fit a 3D distribution compos
 
 ### 1. Define a true distribution
 
-First, we define a distribution from which we will generate synthetic data. We use a **Composed Multivariate Normal Distribution (CMND)** with 2 Gaussian components (`ngauss=2`) in 3 dimensions (`nvars=3`).
+First, we define a distribution from which we will generate synthetic data. We use a **Mixture of Gaussians (MoG)** with 2 Gaussian components (`ngauss=2`) in 3 dimensions (`nvars=3`).
 
 ```python
 import numpy as np
@@ -132,8 +132,8 @@ angles = [
 # Calculate covariance matrices from rotation angles
 Sigmas = mn.Stats.calc_covariance_from_rotation(sigmas, angles)
 
-# Create the CMND object
-CMND = mn.ComposedMultiVariateNormal(mus=mus, weights=weights, Sigmas=Sigmas)
+# Create the MoG object
+MoG = mn.ComposedMultiVariateNormal(mus=mus, weights=weights, Sigmas=Sigmas)
 ```
 
 ### 2. Generate sample data
@@ -142,7 +142,7 @@ We generate 5000 random samples from this distribution to serve as our "observed
 
 ```python
 np.random.seed(1)
-sample = CMND.rvs(5000)
+sample = MoG.rvs(5000)
 ```
 
 ### 3. Visualize the data
@@ -169,19 +169,19 @@ sargs=dict(s=0.5,edgecolor='None',color='r')
 scatter=G.scatter_plot(sample,**sargs)
 ```
 
-The same `properties` dict can be passed to `CMND.plot_sample` and `F.plot_fit` via the `properties` argument for consistent axis labels. You can also pass a simple list of names (e.g. `properties=["x","y","z"]`); then each name is used as the axis label and `range=None`.
+The same `properties` dict can be passed to `MoG.plot_sample` and `F.plot_fit` via the `properties` argument for consistent axis labels. You can also pass a simple list of names (e.g. `properties=["x","y","z"]`); then each name is used as the axis label and `range=None`.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/seap-udea/multimin/master/examples/gallery/cmnd_data_density_scatter.png" alt="Data Scatter Plot" width="600"/>
+  <img src="https://raw.githubusercontent.com/seap-udea/multimin/master/examples/gallery/mog_data_density_scatter.png" alt="Data Scatter Plot" width="600"/>
 </div>
 
 ### 4. Initialize the Fitter and Run the Fit
 
-We initialize the `FitCMND` handler with the expected number of Gaussians (2) and variables (3). We then run the fitting procedure.
+We initialize the `FitMoG` handler with the expected number of Gaussians (2) and variables (3). We then run the fitting procedure.
 
 ```python
 # Initialize the fitter
-F = mn.FitCMND(data=sample, ngauss=2)
+F = mn.FitMoG(data=sample, ngauss=2)
 
 # Run the fit (using progress="text" for better convergence on complex models)
 F.fit_data(progress="text")
@@ -202,17 +202,17 @@ G = F.plot_fit(
 ```
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/seap-udea/multimin/master/examples/gallery/cmnd_fit_result_3d.png" alt="Fit Result" width="600"/>
+  <img src="https://raw.githubusercontent.com/seap-udea/multimin/master/examples/gallery/mog_fit_result_3d.png" alt="Fit Result" width="600"/>
 </div>
 
 ### 6. Inspect Parameters and Get Explicit PDF Function
 
 You can tabulate the fitted parameters and obtain an explicit Python function that evaluates the fitted PDF. Below, each step is shown with its output.
 
-**Stage 1: Tabulate the fitted CMND**
+**Stage 1: Tabulate the fitted MoG**
 
 ```python
-F.cmnd.tabulate(sort_by='weight')
+F.mog.tabulate(sort_by='weight')
 ```
 
 Output:
@@ -227,7 +227,7 @@ component
 **Stage 2: Get the source code and a callable function**
 
 ```python
-code, cmnd = F.cmnd.get_function()
+code, mog = F.mog.get_function()
 ```
 
 Output (the printed code, which you can copy):
@@ -235,7 +235,7 @@ Output (the printed code, which you can copy):
 ```
 from multimin import nmd
 
-def cmnd(X):
+def mog(X):
 
     mu1_1 = 0.957687
     mu1_2 = 0.517584
@@ -263,7 +263,7 @@ def cmnd(X):
 **Stage 3: Evaluate the PDF at a point**
 
 ```python
-cmnd([1.0, 0.5, -0.5])
+mog([1.0, 0.5, -0.5])
 ```
 
 Output:
@@ -277,7 +277,7 @@ Output:
 You can get the fitted PDF as a LaTeX string (suitable for inclusion in papers) with parameter values and the definition of the normal distribution:
 
 ```python
-latex_str, _ = F.cmnd.get_function(print_code=False, type='latex', decimals=4)
+latex_str, _ = F.mog.get_function(print_code=False, type='latex', decimals=4)
 print(latex_str)
 ```
 
@@ -299,7 +299,7 @@ Here the normal distribution is defined as:
 
 $$\mathcal{N}(\mathbf{x}; \boldsymbol{\mu}, \mathbf{\Sigma}) = \frac{1}{\sqrt{(2\pi)^{{k}} \det \mathbf{\Sigma}}} \exp\left[-\frac{1}{2}(\mathbf{x}-\boldsymbol{\mu})^{\top} \mathbf{\Sigma}^{{-1}} (\mathbf{x}-\boldsymbol{\mu})\right]$$
 
-A parameter table in LaTeX is also available via ``F.cmnd.tabulate(sort_by='weight', type='latex')``.
+A parameter table in LaTeX is also available via ``F.mog.tabulate(sort_by='weight', type='latex')``.
 
 ## Truncated multivariate distributions.
 
@@ -331,24 +331,24 @@ $$
 
 ### Example: univariate truncated mixture
 
-Define a mixture of two Gaussians on the interval $[0, 1]$ with the **domain** parameter, generate data, and fit with `FitCMND(..., domain=[[0, 1]])`:
+Define a mixture of two Gaussians on the interval $[0, 1]$ with the **domain** parameter, generate data, and fit with `FitMoG(..., domain=[[0, 1]])`:
 
 ```python
 import numpy as np
 import multimin as mn
 
 # Truncated mixture of 2 Gaussians on [0, 1]
-CMND_1d = mn.ComposedMultiVariateNormal(
+MoG_1d = mn.ComposedMultiVariateNormal(
     mus=[0.2, 0.8],
     weights=[0.5, 0.5],
     Sigmas=[0.01, 0.03],
     domain=[[0, 1]],
 )
 np.random.seed(1)
-data_1d = CMND_1d.rvs(5000)
+data_1d = MoG_1d.rvs(5000)
 
 # Fit with same domain so likelihood and means respect [0, 1]
-F_1d = mn.FitCMND(data=data_1d, ngauss=2, domain=[[0, 1]])
+F_1d = mn.FitMoG(data=data_1d, ngauss=2, domain=[[0, 1]])
 F_1d.fit_data(progress="text")
 G = F_1d.plot_fit(hargs=dict(bins=40), sargs=dict(s=0.5, alpha=0.6))
 ```
@@ -360,7 +360,7 @@ G = F_1d.plot_fit(hargs=dict(bins=40), sargs=dict(s=0.5, alpha=0.6))
 You can also extract an explicit callable function for the fitted *truncated* PDF (including the bounds) and evaluate it safely outside the interval.
 
 ```python
-function, cmnd = F_1d.cmnd.get_function()
+function, mog = F_1d.mog.get_function()
 ```
 
 Output (the printed code, which you can copy):
@@ -369,7 +369,7 @@ Output (the printed code, which you can copy):
 import numpy as np
 from multimin import tnmd
 
-def cmnd(X):
+def mog(X):
 
     a = 0.0
     b = 1.0
@@ -394,7 +394,7 @@ def cmnd(X):
 Evaluate the fitted PDF at a point inside the domain and outside the domain:
 
 ```python
-cmnd(0.5), cmnd(-0.2)
+mog(0.5), mog(-0.2)
 ```
 
 Output:
@@ -406,7 +406,7 @@ Output:
 For papers, you can also generate a LaTeX/Markdown description that includes the truncation information:
 
 ```python
-function_str, _ = F_1d.cmnd.get_function(print_code=False, type='latex', decimals=4)
+function_str, _ = F_1d.mog.get_function(print_code=False, type='latex', decimals=4)
 print(function_str)
 ```
 

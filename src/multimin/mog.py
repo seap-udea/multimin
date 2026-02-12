@@ -9,10 +9,10 @@
 ##################################################################
 
 """
-Composed Multivariate Normal Distribution (CMND) implementation.
+Mixture of Gaussians (MoG) implementation.
 
 Contains:
-- ComposedMultiVariateNormal: Main class for CMND representation and sampling
+- MixtureOfGaussians: Main class for MoG representation and sampling
 """
 
 import itertools
@@ -27,9 +27,10 @@ from .util import Util, Stats
 from .plotting import multimin_watermark, DensityPlot
 from .version import __version__
 
-class ComposedMultiVariateNormal(MultiMinBase):
+
+class MixtureOfGaussians(MultiMinBase):
     r"""
-    The Composed Multivariate Normal Distribution (CMND).
+    The Mixture of Gaussians (MoG).
 
     We conjecture that any multivariate distribution function :math:`p(\tilde U):\Re^{N}\rightarrow\Re`,
     where :math:`\tilde U:(u_1,u_2,u_3,\ldots,u_N)` and :math:`u_i` are random variables, can be approximated
@@ -80,7 +81,7 @@ class ComposedMultiVariateNormal(MultiMinBase):
         = \int_{A_T} \mathcal{N}(\tilde T; \tilde\mu, \Sigma) \, d\tilde T
         = \mathbb{P}_{\tilde T \sim \mathcal{N}(\tilde\mu,\Sigma)}\!\left( \tilde T \in A_T \right).
 
-    When a finite ``domain`` is set (e.g. ``domain=[[0, 1], None]``), the CMND uses truncated normals for the
+    When a finite ``domain`` is set (e.g. ``domain=[[0, 1], None]``), the MoG uses truncated normals for the
     bounded variables so that the PDF is zero outside the domain and the mixture remains normalized.
 
     Attributes
@@ -109,7 +110,7 @@ class ComposedMultiVariateNormal(MultiMinBase):
 
     Notes
     -----
-    There are several ways of initialize a CMND:
+    There are several ways of initialize a MoG:
 
     1. Providing: ngauss and nvars
        In this case the class is instantiated with zero means, unitary dispersion and
@@ -126,14 +127,14 @@ class ComposedMultiVariateNormal(MultiMinBase):
        is required.
 
     4. Providing: weights, mus, Sigmas (optional), domain (optional), normalize_weights (optional)
-       In this case the basic properties of the CMND are set.
+       In this case the basic properties of the MoG are set.
        For univariate (one variable), mus may be a 1-D array of means, e.g. [0, 2],
        and Sigmas a 1-D array of variances, e.g. [1.0, 0.25].
        domain: list of length nvars; each element is None (unbounded) or [low, high]
        (finite support). Example: [None, [0, 1], None] for variable 1 in [0, 1].
        normalize_weights: if True (default), weights are scaled so sum(weights)=1 (proper PDF).
        If False, weights are used as-is (sum may != 1); useful for function fitting with
-       an overall scale (e.g. FitFunctionCMND).
+       an overall scale (e.g. FitFunctionMoG).
 
     Examples
     --------
@@ -143,8 +144,8 @@ class ComposedMultiVariateNormal(MultiMinBase):
     >>> mus = [[0, 0], [1, 1]]
     >>> # Define weights (normalization is handled automatically)
     >>> weights = [0.1, 0]
-    >>> # Create the CMND object
-    >>> MND1 = ComposedMultiVariateNormal(mus=mus, weights=weights)
+    >>> # Create the MoG object
+    >>> MND1 = MixtureOfGaussians(mus=mus, weights=weights)
     >>> # Set covariance matrices explicitly
     >>> MND1.set_sigmas([[[1, 0.2], [0, 1]], [[1, 0], [0, 1]]])
     >>> print(MND1)
@@ -153,8 +154,8 @@ class ComposedMultiVariateNormal(MultiMinBase):
 
     >>> # Flattened parameters: [weights..., mus..., flattened_covariances...]
     >>> params = [0.1, 0.9, 0, 0, 1, 1, 1, 0.2, 0.2, 1, 1, 0, 0, 1]
-    >>> # Create CMND object specifying number of variables
-    >>> MND2 = ComposedMultiVariateNormal(params=params, nvars=2)
+    >>> # Create MoG object specifying number of variables
+    >>> MND2 = MixtureOfGaussians(params=params, nvars=2)
     >>> print(MND2)
     """
 
@@ -279,11 +280,11 @@ class ComposedMultiVariateNormal(MultiMinBase):
         self._Z_cache = None
 
     def update_params(self, weights=None, mus=None, sigmas=None, rhos=None):
-        """Update CMND parameters in-place using FitCMND-like syntax.
+        """Update MoG parameters in-place using FitMoG-like syntax.
 
         This method updates the internal parameters of the composed distribution
         (means, standard deviations, and correlations) using the same broadcasting
-        rules as :meth:`FitCMND.set_initial_params`.
+        rules as :meth:`FitMoG.set_initial_params`.
 
         Only arguments provided are updated; other parameters keep their current
         values.
@@ -352,7 +353,7 @@ class ComposedMultiVariateNormal(MultiMinBase):
             if sigmas is not None or rhos is not None:
                 raise ValueError(
                     "Cannot reset sigmas/rhos because covariance matrices are not set; "
-                    "initialize the CMND with Sigmas or stdcorr first."
+                    "initialize the MoG with Sigmas or stdcorr first."
                 )
 
         if mus is not None:
@@ -449,7 +450,7 @@ class ComposedMultiVariateNormal(MultiMinBase):
 
     def set_params(self, params, nvars):
         """
-        Set the properties of the CMND from flatten params. After setting it generate flattend stdcorr
+        Set the properties of the MoG from flatten params. After setting it generate flattend stdcorr
         and normalize weights.
         Ex. set_params(params, nvars=2)
 
@@ -473,7 +474,7 @@ class ComposedMultiVariateNormal(MultiMinBase):
 
     def set_stdcorr(self, stdcorr, nvars):
         """
-        Set the properties of the CMND from flatten stdcorr. After setting it generate flattened
+        Set the properties of the MoG from flatten stdcorr. After setting it generate flattened
         params and normalize weights.
         Ex. set_stdcorr(stdcorr, nvars=2)
 
@@ -705,7 +706,7 @@ class ComposedMultiVariateNormal(MultiMinBase):
     def pdf(self, X):
         """
         Compute the PDF.
-        Ex. cmnd.pdf([1.0, 0.5])
+        Ex. mog.pdf([1.0, 0.5])
 
         Parameters
         ----------
@@ -729,12 +730,12 @@ class ComposedMultiVariateNormal(MultiMinBase):
                 X2 = X.reshape(1, -1)
             else:
                 raise ValueError(
-                    f"Point X has length {len(X)} but this CMND has nvars={self.nvars}"
+                    f"Point X has length {len(X)} but this MoG has nvars={self.nvars}"
                 )
         elif X.ndim == 2:
             if X.shape[1] != self.nvars:
                 raise ValueError(
-                    f"Points X have {X.shape[1]} dimensions but this CMND has nvars={self.nvars}"
+                    f"Points X have {X.shape[1]} dimensions but this MoG has nvars={self.nvars}"
                 )
             X2 = X
         else:
@@ -786,7 +787,7 @@ class ComposedMultiVariateNormal(MultiMinBase):
         cmap="Spectral_r",
         colorbar=False,
     ):
-        """Plot only the PDF of the CMND.
+        """Plot only the PDF of the MoG.
 
         For univariate distributions (``nvars==1``) this produces a single curve.
         For multivariate distributions (``nvars>=2``) this produces density panels
@@ -931,7 +932,7 @@ class ComposedMultiVariateNormal(MultiMinBase):
         Generate a random sample of points following this Multivariate distribution. When domain is
         finite, samples are drawn inside the domain (rejection sampling for multivariate; truncated
         normal for univariate).
-        Ex. cmnd.rvs(1000)
+        Ex. mog.rvs(1000)
 
         Parameters
         ----------
@@ -990,12 +991,12 @@ class ComposedMultiVariateNormal(MultiMinBase):
                 )
         return Xs
 
-    def sample_cmnd_likelihood(
+    def sample_mog_likelihood(
         self, uparams, data=None, pmap=None, tset="stdcorr", scales=[], verbose=0
     ):
         """
         Compute the negative value of the logarithm of the likelihood of a sample.
-        Ex. cmnd.sample_cmnd_likelihood(uparams, data=data, pmap=pmap)
+        Ex. mog.sample_mog_likelihood(uparams, data=data, pmap=pmap)
 
         Parameters
         ----------
@@ -1015,7 +1016,7 @@ class ComposedMultiVariateNormal(MultiMinBase):
         scales : list, optional
             List of scales for transforming uparams (unbound) in minparams (natural scale).
         verbose : int, optional
-            Verbosity level (0, none, 1: input parameters, 2: full definition of the CMND) (default 0).
+            Verbosity level (0, none, 1: input parameters, 2: full definition of the MoG) (default 0).
 
         Returns
         -------
@@ -1027,22 +1028,22 @@ class ComposedMultiVariateNormal(MultiMinBase):
         # Map unbound minimization parameters into their right range
         minparams = np.array(Util.t_if(uparams, scales, Util.u2f))
 
-        # Map minimizaiton parameters into CMND parameters
+        # Map minimizaiton parameters into MoG parameters
         params = np.array(pmap(minparams))
 
         if verbose >= 1:
             print("*" * 80)
             print(f"Minimization parameters: {minparams.tolist()}")
-            print(f"CMND parameters: {params.tolist()}")
+            print(f"MoG parameters: {params.tolist()}")
 
-        # Update CMND parameters according to type of minimization parameters
+        # Update MoG parameters according to type of minimization parameters
         if tset == "params":
             self.set_params(params, self.nvars)
         else:
             self.set_stdcorr(params, self.nvars)
 
         if verbose >= 2:
-            print("CMND:")
+            print("MoG:")
             print(self)
 
         # Compute PDF for each point in data and sum
@@ -1068,7 +1069,7 @@ class ComposedMultiVariateNormal(MultiMinBase):
         hargs=None,
     ):
         """
-        Plot a sample of the CMND.
+        Plot a sample of the MoG.
         Ex. plot_sample(N=1000, sargs=dict(s=0.5))
 
         Parameters
@@ -1100,20 +1101,20 @@ class ComposedMultiVariateNormal(MultiMinBase):
         Example 1: Plotting a generated sample.
 
         >>> # Generate and plot 10000 points
-        >>> G = CMND.plot_sample(N=10000, sargs=dict(s=1, c='r'))
+        >>> G = MoG.plot_sample(N=10000, sargs=dict(s=1, c='r'))
         >>> # Plot with histogram bins
-        >>> G = CMND.plot_sample(N=1000, sargs=dict(s=1, c='r'), hargs=dict(bins=20))
+        >>> G = MoG.plot_sample(N=1000, sargs=dict(s=1, c='r'), hargs=dict(bins=20))
 
         Example 2: Plotting for a 2D distribution.
 
-        >>> CMND = ComposedMultiVariateNormal(ngauss=1, nvars=2)
-        >>> fig = CMND.plot_sample(N=1000, hargs=dict(bins=20), sargs=dict(s=1, c='r'))
+        >>> MoG = MixtureOfGaussians(ngauss=1, nvars=2)
+        >>> fig = MoG.plot_sample(N=1000, hargs=dict(bins=20), sargs=dict(s=1, c='r'))
 
-        Example 3: Defining and plotting a complex CMND.
+        Example 3: Defining and plotting a complex MoG.
 
         >>> # Define parameters for 2 Gaussians in 2D
         >>> params = [0.1, 0.9, 0.0, 0.0, 1.0, 1.0, 1.0, 0.2, 1.0, 1.0, 0.0, 1.0]
-        >>> MND2 = ComposedMultiVariateNormal(params=params, nvars=2)
+        >>> MND2 = MixtureOfGaussians(params=params, nvars=2)
         >>> # Print the object details
         >>> print(MND2)
         >>> # Calculate PDF at a point
@@ -1316,9 +1317,9 @@ class ComposedMultiVariateNormal(MultiMinBase):
 
     def get_function(self, print_code=True, decimals=6, type="python", properties=None):
         """
-        Return the source code of ``cmnd(X)`` and an executable function (type='python'),
+        Return the source code of ``mog(X)`` and an executable function (type='python'),
         or LaTeX code with parameters in \\begin{array} (type='latex').
-        Ex. code, cmnd = CMND.get_function()
+        Ex. code, mog = MoG.get_function()
 
         Parameters
         ----------
@@ -1339,12 +1340,12 @@ class ComposedMultiVariateNormal(MultiMinBase):
         Returns
         -------
         tuple (str, callable or None)
-            First element: source code (Python or LaTeX). Second: callable cmnd if type='python', else None.
+            First element: source code (Python or LaTeX). Second: callable mog if type='python', else None.
 
         Examples
         --------
-        >>> code, cmnd = CMND.get_function()
-        >>> latex_str, _ = CMND.get_function(type='latex')
+        >>> code, mog = MoG.get_function()
+        >>> latex_str, _ = MoG.get_function(type='latex')
         """
         if self.Sigmas is None:
             raise ValueError("Sigmas not set; cannot generate get_function()")
@@ -1364,7 +1365,7 @@ class ComposedMultiVariateNormal(MultiMinBase):
                 "import numpy as np",
                 "from multimin import Util",
                 "",
-                "def cmnd(X):",
+                "def mog(X):",
                 "",
             ]
             if self.nvars == 1:
@@ -1389,7 +1390,7 @@ class ComposedMultiVariateNormal(MultiMinBase):
                 lines.append("    b = [{}]".format(", ".join(b_parts)))
             lines.append("")
         else:
-            lines = ["from multimin import Util", "", "def cmnd(X):", ""]
+            lines = ["from multimin import Util", "", "def mog(X):", ""]
         univariate = self.nvars == 1
         for n in range(self.ngauss):
             i = n + 1
@@ -1458,17 +1459,17 @@ class ComposedMultiVariateNormal(MultiMinBase):
         code = "\n".join(lines)
         if print_code:
             print(code)
-        # Execute the code to obtain the callable cmnd
+        # Execute the code to obtain the callable mog
         namespace = {"__builtins__": __builtins__}
         try:
             exec(code, namespace)
-            func = namespace["cmnd"]
+            func = namespace["mog"]
         except Exception:
             func = None
         return code, func
 
     def _get_function_latex(self, print_code=True, decimals=6, properties=None):
-        """Build LaTeX string for the CMND PDF with parameters in \\begin{array}."""
+        """Build LaTeX string for the MoG PDF with parameters in \\begin{array}."""
         parts = []
         var_names = self._var_names(properties)
         bounds = getattr(self, "_domain_bounds", None)
@@ -1693,9 +1694,9 @@ class ComposedMultiVariateNormal(MultiMinBase):
 
     def tabulate(self, sort_by="weight", return_df=True, type="df", properties=None):
         """
-        Build a table of CMND parameters: weights, means (mu_i), standard deviations (sigma_i),
+        Build a table of MoG parameters: weights, means (mu_i), standard deviations (sigma_i),
         and correlations (rho_ij, i < j). Diagonal rho_ii are 1 by definition and omitted.
-        Ex. df = CMND.tabulate(sort_by='weight')
+        Ex. df = MoG.tabulate(sort_by='weight')
 
         Parameters
         ----------
@@ -1809,5 +1810,3 @@ class ComposedMultiVariateNormal(MultiMinBase):
         lines.append("\\hline")
         lines.append("\\end{tabular}\n\\end{table*}")
         return "\n".join(lines)
-
-

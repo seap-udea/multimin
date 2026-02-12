@@ -4,7 +4,7 @@
 
 .PHONY: help install install-dev show test verify clean build docs push release env gallery
 
-NOTEBOOKS := examples/multimin_cmnd_quickstart.ipynb examples/multimin_cmnd_tutorial.ipynb examples/multimin_truncated_tutorial.ipynb examples/multimin_asteroids_application.ipynb
+NOTEBOOKS := examples/*.ipynb
 GALLERY_TIMEOUT ?= 1200
 
 RELMODE=release
