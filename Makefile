@@ -125,3 +125,6 @@ release: clean push
 	@echo "Releasing a new version..."
 	@bash bin/release.sh $(RELMODE) $(VERSION)
 	@make push COMMIT_MSG="[REL] released version $(VERSION)"
+
+sleep:
+	@sleep 3
