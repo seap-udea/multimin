@@ -823,6 +823,7 @@ class MixtureOfGaussians(MultiMinBase):
 
         return G
 
+    @Util.timer
     def rvs(self, Nsam=1, max_tries=100000):
         """
         Generate a random sample of points following this Multivariate distribution. When domain is

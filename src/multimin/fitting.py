@@ -530,6 +530,7 @@ class FitMoG(MultiMinBase):
         log_likelihood = self.log_l(data) / len(data)
         return log_likelihood
 
+    @Util.timer
     def fit_data(
         self, data=None, verbose=0, advance=0, normalize=False, progress=False, **args
     ):
@@ -1143,11 +1144,6 @@ class FitMoG(MultiMinBase):
             if sargs is not None:
                 G.sample_scatter(self.data, **sargs)
 
-            # 2. Plot MoG PDF (default)
-            # Use pargs defaults if provided (which they are by default in this method)
-            if pargs:
-                G.mog_pdf(self.mog, **pargs)
-
             # 3. Plot Histogram of RVS (if requested)
             if hargs is not None:
                 Xfits = self.mog.rvs(N)
@@ -1157,7 +1153,19 @@ class FitMoG(MultiMinBase):
             if cargs is not None:
                 G.mog_contour(self.mog, **cargs)
 
+            # 2. Plot MoG PDF (default)
+            # Use pargs defaults if provided (which they are by default in this method)
+            if pargs:
+                G.mog_pdf(self.mog, **pargs)
+
             # If no layers, maybe warn? But mog_pdf is default.
+            # SET RANGES ACCORDING TO DATA
+            if self.data is not None:
+                for i, prop in enumerate(G.properties):
+                    dmin, dmax = self.data[:, i].min(), self.data[:, i].max()
+                    # Force range to data limits (overriding default 4-sigma extents of PDF)
+                    G.dproperties[prop]["range"] = [dmin, dmax]
+            G.set_ranges()
 
             G.fig.tight_layout()
             multimin_watermark(G.axs[0][0])
@@ -1689,6 +1697,7 @@ class FitFunctionMoG(MultiMinBase):
         residual = self._Fnorm - c * pdf
         return np.sum(residual**2)
 
+    @Util.timer
     def fit_data(
         self,
         verbose=0,
@@ -2483,6 +2492,7 @@ class FitFunctionMoG(MultiMinBase):
         pargs=True,
         hargs=None,
         largs=None,
+        dargs=None,
         **kwargs,
     ):
         """
@@ -2513,6 +2523,11 @@ class FitFunctionMoG(MultiMinBase):
             - If dict: plots PDF with provided options.
             - If None: PDF is not plotted.
             Passed to ax.plot.
+        dargs : dict or bool or None, optional
+            Options for the component lines.
+            - If True or dict: plots individual components with defaults (color='k', ls='--', alpha=0.3).
+            - If dict: updates defaults with provided options.
+            - If None (default): components are not plotted.
         hargs : dict, optional
             Options for histogram (not currently used in plot_fit, but included for API consistency).
         largs : dict, optional
@@ -2580,13 +2595,65 @@ class FitFunctionMoG(MultiMinBase):
             ax.plot(x, f, **sargs_defaults)
 
         # Plot PDF (always plotted unless pargs somehow suppressed, but user wants it default)
-        if self.normalization is not None and pargs:
+        if self.normalization is not None:
             x_min, x_max = x.min(), x.max()
             margin = max(1e-6, 0.05 * (x_max - x_min))
             x_curve = np.linspace(x_min - margin, x_max + margin, n_curve)
-            pdf_vals = self.mog.pdf(x_curve.reshape(-1, 1))
-            model_vals = self.normalization * np.atleast_1d(pdf_vals)
-            ax.plot(x_curve, model_vals, **pargs)
+
+            # Plot components if requested
+            if dargs is not None and dargs is not False:
+                dargs_default = dict(color="k", ls="--", alpha=0.3)
+                if isinstance(dargs, dict):
+                    dargs_default.update(dargs)
+                dargs_default.setdefault("zorder", -10)
+
+                # We need to construct single-component MoGs to use the robust pdf method
+                # (which handles truncation and normalization correctly)
+                for k in range(self.mog.ngauss):
+                    # Extract parameters for k-th component
+                    mu_k = self.mog.mus[k : k + 1]
+                    sigma_k = self.mog.Sigmas[k : k + 1]
+                    # Create temporary MoG with this single component
+                    # Note: we use weight=1 here and apply the actual weight manually
+                    # to ensure we get the component shape correctly scaled
+                    mog_k = MixtureOfGaussians(
+                        mus=mu_k,
+                        Sigmas=sigma_k,
+                        weights=[1.0],
+                        domain=self.domain,
+                        normalize_weights=False,
+                    )
+                    pdf_k = mog_k.pdf(x_curve.reshape(-1, 1))
+                    # Scale by normalization and the component's weight
+                    model_vals_k = (
+                        self.normalization * self.mog.weights[k] * np.atleast_1d(pdf_k)
+                    )
+
+                    # Determine styling for this component
+                    dargs_k = dargs_default.copy()
+
+                    # Color: cycle if not explicitly provided
+                    if "color" not in dargs and "c" not in dargs:
+                        # Use standard matplotlib cycle C0, C1, etc.
+                        dargs_k["color"] = f"C{k % 10}"
+
+                    # Label: construct default label with component details
+                    base_label = dargs_default.get("label", f"Comp {k + 1}")
+                    if base_label is None:  # explicit None
+                        label = None
+                    else:
+                        mu_val = float(mu_k.ravel()[0])
+                        sigma_val = np.sqrt(float(sigma_k.ravel()[0]))
+                        label = rf"{base_label} ($\mu$={mu_val:.2f}, $\sigma$={sigma_val:.2f})"
+
+                    dargs_k["label"] = label
+
+                    ax.plot(x_curve, model_vals_k, **dargs_k)
+
+            if pargs:
+                pdf_vals = self.mog.pdf(x_curve.reshape(-1, 1))
+                model_vals = self.normalization * np.atleast_1d(pdf_vals)
+                ax.plot(x_curve, model_vals, **pargs)
 
         if xlabel is not None:
             ax.set_xlabel(xlabel)

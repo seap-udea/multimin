@@ -154,6 +154,64 @@ class Util(MultiMinBase):
         return [f(p[i], s[i]) if s[i] > 0 else p[i] for i in range(len(p))]
 
     @staticmethod
+    def logit_transform(data, scales, inverse=False):
+        """
+        Apply logit (log-odds) transformation to data, or its inverse.
+        This provides a vectorized alternative to utilizing t_if in a loop.
+
+        Parameters
+        ----------
+        data : array_like
+            Data to transform (N, nvars) or (nvars,).
+        scales : array_like
+            Scales/bounds for each variable. If scale[i] > 0, the variable is transformed.
+            If scale[i] <= 0, variable is unchanged.
+        inverse : bool, optional
+            If True, apply inverse transformation (False is finite -> unbounded).
+            Default False.
+
+        Returns
+        -------
+        out : ndarray
+            Transformed data (same shape as input).
+        """
+        X = np.array(data, dtype=float, copy=True)
+        S = np.array(scales, dtype=float)
+
+        # Determine indices to transform
+        idx = np.where(S > 0)[0]
+        if len(idx) == 0:
+            return X
+
+        if X.ndim == 1:
+            # Single sample case
+            if len(S) != len(X):
+                raise ValueError("Length of scales must match data dimension")
+
+            x_sub = X[idx]
+            s_sub = S[idx]
+
+            if not inverse:
+                X[idx] = Util.f2u(x_sub, s_sub)
+            else:
+                X[idx] = Util.u2f(x_sub, s_sub)
+
+        else:
+            # Batch case (N samples, nvars dimension)
+            if len(S) != X.shape[-1]:
+                raise ValueError("Length of scales must match data dimension")
+
+            x_sub = X[:, idx]
+            s_sub = S[idx]
+
+            if not inverse:
+                X[:, idx] = Util.f2u(x_sub, s_sub)
+            else:
+                X[:, idx] = Util.u2f(x_sub, s_sub)
+
+        return X
+
+    @staticmethod
     def true_anomaly_to_mean_anomaly(e, f):
         """
         Convert true anomaly to mean anomaly.
@@ -417,7 +475,9 @@ class Util(MultiMinBase):
         n = len(mu)
         if n == 1:
             sig = np.sqrt(float(np.asarray(Sigma).ravel()[0]))
-            return float(norm.cdf((b[0] - mu[0]) / sig) - norm.cdf((a[0] - mu[0]) / sig))
+            return float(
+                norm.cdf((b[0] - mu[0]) / sig) - norm.cdf((a[0] - mu[0]) / sig)
+            )
         draws = multinorm.rvs(mu, Sigma, size=50000, random_state=42)
         in_box = np.all((draws >= a) & (draws <= b), axis=1)
         return max(float(np.mean(in_box)), 1e-300)
@@ -470,7 +530,9 @@ class Util(MultiMinBase):
             return out
         # list or sequence: use elements as names and labels, range from ranges
         return {
-            (str(properties[i]) if i < len(properties) else string.ascii_letters[i]): dict(
+            (
+                str(properties[i]) if i < len(properties) else string.ascii_letters[i]
+            ): dict(
                 label=str(properties[i])
                 if i < len(properties)
                 else f"${string.ascii_letters[i]}$",
@@ -478,6 +540,19 @@ class Util(MultiMinBase):
             )
             for i in range(nvars)
         }
+
+    @staticmethod
+    def timer(func):
+        import time
+
+        def wrapper(*args, **kwargs):
+            start_time = time.time()
+            result = func(*args, **kwargs)
+            end_time = time.time()
+            print(f"{func.__qualname__} executed in {end_time - start_time} seconds")
+            return result
+
+        return wrapper
 
 
 class Stats(MultiMinBase):

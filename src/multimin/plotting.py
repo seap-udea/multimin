@@ -782,12 +782,22 @@ class MultiPlot(MultiMinBase):
         **args : dict
             Arguments for contour function.
         """
-        opts = dict(levels=5, cmap="Reds")
+        opts = dict(levels=5, cmap="Reds", legend=True)
         opts.update(args)
 
         if getattr(self, "_univariate", False):
             # Contours don't make sense in 1D, maybe strict validation or ignore?
             return
+
+        # Decomposition handling
+        decomp = args.pop("decomp", False)
+
+        # We need to access MixtureOfGaussians to create components if decomp=True
+        from .mog import MixtureOfGaussians
+
+        # Collect legend handles if decomp=True
+        legend_handles = []
+        legend_labels = []
 
         for i, propi in enumerate(self.properties):
             if self.dproperties[propi]["range"] is not None:
@@ -813,17 +823,109 @@ class MultiPlot(MultiMinBase):
                 yi = np.linspace(ymin, ymax, grid_size)
                 Xi, Yi = np.meshgrid(xi, yi)
 
-                # Full vector X
-                X_full = np.zeros((grid_size * grid_size, mog.nvars))
-                mean_vec = np.average(mog.mus, axis=0, weights=mog.weights)
-                X_full[:] = mean_vec
+                # Helper to plot a specific MoG (full or component)
+                def plot_mog_instance(sub_mog, style_opts):
+                    # Full vector X
+                    X_full = np.zeros((grid_size * grid_size, sub_mog.nvars))
+                    mean_vec = np.average(sub_mog.mus, axis=0, weights=sub_mog.weights)
+                    X_full[:] = mean_vec
+                    X_full[:, i] = Xi.ravel()
+                    X_full[:, j] = Yi.ravel()
 
-                X_full[:, i] = Xi.ravel()
-                X_full[:, j] = Yi.ravel()
+                    Z = sub_mog.pdf(X_full).reshape(grid_size, grid_size)
 
-                Z = mog.pdf(X_full).reshape(grid_size, grid_size)
+                    # Adjust levels to avoid white frame
+                    current_opts = style_opts.copy()
+                    if isinstance(style_opts.get("levels"), int):
+                        nlevels = style_opts["levels"]
+                        zmax = Z.max()
+                        current_opts["levels"] = np.linspace(
+                            0.1 * zmax, 0.95 * zmax, nlevels
+                        )
 
-                self.axp[propi][propj].contour(Xi, Yi, Z, **opts)
+                    cntr = self.axp[propi][propj].contour(Xi, Yi, Z, **current_opts)
+                    return cntr
+
+                if not decomp:
+                    plot_mog_instance(mog, opts)
+                else:
+                    # Decomposition: plot each component
+                    for k in range(mog.ngauss):
+                        # Extract component
+                        mu_k = mog.mus[k : k + 1]
+                        sigma_k = mog.Sigmas[k : k + 1]
+                        rho_k = mog.rhos[k : k + 1] if mog.rhos is not None else None
+
+                        # Create component MoG
+                        # Create component MoG
+                        # rhos are implicit in Sigmas, so we don't pass them to init
+                        comp_mog = MixtureOfGaussians(
+                            mus=mu_k,
+                            Sigmas=sigma_k,
+                            weights=[1.0],
+                            domain=getattr(mog, "domain", None),
+                            normalize_weights=False,
+                        )
+
+                        # Style for component
+                        comp_opts = opts.copy()
+                        # Cycle colors: C0, C1...
+                        color = f"C{k % 10}"
+                        comp_opts["colors"] = color
+                        comp_opts.pop("cmap", None)  # Remove cmap to use colors
+
+                        plot_mog_instance(comp_mog, comp_opts)
+
+                        # Collect legend info (only need to do this once for the first 2D panel found)
+                        if len(legend_handles) < mog.ngauss:
+                            # Create a dummy line for legend
+                            from matplotlib.lines import Line2D
+
+                            line = Line2D([0], [0], color=color, lw=2)
+                            legend_handles.append(line)
+
+                            mu_i = mu_k[0, i]
+                            mu_j = mu_k[0, j]
+                            # Safe sigma calculation
+                            var_i = sigma_k[0, i, i]
+                            var_j = sigma_k[0, j, j]
+                            sig_i = np.sqrt(max(0, var_i))
+                            sig_j = np.sqrt(max(0, var_j))
+
+                            # Calculate rho from covariance matrix
+                            cov_ij = sigma_k[0, i, j]
+                            if sig_i > 0 and sig_j > 0:
+                                rho_val = cov_ij / (sig_i * sig_j)
+                            else:
+                                rho_val = 0.0
+
+                            # Safe sigma calculation
+                            var_i = sigma_k[0, i, i]
+                            var_j = sigma_k[0, j, j]
+                            sig_i = np.sqrt(max(0, var_i))
+                            sig_j = np.sqrt(max(0, var_j))
+
+                            # Calculate rho from covariance matrix
+                            cov_ij = sigma_k[0, i, j]
+                            if sig_i > 0 and sig_j > 0:
+                                rho_val = cov_ij / (sig_i * sig_j)
+                            else:
+                                rho_val = 0.0
+
+                            label = rf"Comp {k + 1}: $\mu$=({mu_i:.2f}, {mu_j:.2f}), $\sigma$=({sig_i:.2f}, {sig_j:.2f}), $\rho$={rho_val:.2f}"
+                            legend_labels.append(label)
+
+        if decomp and legend_handles and opts["legend"]:
+            # Add legend to the right of G.axs[0][0]
+            # We anchor it to axs[0][0] (top-left panel)
+            ax_ref = self.axs[0][0]
+            ax_ref.legend(
+                legend_handles,
+                legend_labels,
+                loc="upper right",
+                frameon=True,
+                fontsize=6,
+            )
 
         self.set_ranges()
         self.set_tick_params()
