@@ -144,11 +144,11 @@ properties = dict(
 # Plot the density plot
 G = mn.DensityPlot(properties, figsize=3)
 
-hargs=dict(bins=30,cmap='Spectral_r')
-histogram=G.plot_hist(sample,**hargs)
+pargs=dict(cmap='Spectral_r')
+pdf = G.mog_pdf(MoG,**pargs)
 
-sargs=dict(s=0.5,edgecolor='None',color='r')
-scatter=G.scatter_plot(sample,**sargs)
+sargs = dict(s=0.5,edgecolor='None',color='r')
+scatter = G.scatter_plot(sample,**sargs)
 ```
 
 The same `properties` dict can be passed to `MoG.plot_sample` and `F.plot_fit` via the `properties` argument for consistent axis labels. You can also pass a simple list of names (e.g. `properties=["x","y","z"]`); then each name is used as the axis label and `range=None`.
@@ -203,7 +203,7 @@ Finally, we visualize the fitted distribution compared to the data.
 # Plot the fit result (properties accepts the same dict as DensityPlot, or a list of names)
 G = F.plot_fit(
     properties=properties,
-    hargs=dict(bins=30, cmap='YlGn'),
+    pargs=dict(cmap='YlGn'),
     sargs=dict(s=0.2, edgecolor='None', color='r'),
     figsize=3
 )

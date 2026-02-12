@@ -8,7 +8,7 @@ NOTEBOOKS := examples/*.ipynb
 GALLERY_TIMEOUT ?= 1200
 
 RELMODE=release
-PYTHON ?= .multimin/bin/python3
+PYTHON ?= python3
 COMMIT_MSG ?= [FIX] Minor changes
 
 help:
