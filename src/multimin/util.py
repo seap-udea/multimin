@@ -424,10 +424,10 @@ class Util(MultiMinBase):
 
     @staticmethod
     def props_to_properties(properties, nvars, ranges=None):
-        """Convert properties (list or DensityPlot-style dict) to properties dict for DensityPlot.
+        """Convert properties (list or MultiPlot-style dict) to properties dict for MultiPlot.
         Ex. Util.props_to_properties(properties, nvars, ranges)
 
-        - If properties is a dict: use as-is (DensityPlot-style); each value must have 'label'
+        - If properties is a dict: use as-is (MultiPlot-style); each value must have 'label'
           and optionally 'range'. Keys define variable names; first nvars keys are used.
         - If properties is a list or sequence: use each element as variable name and as axis
           label, with range=None unless ranges is provided (backward compatible).

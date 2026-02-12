@@ -28,7 +28,7 @@ from scipy.ndimage import uniform_filter1d
 from .base import MultiMinBase
 from .util import Util, Stats
 from .mog import MixtureOfGaussians
-from .plotting import multimin_watermark, DensityPlot
+from .plotting import multimin_watermark, MultiPlot
 
 
 class FitMoG(MultiMinBase):
@@ -1003,6 +1003,8 @@ class FitMoG(MultiMinBase):
         ranges=None,
         hargs=None,
         sargs=None,
+        pargs=True,
+        cargs=None,
     ):
         """
         Plot the result of the fitting procedure.
@@ -1015,21 +1017,27 @@ class FitMoG(MultiMinBase):
         figsize : int, optional
             Size of each axis (default 2).
         properties : list or dict, optional
-            Property names or DensityPlot-style properties. List: each element as axis label,
-            range=None. Dict: same as DensityPlot (keys with 'label' and optional 'range').
+            Property names or MultiPlot-style properties. List: each element as axis label,
+            range=None. Dict: same as MultiPlot (keys with 'label' and optional 'range').
         ranges : list, optional
             Ranges per variable; used only when properties is a list or None.
         hargs : dict, optional
             Dictionary with options for the hist2d function (or 1D hist when nvars=1).
-            For univariate fits, if provided the sample is shown as a histogram; otherwise
-            the sample is shown as a scatter plot.
+            If provided, the sample is shown as a histogram.
         sargs : dict, optional
-            Dictionary with options for the scatter plot. Default: dict(s=0.5, edgecolor=None, color='b').
-            For univariate fits, used when hargs is not provided (fit is always shown as PDF).
+            Dictionary with options for the scatter plot.
+            If provided, the sample is shown as a scatter plot.
+        pargs : dict, optional
+            Dictionary with options for the PDF plot.
+            If None (default), defaults are used (color='k', lw=2, label='PDF').
+            To suppress PDF, pass an empty dict is not sufficient, but pargs is default.
+        cargs : dict, optional
+            Dictionary with options for the contour plot (mog_contour).
+            If None (default), contours are not plotted.
 
         Returns
         -------
-        G : matplotlib.figure.Figure or DensityPlot
+        G : matplotlib.figure.Figure or MultiPlot
             Graphic handle.
 
         Examples
@@ -1038,77 +1046,123 @@ class FitMoG(MultiMinBase):
         >>> F.fit_data(data, verbose=0, tol=1e-3, options=dict(maxiter=100, disp=True))
         >>> G = F.plot_fit(figsize=3, hargs=dict(bins=30, cmap='YlGn'), sargs=dict(s=0.5, edgecolor=None, color='r'))
         """
-        if hargs is None:
-            hargs = dict()
-        if sargs is None:
-            sargs = dict(s=0.5, edgecolor=None, color="b")
+        # Set defaults
+        if pargs is True:
+            pargs = dict(color="k", lw=2, label="PDF")
+        elif isinstance(pargs, dict):
+            pargs = dict(pargs)
+            pargs.setdefault("label", "PDF")
+        # If pargs is None (or False), it remains None/False and we skip plotting
+
+        if pargs:
+            # Default zorder for PDF (background)
+            pargs.setdefault("zorder", -100)
+
+        # hargs/sargs are None by default as per user request (no plot unless specified)
+
+        # "Escoger desde el principio el rango del pcolormesh para que coincida con el de los datos"
+        # If ranges is not provided, compute it from data to ensure plot covers all points
+        if ranges is None and properties is not None:
+            # Check if properties is dict and has ranges (skip)
+            # But if properties is list, calculate ranges from data
+            if (
+                isinstance(properties, list)
+                and self.data is not None
+                and len(self.data) > 0
+            ):
+                ranges = []
+                for i in range(self.nvars):
+                    dmin, dmax = self.data[:, i].min(), self.data[:, i].max()
+                    width = dmax - dmin
+                    margin = 0.05 * width if width > 0 else 1.0
+                    ranges.append((float(dmin - margin), float(dmax + margin)))
+
         properties = Util.props_to_properties(properties, self.nvars, ranges)
 
         from matplotlib import pyplot as plt
 
         if self.nvars == 1:
-            # Univariate: show fitted PDF; show sample as histogram (if hargs) and/or scatter (if sargs or neither)
-            G = DensityPlot(properties, figsize=figsize)
+            # Univariate: show fitted PDF; show sample as histogram (if hargs) and/or scatter (if sargs)
+            G = MultiPlot(properties, figsize=figsize)
             ax = G.axs[0][0]
-            if hargs:
-                G.plot_hist(self.data, **hargs)
-            if sargs or (not hargs and not sargs):
-                G.scatter_plot(self.data, **sargs)
-            # Overlay fitted PDF (same axis when we have hist, else twin when only scatter)
-            x_min, x_max = self.data[:, 0].min(), self.data[:, 0].max()
-            margin = max(1e-6, 0.1 * (x_max - x_min))
-            x_curve = np.linspace(x_min - margin, x_max + margin, 300)
-            pdf_vals = self.mog.pdf(x_curve.reshape(-1, 1))
-            if hargs:
-                ax.plot(x_curve, pdf_vals, "k-", lw=2, label="PDF")
-            else:
-                ax.plot(x_curve, pdf_vals, "k-", lw=2, label="PDF")
+
+            if hargs is not None:
+                G.sample_hist(self.data, **hargs)
+            if sargs is not None:
+                G.sample_scatter(self.data, **sargs)
+
+            # Overlay fitted PDF
+            # Check if we have data to determine range? If fitting was done, self.data or bounds are known.
+            # Use MultiPlot logic mostly, but here we plot manually.
+            # Or we can delegate to G.mog_pdf(self.mog)?
+            # But FitMoG contains self.mog.
+            # And self.data is the training data.
+            # We want to plot the fitted regular PDF.
+            # G.mog_pdf(self.mog, **pargs) would work and be cleaner!
+            # But let's keep existing logic to be safe, just updated with pargs.
+
+            # Overlay fitted PDF
+            if pargs:
+                x_min, x_max = self.data[:, 0].min(), self.data[:, 0].max()
+                margin = max(1e-6, 0.1 * (x_max - x_min))
+                x_curve = np.linspace(x_min - margin, x_max + margin, 300)
+                pdf_vals = self.mog.pdf(x_curve.reshape(-1, 1))
+
+                ax.plot(x_curve, pdf_vals, **pargs)
+
+            # If no data plotted, set basic labels/limits
+            if not hargs and not sargs:
                 ax.set_ylabel("PDF")
                 ax.set_ylim(0, None)
-            # Legend: combine primary ax (histogram, PDF) and twin (sample scatter) if present
+
+            # Legend
             handles, labels = ax.get_legend_handles_labels()
             if getattr(G, "_ax_twin", None) is not None:
                 h2, l2 = G._ax_twin.get_legend_handles_labels()
                 handles, labels = handles + h2, labels + l2
-            ax.legend(
-                handles,
-                labels,
-                loc="lower center",
-                bbox_to_anchor=(0.5, 1.02),
-                ncol=len(handles),
-                frameon=False,
-            )
-            G.fig.subplots_adjust(top=0.88)  # room for legend above
+
+            if handles:
+                ax.legend(
+                    handles,
+                    labels,
+                    loc="lower center",
+                    bbox_to_anchor=(0.5, 1.02),
+                    ncol=len(handles),
+                    frameon=False,
+                )
+                G.fig.subplots_adjust(top=0.88)
+
             if not getattr(G, "_watermark_added", False):
-                multimin_watermark(
-                    G.axs[0][0], frac=0.5
-                )  # univariate: larger watermark
+                multimin_watermark(G.axs[0][0], frac=0.5)
             self.fig = G.fig
             return G
         if self.nvars >= 2:
-            Xfits = self.mog.rvs(N)
-            G = DensityPlot(properties, figsize=figsize)
-            G.plot_hist(Xfits, **hargs)
-            G.scatter_plot(self.data, **sargs)
+            G = MultiPlot(properties, figsize=figsize)
+
+            # 1. Plot MoG PDF (default)
+            # Use pargs defaults if provided (which they are by default in this method)
+            if pargs:
+                G.mog_pdf(self.mog, **pargs)
+
+            # 2. Plot MoG Contours (if requested)
+            if cargs is not None:
+                G.mog_contour(self.mog, **cargs)
+
+            # 3. Plot Histogram of RVS (if requested)
+            if hargs is not None:
+                Xfits = self.mog.rvs(N)
+                G.sample_hist(Xfits, **hargs)
+
+            # 4. Plot Scatter of Data (if requested)
+            if sargs is not None:
+                G.sample_scatter(self.data, **sargs)
+
+            # If no layers, maybe warn? But mog_pdf is default.
+
             G.fig.tight_layout()
             multimin_watermark(G.axs[0][0])
             self.fig = G.fig
             return G
-        else:
-            # nvars == 2: 2D hist2d + scatter
-            Xfits = self.mog.rvs(N)
-            keys = list(properties.keys())
-            fig = plt.figure(figsize=(5, 5))
-            ax = fig.gca()
-            ax.hist2d(Xfits[:, 0], Xfits[:, 1], **hargs)
-            ax.scatter(self.data[:, 0], self.data[:, 1], **sargs)
-            ax.grid()
-            ax.set_xlabel(properties[keys[0]]["label"])
-            ax.set_ylabel(properties[keys[1]]["label"])
-            multimin_watermark(ax)
-            fig.tight_layout()
-            self.fig = fig
-            return fig
 
     def _inv_params(self, stdcorr):
         """
@@ -2425,7 +2479,9 @@ class FitFunctionMoG(MultiMinBase):
         xlabel=None,
         ylabel=None,
         n_curve=300,
-        sargs=None,
+        sargs=True,
+        pargs=True,
+        hargs=None,
         largs=None,
         **kwargs,
     ):
@@ -2446,14 +2502,21 @@ class FitFunctionMoG(MultiMinBase):
             Label for the y-axis.
         n_curve : int, optional
             Number of points for the smooth PDF curve (default 300).
-        sargs : dict, optional
-            Options for the data (points) plot. Default: dict(ms=1.5, label='data').
-            Passed to ax.plot for the (x, F) points.
+        sargs : dict or bool or None, optional
+            Options for the data (points) plot (passed to ax.plot or ax.scatter).
+            - If True (default): plots data with defaults (marker='+', linestyle='-', label='data').
+            - If dict: plots data with provided options.
+            - If None: data is not plotted.
+        pargs : dict or bool or None, optional
+            Options for the fit line (norm × MoG PDF).
+            - If True (default): plots PDF with default options (color='r', lw=2, label='fit').
+            - If dict: plots PDF with provided options.
+            - If None: PDF is not plotted.
+            Passed to ax.plot.
+        hargs : dict, optional
+            Options for histogram (not currently used in plot_fit, but included for API consistency).
         largs : dict, optional
-            Options for the fit line (norm × MoG PDF). Default: dict(color='k',
-            lw=2, label='fit (norm × MoG PDF)').
-        **kwargs
-            Extra arguments merged into the data plot when sargs is None; else ignored.
+            Deprecated. Use pargs instead.
 
         Returns
         -------
@@ -2463,7 +2526,7 @@ class FitFunctionMoG(MultiMinBase):
         Examples
         --------
         >>> F.plot_fit(xlabel=r'$\\tau$', ylabel='ISR')
-        >>> F.plot_fit(sargs=dict(ms=2, color='C0'), largs=dict(color='C1', lw=3))
+        >>> F.plot_fit(sargs=dict(ms=2, color='C0'), pargs=dict(color='C1', lw=3))
         """
         if self.nvars != 1:
             raise NotImplementedError(
@@ -2471,32 +2534,59 @@ class FitFunctionMoG(MultiMinBase):
             )
         from matplotlib import pyplot as plt
 
-        if sargs is None:
-            sargs = dict(ms=1.5, label="data")
-            sargs.update(kwargs)
-        else:
+        # Handle deprecation/alias
+        if pargs is None and largs is not None:
+            pargs = largs
+
+        # Apply defaults for PDF (pargs)
+        if pargs is True:
+            pargs = dict(color="r", lw=2, label="fit (norm × MoG PDF)")
+        elif isinstance(pargs, dict):
+            pargs = dict(pargs)
+            pargs.setdefault("label", "fit (norm × MoG PDF)")
+        # If pargs is None (or False), it remains None/False and we skip plotting
+
+        if pargs:
+            # Default zorder for PDF (background)
+            pargs.setdefault("zorder", -100)
+
+        # Apply defaults for Data (sargs)
+        if sargs is True:
+            # User requested default: sargs=dict(marker='+',linestyle='-')
+            sargs = dict(marker="+", ms=5, linestyle="-", label="data")
+        elif isinstance(sargs, dict):
             sargs = dict(sargs)
             sargs.setdefault("label", "data")
-            sargs.setdefault("ms", 1.5)
-        if largs is None:
-            largs = dict(color="k", lw=2, label="fit (norm × MoG PDF)")
-        else:
-            largs = dict(largs)
-            largs.setdefault("label", "fit (norm × MoG PDF)")
+            sargs.setdefault("marker", "+")
+            sargs.setdefault("linestyle", "-")
+        # If sargs is None (or False), it remains None/False and we skip plotting
+
+        # Merge kwargs into pargs ?? Or sargs?
+        # If user passes kwargs, they probably mean to affect the plot being shown (PDF).
+        if kwargs and pargs:
+            pargs.update(kwargs)
 
         fig, ax = plt.subplots(1, 1, figsize=figsize)
         x = np.asarray(self.X).ravel()
         f = np.asarray(self.F).ravel()
 
-        ax.plot(x, f, "o", **sargs)
+        # Only plot data if sargs is explicitly provided (or true default)
+        if sargs:
+            sargs_defaults = dict(ms=1.5, label="data", marker="+", linestyle="-")
+            # We use update to overwrite defaults with user provided sargs (which might be the default dict from above)
+            sargs_defaults.update(sargs)
+            # Default zorder for data (foreground)
+            sargs_defaults.setdefault("zorder", -100)
+            ax.plot(x, f, **sargs_defaults)
 
-        if self.normalization is not None:
+        # Plot PDF (always plotted unless pargs somehow suppressed, but user wants it default)
+        if self.normalization is not None and pargs:
             x_min, x_max = x.min(), x.max()
             margin = max(1e-6, 0.05 * (x_max - x_min))
             x_curve = np.linspace(x_min - margin, x_max + margin, n_curve)
             pdf_vals = self.mog.pdf(x_curve.reshape(-1, 1))
             model_vals = self.normalization * np.atleast_1d(pdf_vals)
-            ax.plot(x_curve, model_vals, "-", **largs)
+            ax.plot(x_curve, model_vals, **pargs)
 
         if xlabel is not None:
             ax.set_xlabel(xlabel)

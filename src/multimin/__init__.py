@@ -44,7 +44,7 @@ __url__ = "https://github.com/seap-udea/multimin"
 __license__ = "AGPL-3.0-only"
 __description__ = "MultiMin: Multivariate Gaussian fitting"
 
-# Global option: set to False to disable watermarks on all plots (DensityPlot, plot_sample, plot_fit).
+# Global option: set to False to disable watermarks on all plots (MultiPlot, plot_sample, plot_fit).
 show_watermark = os.getenv("MULTIMIN_NO_WATERMARK", "").lower() not in (
     "1",
     "true",
@@ -71,7 +71,7 @@ from .base import MultiMinBase, ROOTDIR
 from .util import Util, Stats
 
 # Plotting and visualization
-from .plotting import DensityPlot, multimin_watermark
+from .plotting import MultiPlot, multimin_watermark
 
 # MoG class
 from .mog import MixtureOfGaussians
@@ -100,7 +100,7 @@ __all__ = [
     "Util",
     "Stats",
     # Plotting
-    "DensityPlot",
+    "MultiPlot",
     "multimin_watermark",
     # MoG
     "MixtureOfGaussians",

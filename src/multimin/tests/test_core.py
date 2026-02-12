@@ -106,13 +106,18 @@ def test_plotting(setup_gallery, mog_params):
         warnings.filterwarnings(
             "ignore", message="The figure layout has changed to tight"
         )
-        G = mn.DensityPlot(properties, figsize=3)
+        G = mn.MultiPlot(properties, figsize=3)
 
     sargs = dict(s=1.2, edgecolor="None", color="r")
 
     # Generate scatter plot
-    hist = G.scatter_plot(data, **sargs)
+    hist = G.sample_scatter(data, **sargs)
     assert hist is not None, "Scatter plot returned None"
+
+    # Test new methods existence
+    # We need a MoG object for this
+    G.mog_pdf(MoG)
+    G.mog_contour(MoG)
 
     # Save figure
     output_filename = "multimin_core_test_plot.png"
@@ -484,7 +489,7 @@ def test_mog_update_params_updates_weights_without_normalization():
 
 
 def test_mog_plot_pdf_univariate_runs():
-    """plot_pdf should run for univariate MoG and return a DensityPlot."""
+    """plot_pdf should run for univariate MoG and return a MultiPlot."""
     mog = mn.MixtureOfGaussians(
         mus=[0.0, 2.5],
         Sigmas=[1.0, 0.25],
@@ -496,7 +501,7 @@ def test_mog_plot_pdf_univariate_runs():
 
 
 def test_mog_plot_pdf_bivariate_runs():
-    """plot_pdf should run for 2D MoG and return a DensityPlot."""
+    """plot_pdf should run for 2D MoG and return a MultiPlot."""
     mog = mn.MixtureOfGaussians(
         mus=[[0.0, 0.0], [1.0, 1.0]],
         Sigmas=[np.eye(2), np.eye(2)],

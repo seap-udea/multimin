@@ -20,13 +20,13 @@
 
 ## Introducing `MultiMin`
 
-`MultiMin` is a `Python` package designed to provide numerical tools for fitting data to **composed multivariate normal distributions** (seel below), that means that the package is able to receive a sample of n-variables and find a set of multivariate normal that better describe the sample. The package is also able to fit one-dimensional data (eg. numerical functions, time-series, etc.) to a composition of gaussians that better describe it. 
+`MultiMin` is a `Python` package designed to provide numerical tools for fitting data to a **Mixture of Gaussians** (MoG, see below). It can process a sample of $n$ variables to find the set of multivariate normal distributions that best describe the data. Additionally, the package can fit one-dimensional data (e.g., numerical functions, time-series, etc.) to a composition of Gaussians.
 
 These are the main features of `MultiMin`:
 
-- **Tools for multivariate normal distribution**: Tools for defining single or composed multivariate normal distributions and for plotting and sampling these functions.
-- **Multivariate data visualization***: Tools for visualization of multivariate data, ie. corner plots of scatter and density diagrams.
-- **Multivariate data fitting**: Tools for fitting multivariate data to composed multivariate normal distributions (MoG). It includes fitting of simple data (time-series, numerical functions of one variable, spectra, etc.) to a composition of gaussians.
+- **Multivariate Normal Distributions**: Define, plot, and sample single or mixture of gaussians.
+- **Multivariate Data Visualization**: Visualize multivariate datasets using corner plots, scatter diagrams, and density plots.
+- **Multivariate Data Fitting**: Fit multivariate data to Mixtures of Gaussians (MoG), including one-dimensional data such as time-series, numerical functions, and spectra.
 
 ## Resources
 
@@ -50,50 +50,23 @@ If you prefer, you can install the latest version of the developers taking it fr
 pip install -U git+https://github.com/seap-udea/multimin
 ```
 
-## Theoretical Background
+## Theoretical Background: the MoG
 
 The core of `MultiMin` is the **Mixture of Gaussians (MoG)** defined as:
 
 $$
-\mathcal{C}_M(\tilde U; \{w_k\}_M, \{\mu_k\}_M, \{\Sigma_k\}_M) \equiv \sum_{i=1}^{M} w_i\mathcal{N}(\tilde U; \tilde \mu_i, \Sigma_i)
+\mathcal{C}_{M,k}(\tilde U; \{w_k\}_M, \{\mu_k\}_M, \{\Sigma_k\}_M) \equiv \sum_{i=1}^{M} w_i\mathcal{N}_k(\tilde U; \tilde \mu_i, \Sigma_i)
 $$
 
-where $\tilde U:(u_1,u_2,u_3,\ldots,u_N)$ are random variables and the multivariate normal distribution (MND) $\mathcal{N}(\tilde U; \tilde \mu, \Sigma)$ with mean vector $\tilde \mu$ and covariance matrix $\Sigma$ is given by:
+where $\tilde U:(u_1,u_2,u_3,\ldots,u_N)$ are random variables and the multivariate normal distribution (MND) $\mathcal{N}_k(\tilde U; \tilde \mu, \Sigma)$ with mean vector $\tilde \mu$ and covariance matrix $\Sigma$ is given by:
 
 $$
-\mathcal{N}(\tilde U; \tilde \mu, \Sigma) = \frac{1}{\sqrt{(2\pi)^{k} \det \Sigma}} \exp\left[-\frac{1}{2}(\tilde U - \tilde \mu)^{\rm T} \Sigma^{-1} (\tilde U - \tilde \mu)\right]
+\mathcal{N}_k(\tilde U; \tilde \mu, \Sigma) = \frac{1}{\sqrt{(2\pi)^{k} \det \Sigma}} \exp\left[-\frac{1}{2}(\tilde U - \tilde \mu)^{\rm T} \Sigma^{-1} (\tilde U - \tilde \mu)\right]
 $$
 
 The covariance matrix $\Sigma$ elements are defined as $\Sigma_{ij} = \rho_{ij}\sigma_{i}\sigma_{j}$, where $\sigma_i$ is the standard deviation of $u_i$ and $\rho_{ij}$ is the correlation coefficient between variable $u_i$ and $u_j$ ($-1<\rho_{ij}<1$, $\rho_{ii}=1$).
 
 The normalization condition implies that the set of weights $\{w_k\}_M$ are also normalized, i.e., $\sum_i w_i=1$.
-
-
-### Fitting procedure
-
-The theory behind it posits that any multivariate distribution function $p(\tilde U):\Re^{N}\rightarrow\Re$, where $\tilde U:(u_1,u_2,u_3,\ldots,u_N)$ are random variables, can be approximated with arbitrary precision by a normalized linear combination of $M$ Multivariate Normal Distributions or MoG:
-
-To estimate the parameters of the MoG that best describe a given dataset ,
-we use the **Likelihood Statistics** method.
-
-Given a dataset of $S$ objects with state vectors $\{\tilde U_k\}_{k=1}^S$, the likelihood $\mathcal{L}$ of the
-MoG parameters is defined as the product of the probability densities evaluated at each data point:
-
-$$
-\mathcal{L} = \prod_{i=1}^{S} \mathcal{C}_M(\tilde U_i)
-$$
-
-The goal is to find the set of parameters (weights, means, and covariances) that maximize this likelihood.
-In practice, it is numerically more stable to minimize the **negative normalized log-likelihood**:
-
-$$
--\frac{\log \mathcal{L}}{S} = -\frac{1}{S} \sum_{i=1}^{S} \log \mathcal{C}_M(\tilde U_i)
-$$
-
-This approach allows us to fit the distribution without making strong assumptions about the underlying
-normality of the data, effectively treating the MoG as a series expansion of the true probability density function.
-
-In `MultiMin`, we use the `scipy.optimize.minimize` function to find the set of parameters that minimize the negative normalized log-likelihood.
 
 ## Quickstart
 
@@ -133,7 +106,7 @@ angles = [
 Sigmas = mn.Stats.calc_covariance_from_rotation(sigmas, angles)
 
 # Create the MoG object
-MoG = mn.ComposedMultiVariateNormal(mus=mus, weights=weights, Sigmas=Sigmas)
+MoG = mn.MixtureOfGaussians(mus=mus, weights=weights, Sigmas=Sigmas)
 ```
 
 ### 2. Generate sample data
@@ -175,7 +148,33 @@ The same `properties` dict can be passed to `MoG.plot_sample` and `F.plot_fit` v
   <img src="https://raw.githubusercontent.com/seap-udea/multimin/master/examples/gallery/mog_data_density_scatter.png" alt="Data Scatter Plot" width="600"/>
 </div>
 
-### 4. Initialize the Fitter and Run the Fit
+## Theoretical Background: fitting a MoG
+
+The theory behind it posits that any multivariate distribution function $p(\tilde U):\Re^{N}\rightarrow\Re$, where $\tilde U:(u_1,u_2,u_3,\ldots,u_N)$ are random variables, can be approximated with arbitrary precision by a normalized linear combination of $M$ Multivariate Normal Distributions or MoG:
+
+To estimate the parameters of the MoG that best describe a given dataset ,
+we use the **Likelihood Statistics** method.
+
+Given a dataset of $S$ objects with state vectors $\{\tilde U_k\}_{k=1}^S$, the likelihood $\mathcal{L}$ of the
+MoG parameters is defined as the product of the probability densities evaluated at each data point:
+
+$$
+\mathcal{L} = \prod_{i=1}^{S} \mathcal{C}_{M,k}(\tilde U_i)
+$$
+
+The goal is to find the set of parameters (weights, means, and covariances) that maximize this likelihood.
+In practice, it is numerically more stable to minimize the **negative normalized log-likelihood**:
+
+$$
+-\frac{\log \mathcal{L}}{S} = -\frac{1}{S} \sum_{i=1}^{S} \log \mathcal{C}_{M,k}(\tilde U_i)
+$$
+
+This approach allows us to fit the distribution without making strong assumptions about the underlying
+normality of the data, effectively treating the MoG as a series expansion of the true probability density function.
+
+In `MultiMin`, we use the `scipy.optimize.minimize` function to find the set of parameters that minimize the negative normalized log-likelihood.
+
+### 1. Initialize the Fitter and Run the Fit
 
 We initialize the `FitMoG` handler with the expected number of Gaussians (2) and variables (3). We then run the fitting procedure.
 
@@ -187,7 +186,7 @@ F = mn.FitMoG(data=sample, ngauss=2)
 F.fit_data(progress="text")
 ```
 
-### 5. Check and Plot Results
+### 2. Check and Plot Results
 
 Finally, we visualize the fitted distribution compared to the data.
 
@@ -205,7 +204,7 @@ G = F.plot_fit(
   <img src="https://raw.githubusercontent.com/seap-udea/multimin/master/examples/gallery/mog_fit_result_3d.png" alt="Fit Result" width="600"/>
 </div>
 
-### 6. Inspect Parameters and Get Explicit PDF Function
+### 3. Inspect Parameters and Get Explicit PDF Function
 
 You can tabulate the fitted parameters and obtain an explicit Python function that evaluates the fitted PDF. Below, each step is shown with its output.
 
@@ -233,7 +232,7 @@ code, mog = F.mog.get_function()
 Output (the printed code, which you can copy):
 
 ```
-from multimin import nmd
+from multimin.Util import nmd
 
 def mog(X):
 
@@ -283,7 +282,7 @@ print(latex_str)
 
 Output:
 
-$$f(\mathbf{x}) = w_1 \, \mathcal{N}(\mathbf{x}; \boldsymbol{\mu}_1, \mathbf{\Sigma}_1) + w_2 \, \mathcal{N}(\mathbf{x}; \boldsymbol{\mu}_2, \mathbf{\Sigma}_2)$$
+$$f(\mathbf{x}) = w_1 \, \mathcal{N}_k(\mathbf{x}; \boldsymbol{\mu}_1, \mathbf{\Sigma}_1) + w_2 \, \mathcal{N}_k(\mathbf{x}; \boldsymbol{\mu}_2, \mathbf{\Sigma}_2)$$
 
 where
 
@@ -297,7 +296,7 @@ $$\mathbf{\Sigma}_2 = \left( \begin{array}{ccc} 0.6319 & 0.1054 & -0.0236 \\ 0.1
 
 Here the normal distribution is defined as:
 
-$$\mathcal{N}(\mathbf{x}; \boldsymbol{\mu}, \mathbf{\Sigma}) = \frac{1}{\sqrt{(2\pi)^{{k}} \det \mathbf{\Sigma}}} \exp\left[-\frac{1}{2}(\mathbf{x}-\boldsymbol{\mu})^{\top} \mathbf{\Sigma}^{{-1}} (\mathbf{x}-\boldsymbol{\mu})\right]$$
+$$\mathcal{N}_k(\mathbf{x}; \boldsymbol{\mu}, \mathbf{\Sigma}) = \frac{1}{\sqrt{(2\pi)^{{k}} \det \mathbf{\Sigma}}} \exp\left[-\frac{1}{2}(\mathbf{x}-\boldsymbol{\mu})^{\top} \mathbf{\Sigma}^{{-1}} (\mathbf{x}-\boldsymbol{\mu})\right]$$
 
 A parameter table in LaTeX is also available via ``F.mog.tabulate(sort_by='weight', type='latex')``.
 
@@ -311,7 +310,7 @@ $$
 \mathcal{N}_k(\tilde U; \tilde \mu, \Sigma) = \frac{1}{\sqrt{(2\pi)^{k}\det \Sigma}} \exp\left[ -\frac{1}{2}(\tilde U - \tilde \mu)^{\rm T}\Sigma^{-1}(\tilde U - \tilde \mu) \right]
 $$
 
-Let $T\subset\{l,\dots,m\}$, where $l\leq k$ and $m\leq k$ be the set of indices of the truncated variables, and let $a_i<b_i$ be the truncation bounds for $i\in S$. Define the truncation region:
+Let $T\subset\{l,\dots,m\}$, where $l\leq k$ and $m\leq k$ be the set of indices of the truncated variables, and let $a_i<b_i$ be the truncation bounds for $i\in T$. Define the truncation region:
 
 $$
 A_S : \{\tilde U\in\mathbb{R}^k:\ a_i \le \tilde U_i \le b_i \ \ \forall\, i\in T \}
@@ -320,13 +319,13 @@ $$
 with the remaining coordinates $i\notin T$ unbounded. The partially-truncated multivariate normal distribution is defined by
 
 $$
-\mathcal{TN}_T(\tilde U;\tilde\mu,\Sigma,\mathbf{a}_T,\mathbf{b}_T) = \frac{\mathcal{N}_k(\tilde U;\tilde\mu,\Sigma)\,\mathbf{1}_{A_T}(\tilde U)}{Z_ (\tilde\mu,\Sigma,\mathbf{a}_T,\mathbf{b}_T)},
+\mathcal{TN}_T(\tilde U;\tilde\mu,\Sigma,\mathbf{a}_T,\mathbf{b}_T) = \frac{\mathcal{N}_k(\tilde U;\tilde\mu,\Sigma)\,\mathbf{1}_{A_T}(\tilde U)}{Z_T(\tilde\mu,\Sigma,\mathbf{a}_T,\mathbf{b}_T)},
 $$
 
 where $\mathbf{1}_{A_T}$ is the indicator function of $A_T$ and the normalization constant is
 
 $$
-Z_T(\tilde\mu,\Sigma,\mathbf{a}_T,\mathbf{b}_T)= \int_{A_T}\mathcal{N}_k(\tilde T;\tilde\mu,\Sigma)\,d\tilde T = \mathbb{P}_{\tilde T\sim\mathcal{N}_k(\tilde\mu,\Sigma)}\left(\tilde T\in A_T\right).
+Z_T(\tilde\mu,\Sigma,\mathbf{a}_T,\mathbf{b}_T)= \int_{A_T}\mathcal{N}_k(\tilde V;\tilde\mu,\Sigma)\,d\tilde V = \mathbb{P}_{\tilde U\sim\mathcal{N}_k(\tilde\mu,\Sigma)}\left(\tilde U\in A_T\right).
 $$
 
 ### Example: univariate truncated mixture
@@ -338,7 +337,7 @@ import numpy as np
 import multimin as mn
 
 # Truncated mixture of 2 Gaussians on [0, 1]
-MoG_1d = mn.ComposedMultiVariateNormal(
+MoG_1d = mn.MixtureOfGaussians(
     mus=[0.2, 0.8],
     weights=[0.5, 0.5],
     Sigmas=[0.01, 0.03],
@@ -428,15 +427,15 @@ $$w_2 = 0.4958,\quad \mu_{2} = 0.8011,\quad \sigma_{2}^2 = 0.0304,\quad a = 0.0,
 
 Truncated normal. The unbounded normal is
 
-$$\mathcal{N}(x; \mu, \sigma) = \frac{1}{\sigma\sqrt{2\pi}} \exp\left(-\frac{(x-\mu)^2}{2\sigma^2}\right).$$
+$$\mathcal{N}_k(x; \mu, \sigma) = \frac{1}{\sigma\sqrt{2\pi}} \exp\left(-\frac{(x-\mu)^2}{2\sigma^2}\right).$$
 
 The truncation region is $A_T = \{\tilde{U} \in \mathbb{R}^k : a_i \le \tilde{U}_i \le b_i \;\forall i \in T\}$. The partially truncated normal is
 
-$$\mathcal{TN}_T(\tilde{U}; \tilde{\mu}, \Sigma, \mathbf{a}_T, \mathbf{b}_T) = \frac{\mathcal{N}(\tilde{U}; \tilde{\mu}, \Sigma) \, \mathbf{1}_{A_T}(\tilde{U})}{Z_T(\tilde{\mu}, \Sigma, \mathbf{a}_T, \mathbf{b}_T)},$$
+$$\mathcal{TN}_T(\tilde{U}; \tilde{\mu}, \Sigma, \mathbf{a}_T, \mathbf{b}_T) = \frac{\mathcal{N}_k(\tilde{U}; \tilde{\mu}, \Sigma) \, \mathbf{1}_{A_T}(\tilde{U})}{Z_T(\tilde{\mu}, \Sigma, \mathbf{a}_T, \mathbf{b}_T)},$$
 
 where $\mathbf{1}_{A_T}$ is the indicator of $A_T$ and the normalization constant is
 
-$$Z_T(\tilde{\mu}, \Sigma, \mathbf{a}_T, \mathbf{b}_T) = \int_{A_T} \mathcal{N}(\tilde{T}; \tilde{\mu}, \Sigma) \, d\tilde{T} = \mathbb{P}_{\tilde{T} \sim \mathcal{N}(\tilde{\mu},\Sigma)}(\tilde{T} \in A_T).$$
+$$Z_T(\tilde{\mu}, \Sigma, \mathbf{a}_T, \mathbf{b}_T) = \int_{A_T} \mathcal{N}_k(\tilde{T}; \tilde{\mu}, \Sigma) \, d\tilde{T} = \mathbb{P}_{\tilde{T} \sim \mathcal{N}_k(\tilde{\mu},\Sigma)}(\tilde{T} \in A_T).$$
 
 See [examples/multimin_truncated_tutorial.ipynb](examples/multimin_truncated_tutorial.ipynb) for 3D truncated examples and more detail.
 

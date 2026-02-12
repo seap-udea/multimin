@@ -12,7 +12,7 @@
 Visualization and plotting utilities for MultiMin package.
 
 Contains:
-- DensityPlot: Grid plotting for N-dimensional data projections
+- MultiPlot: Grid plotting for N-dimensional data projections
 - multimin_watermark: Add watermark to plots
 """
 
@@ -39,6 +39,7 @@ def multimin_watermark(ax, frac=1 / 4, alpha=1):
     """
     # Import show_watermark from main module at runtime
     import multimin as mn
+
     if not mn.show_watermark:
         return None
     # Get the height of axe
@@ -75,7 +76,7 @@ def multimin_watermark(ax, frac=1 / 4, alpha=1):
     return text
 
 
-class DensityPlot(MultiMinBase):
+class MultiPlot(MultiMinBase):
     """
     Create a grid of plots showing the projection of a N-dimensional data.
 
@@ -124,10 +125,14 @@ class DensityPlot(MultiMinBase):
         Set ranges in panels according to ranges defined in dparameters.
     set_tick_params(**args)
         Set tick parameters.
-    plot_hist(data, colorbar=False, **args)
-        Create a 2d-histograms of data on all panels of the DensityPlot.
-    scatter_plot(data, **args)
-        Scatter plot on all panels of the DensityPlot.
+    sample_hist(data, colorbar=False, **args)
+        Create a 2d-histograms of data on all panels of the MultiPlot.
+    sample_scatter(data, **args)
+        Scatter plot on all panels of the MultiPlot.
+    mog_pdf(mog, **args)
+        Plot the PDF of a MoG on all panels of the MultiPlot.
+    mog_contour(mog, **args)
+        Plot the contours of a MoG on all panels of the MultiPlot.
 
     """
 
@@ -240,7 +245,9 @@ class DensityPlot(MultiMinBase):
         if self.constrained == False:
             self.fig.subplots_adjust(wspace=self.fw / 100.0, hspace=self.fw / 100.0)
         with warnings.catch_warnings():
-            warnings.filterwarnings('ignore', message='The figure layout has changed to tight')
+            warnings.filterwarnings(
+                "ignore", message="The figure layout has changed to tight"
+            )
             self.fig.tight_layout()
 
     def set_tick_params(self, **args):
@@ -351,10 +358,10 @@ class DensityPlot(MultiMinBase):
 
         self.tight_layout()
 
-    def plot_hist(self, data, colorbar=False, **args):
+    def sample_hist(self, data, colorbar=False, **args):
         """
-        Create a 2d-histograms of data on all panels of the DensityPlot.
-        Ex. G.plot_hist(data, bins=100, cmap='viridis')
+        Create a 2d-histograms of data on all panels of the MultiPlot.
+        Ex. G.sample_hist(data, bins=100, cmap='viridis')
 
         Parameters
         ----------
@@ -377,14 +384,18 @@ class DensityPlot(MultiMinBase):
         ...     'E': {'label': r"$C$", 'range': None},
         ...     'I': {'label': r"$I$", 'range': None},
         ... }
-        >>> G = mm.DensityPlot(properties, figsize=3)
+        >>> G = mm.MultiPlot(properties, figsize=3)
         >>> hargs = dict(bins=100, cmap='viridis')
-        >>> hist = G.plot_hist(udata, **hargs)
+        >>> hist = G.sample_hist(udata, **hargs)
 
 
         """
         opts = dict()
         opts.update(args)
+
+        # Default zorder for histogram (background)
+        if "zorder" not in opts:
+            opts["zorder"] = -100
 
         # Univariate: 1D histogram (same style as plot_sample)
         if getattr(self, "_univariate", False):
@@ -486,10 +497,10 @@ class DensityPlot(MultiMinBase):
         multimin_watermark(self.axs[0][0], frac=1 / 4 * self.axs.shape[0])
         return hist
 
-    def scatter_plot(self, data, **args):
+    def sample_scatter(self, data, **args):
         """
-        Scatter plot on all panels of the DensityPlot.
-        Ex. G.scatter_plot(data, s=0.2, color='r')
+        Scatter plot on all panels of the MultiPlot.
+        Ex. G.sample_scatter(data, s=0.2, color='r')
 
         Parameters
         ----------
@@ -506,7 +517,7 @@ class DensityPlot(MultiMinBase):
         Examples
         --------
         >>> sargs = dict(s=0.2, edgecolor='None', color='r')
-        >>> hist = G.scatter_plot(udata, **sargs)
+        >>> hist = G.sample_scatter(udata, **sargs)
 
 
         """
@@ -518,6 +529,8 @@ class DensityPlot(MultiMinBase):
             y_jitter = np.random.uniform(0, 1, size=len(x))
             sargs_1d = dict(args)
             sargs_1d.setdefault("label", "sample")
+            # Default zorder for scatter (foreground)
+            sargs_1d.setdefault("zorder", 100)
             sc = ax_twin.scatter(x, y_jitter, **sargs_1d)
             ax_twin.set_ylim(0, 1)
             ax_twin.set_yticks([])
@@ -551,6 +564,10 @@ class DensityPlot(MultiMinBase):
             return [sc]
 
         scatter = []
+        # Default zorder for scatter (foreground)
+        if "zorder" not in args:
+            args["zorder"] = 100
+
         for i, propi in enumerate(self.properties):
             for j, propj in enumerate(self.properties):
                 if j <= i:
@@ -565,3 +582,250 @@ class DensityPlot(MultiMinBase):
         self.tight_layout()
         multimin_watermark(self.axs[0][0], frac=1 / 4 * self.axs.shape[0])
         return scatter
+
+    def mog_pdf(self, mog, grid_size=200, **args):
+        """
+        Plot the PDF of a MoG on all panels of the MultiPlot.
+        Ex. G.mog_pdf(mog, color='k', lw=2)
+
+        Parameters
+        ----------
+        mog : MixtureOfGaussians
+            MoG object to plot.
+        grid_size : int, optional
+            Number of points for the grid (default 200).
+        **args : dict
+            Arguments for the plot function (e.g. color, linewidth).
+        """
+        opts = dict(color="k", lw=2)
+        opts.update(args)
+
+        # Default zorder for PDF (background)
+        # Note: User requested zorder=100 for background and -100 for foreground,
+        # but standard is low=back, high=front. We use -100 for background.
+        if "zorder" not in opts:
+            opts["zorder"] = -100
+
+        if getattr(self, "_univariate", False):
+            # Filter out arguments not supported by ax.plot
+            # (e.g. cmap/colorbar are for pcolormesh/images)
+            plot_opts = opts.copy()
+            for key in ["cmap", "colorbar"]:
+                plot_opts.pop(key, None)
+
+            ax = self.axs[0][0]
+            if "label" not in plot_opts:
+                plot_opts["label"] = "PDF"
+
+            if self.dproperties[self.properties[0]]["range"] is not None:
+                xmin, xmax = self.dproperties[self.properties[0]]["range"]
+            else:
+                bounds = getattr(mog, "_domain_bounds", None)
+                if (
+                    bounds is not None
+                    and np.isfinite(bounds[0][0])
+                    and np.isfinite(bounds[0][1])
+                ):
+                    xmin, xmax = bounds[0]
+                else:
+                    # Robust auto-range based on mus/sigmas
+                    mu_min = np.min(mog.mus[:, 0])
+                    mu_max = np.max(mog.mus[:, 0])
+                    sig_max = np.max(mog.sigmas[:, 0])
+                    nsig = 4.0
+                    xmin = mu_min - nsig * sig_max
+                    xmax = mu_max + nsig * sig_max
+                    if not np.isfinite(xmin) or not np.isfinite(xmax) or xmin == xmax:
+                        xmin, xmax = mu_min - 1.0, mu_max + 1.0
+
+            x = np.linspace(xmin, xmax, int(grid_size))
+            y = mog.pdf(x.reshape(-1, 1))
+            ax.plot(x, y, **plot_opts)
+
+            # Update y-limits if needed
+            if y.size > 0:
+                current_ylim = ax.get_ylim()
+                new_ymax = max(current_ylim[1], float(np.max(y)) * 1.05)
+                ax.set_ylim(0, new_ymax)
+
+            self.set_ranges()
+            self.set_tick_params()
+            self.tight_layout()
+            if not getattr(self, "_watermark_added", False):
+                multimin_watermark(ax, frac=0.5)
+                self._watermark_added = True
+            return
+
+        # Multivariate case
+        w = np.asarray(mog.weights, dtype=float)
+        w_sum = float(np.sum(w))
+        if w_sum <= 0:
+            w = np.ones_like(w) / max(1, w.size)
+        else:
+            w = w / w_sum
+        base_point = np.average(mog.mus, axis=0, weights=w)
+
+        # Helper to get range for a variable (index k, name prop, axis ax)
+        def _get_range(k, prop, ax, axis_idx=0):  # axis_idx 0 for x, 1 for y
+            # 1. User specified range in properties
+            if self.dproperties[prop]["range"] is not None:
+                return self.dproperties[prop]["range"]
+
+            # 2. Existing axis limits (if data is present)
+            # Check if axis has data that might have set limits
+            has_data = (
+                ax.has_data()
+                or len(ax.collections) > 0
+                or len(ax.images) > 0
+                or len(ax.lines) > 0
+            )
+            if has_data:
+                if axis_idx == 0:
+                    return ax.get_xlim()
+                else:
+                    return ax.get_ylim()
+
+            # 3. MoG bounds
+            bounds = getattr(mog, "_domain_bounds", None)
+            if bounds is not None:
+                lo, hi = bounds[k]
+                if np.isfinite(lo) and np.isfinite(hi):
+                    return [float(lo), float(hi)]
+
+            # 4. Auto-range based on MoG parameters
+            mu_min = float(np.min(mog.mus[:, k]))
+            mu_max = float(np.max(mog.mus[:, k]))
+            sig_max = float(np.max(mog.sigmas[:, k]))
+            nsig = 4.0
+            lo = mu_min - nsig * sig_max
+            hi = mu_max + nsig * sig_max
+            if not np.isfinite(lo) or not np.isfinite(hi) or lo == hi:
+                lo, hi = mu_min - 1.0, mu_max + 1.0
+            return [lo, hi]
+
+        first_im = None
+        cmap = args.get("cmap", "Spectral_r")  # Extract cmap from args or default
+
+        for i, propi in enumerate(self.properties):
+            for j, propj in enumerate(self.properties):
+                if j <= i:
+                    continue
+
+                ax = self.axp[propi][propj]
+
+                x_min, x_max = _get_range(i, propi, ax, 0)
+                y_min, y_max = _get_range(j, propj, ax, 1)
+
+                xs = np.linspace(float(x_min), float(x_max), int(grid_size))
+                ys = np.linspace(float(y_min), float(y_max), int(grid_size))
+
+                # Careful with meshgrid indexing for pcolormesh
+                xx, yy = np.meshgrid(xs, ys, indexing="xy")
+                pts = np.column_stack([xx.ravel(), yy.ravel()])
+
+                X_full = np.tile(base_point, (pts.shape[0], 1))
+                X_full[:, i] = pts[:, 0]
+                X_full[:, j] = pts[:, 1]
+
+                zz = np.asarray(mog.pdf(X_full), dtype=float).reshape(xx.shape)
+
+                # pcolormesh
+                # Use zorder from args if present, else default to -100
+                zorder = args.get("zorder", -100)
+                im = ax.pcolormesh(xx, yy, zz, shading="auto", cmap=cmap, zorder=zorder)
+                if first_im is None:
+                    first_im = (ax, im)
+
+        # Handle colorbar if requested (logic from original plot_pdf)
+        # Note: colorbar arg was not explicitly in mog_pdf signature in previous snippet
+        # but usage in plot_pdf(..., colorbar=False) suggests it might be passed in **args or needed.
+        # The user's snippet for mog_pdf(self, mog, grid_size=200, **args)
+        # If colorbar is needed, we should check args.
+        if args.get("colorbar", False) and first_im is not None:
+            ax0, im0 = first_im
+            from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+            divider = make_axes_locatable(ax0)
+            cax = divider.append_axes("top", size="9%", pad=0.1)
+            self.fig.add_axes(cax)
+            vmin = float(np.nanmin(im0.get_array()))
+            vmax = float(np.nanmax(im0.get_array()))
+            if np.isfinite(vmin) and np.isfinite(vmax) and vmin != vmax:
+                cticks = np.linspace(vmin, vmax, 8)[1:-1]
+            else:
+                cticks = None
+            self.fig.colorbar(
+                im0, ax=ax0, cax=cax, orientation="horizontal", ticks=cticks
+            )
+            cax.xaxis.set_tick_params(
+                labelsize=0.5 * self.fs, direction="in", pad=-0.8 * self.fs
+            )
+
+        self.set_ranges()
+        self.set_tick_params()
+        self.tight_layout()
+        if not getattr(self, "_watermark_added", False):
+            multimin_watermark(self.axs[0][0], frac=1 / 4 * self.axs.shape[0])
+            self._watermark_added = True
+
+    def mog_contour(self, mog, grid_size=200, **args):
+        """
+        Plot the contours of a MoG on all panels of the MultiPlot.
+        Ex. G.mog_contour(mog, levels=5, cmap='Reds')
+
+        Parameters
+        ----------
+        mog : MixtureOfGaussians
+            MoG object to plot.
+        grid_size : int, optional
+            Number of points for the grid (default 200).
+        **args : dict
+            Arguments for contour function.
+        """
+        opts = dict(levels=5, cmap="Reds")
+        opts.update(args)
+
+        if getattr(self, "_univariate", False):
+            # Contours don't make sense in 1D, maybe strict validation or ignore?
+            return
+
+        for i, propi in enumerate(self.properties):
+            if self.dproperties[propi]["range"] is not None:
+                xmin, xmax = self.dproperties[propi]["range"]
+            else:
+                xmin, xmax = (
+                    self.axp[propi][self.properties[i + 1]].get_xlim()
+                    if i + 1 < self.N
+                    else (0, 1)
+                )
+
+            for j, propj in enumerate(self.properties):
+                if j <= i:
+                    continue
+
+                if self.dproperties[propj]["range"] is not None:
+                    ymin, ymax = self.dproperties[propj]["range"]
+                else:
+                    ymin, ymax = self.axp[propi][propj].get_ylim()
+
+                # Evaluation grid
+                xi = np.linspace(xmin, xmax, grid_size)
+                yi = np.linspace(ymin, ymax, grid_size)
+                Xi, Yi = np.meshgrid(xi, yi)
+
+                # Full vector X
+                X_full = np.zeros((grid_size * grid_size, mog.nvars))
+                mean_vec = np.average(mog.mus, axis=0, weights=mog.weights)
+                X_full[:] = mean_vec
+
+                X_full[:, i] = Xi.ravel()
+                X_full[:, j] = Yi.ravel()
+
+                Z = mog.pdf(X_full).reshape(grid_size, grid_size)
+
+                self.axp[propi][propj].contour(Xi, Yi, Z, **opts)
+
+        self.set_ranges()
+        self.set_tick_params()
+        self.tight_layout()
+        multimin_watermark(self.axs[0][0], frac=1 / 4 * self.axs.shape[0])

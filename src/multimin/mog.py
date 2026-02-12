@@ -24,7 +24,7 @@ from scipy.stats import norm, multivariate_normal as multinorm, truncnorm
 # Import from package modules
 from .base import MultiMinBase
 from .util import Util, Stats
-from .plotting import multimin_watermark, DensityPlot
+from .plotting import multimin_watermark, MultiPlot
 from .version import __version__
 
 
@@ -39,7 +39,7 @@ class MixtureOfGaussians(MultiMinBase):
 
     .. math::
 
-        p(\tilde U) \approx \mathcal{C}_M(\tilde U; \{w_k\}_M, \{\mu_k\}_M, \{\Sigma_k\}_M) \equiv \sum_{i=1}^{M} w_i\;\mathcal{N}(\tilde U; \tilde \mu_i, \Sigma_i)
+        p(\tilde U) \approx \mathcal{C}_{M,k}(\tilde U; \{w_k\}_M, \{\mu_k\}_M, \{\Sigma_k\}_M) \equiv \sum_{i=1}^{M} w_i\;\mathcal{N}(\tilde U; \tilde \mu_i, \Sigma_i)
 
     where the multivariate normal :math:`\mathcal{N}(\tilde U; \tilde \mu, \Sigma)` with mean vector :math:`\tilde \mu`
     and covariance matrix :math:`\Sigma` is given by:
@@ -791,7 +791,7 @@ class MixtureOfGaussians(MultiMinBase):
 
         For univariate distributions (``nvars==1``) this produces a single curve.
         For multivariate distributions (``nvars>=2``) this produces density panels
-        using :class:`DensityPlot`. For ``nvars>2`` the density shown in each panel
+        using :class:`MultiPlot`. For ``nvars>2`` the density shown in each panel
         is a 2D *slice* of the full PDF, evaluated at the weighted mean for the
         remaining variables.
 
@@ -812,119 +812,15 @@ class MixtureOfGaussians(MultiMinBase):
 
         Returns
         -------
-        G : DensityPlot
+        G : MultiPlot
             Handle to the density plot grid.
         """
         self._check_params(self.params)
         properties = Util.props_to_properties(properties, self.nvars, ranges)
-        G = DensityPlot(properties, figsize=figsize)
+        G = MultiPlot(properties, figsize=figsize)
 
-        def _var_range(var_index, prop_key):
-            """Choose plotting range for a variable."""
-            if properties[prop_key].get("range") is not None:
-                return properties[prop_key]["range"]
-            bounds = getattr(self, "_domain_bounds", None)
-            if bounds is not None:
-                lo, hi = bounds[var_index]
-                if np.isfinite(lo) and np.isfinite(hi):
-                    return [float(lo), float(hi)]
-            mu_min = float(np.min(self.mus[:, var_index]))
-            mu_max = float(np.max(self.mus[:, var_index]))
-            sig_max = float(np.max(self.sigmas[:, var_index]))
-            nsig = 4.0
-            lo = mu_min - nsig * sig_max
-            hi = mu_max + nsig * sig_max
-            if not np.isfinite(lo) or not np.isfinite(hi) or lo == hi:
-                lo, hi = mu_min - 1.0, mu_max + 1.0
-            return [lo, hi]
+        G.mog_pdf(self, grid_size=grid_size, cmap=cmap, colorbar=colorbar)
 
-        prop_keys = list(properties.keys())[: self.nvars]
-
-        if self.nvars == 1:
-            prop0 = prop_keys[0]
-            x_min, x_max = _var_range(0, prop0)
-            x_grid = np.linspace(float(x_min), float(x_max), int(grid_size))
-            pdf_vals = np.asarray(self.pdf(x_grid.reshape(-1, 1)), dtype=float)
-            ax = G.axs[0][0]
-            ax.plot(x_grid, pdf_vals, "k-", lw=2, label="PDF")
-            if pdf_vals.size:
-                ax.set_ylim(0, float(np.max(pdf_vals)) * 1.05)
-            handles, labels = ax.get_legend_handles_labels()
-            if handles:
-                ax.legend(
-                    handles,
-                    labels,
-                    loc="lower center",
-                    bbox_to_anchor=(0.5, 1.02),
-                    ncol=len(handles),
-                    frameon=False,
-                )
-                G.fig.subplots_adjust(top=0.88)
-            G.set_ranges()
-            G.set_tick_params()
-            G.tight_layout()
-            if not getattr(G, "_watermark_added", False):
-                multimin_watermark(ax, frac=0.5)
-                G._watermark_added = True
-            return G
-
-        w = np.asarray(self.weights, dtype=float)
-        w_sum = float(np.sum(w))
-        if w_sum <= 0:
-            w = np.ones_like(w) / max(1, w.size)
-        else:
-            w = w / w_sum
-        base_point = np.average(self.mus, axis=0, weights=w)
-
-        first_im = None
-        for j in range(1, self.nvars):
-            for i in range(j):
-                propi = prop_keys[i]
-                propj = prop_keys[j]
-                ax = G.axp[propi][propj]
-
-                x_min, x_max = _var_range(i, propi)
-                y_min, y_max = _var_range(j, propj)
-
-                xs = np.linspace(float(x_min), float(x_max), int(grid_size))
-                ys = np.linspace(float(y_min), float(y_max), int(grid_size))
-                xx, yy = np.meshgrid(xs, ys, indexing="xy")
-                pts = np.column_stack([xx.ravel(), yy.ravel()])
-
-                X_full = np.tile(base_point, (pts.shape[0], 1))
-                X_full[:, i] = pts[:, 0]
-                X_full[:, j] = pts[:, 1]
-                zz = np.asarray(self.pdf(X_full), dtype=float).reshape(xx.shape)
-
-                im = ax.pcolormesh(xs, ys, zz, shading="auto", cmap=cmap)
-                if first_im is None:
-                    first_im = (ax, im)
-
-        if colorbar and first_im is not None:
-            ax0, im0 = first_im
-            from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-            divider = make_axes_locatable(ax0)
-            cax = divider.append_axes("top", size="9%", pad=0.1)
-            G.fig.add_axes(cax)
-            vmin = float(np.nanmin(im0.get_array()))
-            vmax = float(np.nanmax(im0.get_array()))
-            if np.isfinite(vmin) and np.isfinite(vmax) and vmin != vmax:
-                cticks = np.linspace(vmin, vmax, 8)[1:-1]
-            else:
-                cticks = None
-            G.fig.colorbar(im0, ax=ax0, cax=cax, orientation="horizontal", ticks=cticks)
-            cax.xaxis.set_tick_params(
-                labelsize=0.5 * G.fs, direction="in", pad=-0.8 * G.fs
-            )
-
-        G.set_labels()
-        G.set_ranges()
-        G.set_tick_params()
-        G.tight_layout()
-        if not getattr(G, "_watermark_added", False):
-            multimin_watermark(G.axs[0][0], frac=1 / 4 * G.axs.shape[0])
-            G._watermark_added = True
         return G
 
     def rvs(self, Nsam=1, max_tries=100000):
@@ -1079,8 +975,8 @@ class MixtureOfGaussians(MultiMinBase):
         N : int, optional
             Number of points to generate the sample (default 10000).
         properties : list or dict, optional
-            Property names or DensityPlot-style properties. List (e.g. properties=["x","y"]): each
-            element is used as axis label, range=None. Dict: same as DensityPlot, e.g.
+            Property names or MultiPlot-style properties. List (e.g. properties=["x","y"]): each
+            element is used as axis label, range=None. Dict: same as MultiPlot, e.g.
             properties=dict(x=dict(label=r"$x$", range=None), y=dict(label=r"$y$", range=[-1,1])).
         ranges : list, optional
             Ranges per variable; used only when properties is a list or None. Ex. ranges=[[-3,3],[-5,5]].
@@ -1093,8 +989,10 @@ class MixtureOfGaussians(MultiMinBase):
 
         Returns
         -------
-        G : matplotlib.figure.Figure or DensityPlot
-            Graphic handle. If nvars = 2, it is a figure object, otherwise is a DensityPlot instance.
+        Returns
+        -------
+        G : matplotlib.figure.Figure or MultiPlot
+            Graphic handle. If nvars = 2, it is a figure object, otherwise is a MultiPlot instance.
 
         Examples
         --------
@@ -1132,14 +1030,14 @@ class MixtureOfGaussians(MultiMinBase):
             sargs = dict(s=0.5, edgecolor=None, color="b")
 
         properties = Util.props_to_properties(properties, self.nvars, ranges)
-        G = DensityPlot(properties, figsize=figsize)
+        G = MultiPlot(properties, figsize=figsize)
         ymax = -1e100
         if hargs is not None:
-            G.plot_hist(self.data, **hargs)
+            G.sample_hist(self.data, **hargs)
             if self.nvars == 1:
                 ymax = max(ymax, G.axs[0][0].get_ylim()[1])
         if sargs is not None:
-            G.scatter_plot(self.data, **sargs)
+            G.sample_scatter(self.data, **sargs)
             if self.nvars == 1:
                 ymax = max(ymax, G.axs[0][0].get_ylim()[1])
 
@@ -1334,7 +1232,7 @@ class MixtureOfGaussians(MultiMinBase):
             RST-derived long descriptions without triggering PyPI/twine markup errors.
         properties : dict or sequence, optional
             If None (default), variable subscripts in parameters are numeric (mu_1, sigma_1, ...).
-            If a dict (e.g. from DensityPlot), its keys are used as variable names (mu_x, sigma_x, ...).
+            If a dict (e.g. from MultiPlot), its keys are used as variable names (mu_x, sigma_x, ...).
             If a sequence, its elements are used in order. Length must match the number of variables.
 
         Returns
@@ -1713,7 +1611,7 @@ class MixtureOfGaussians(MultiMinBase):
             - ``'latex'``: return a LaTeX tabular string suitable for papers.
         properties : dict or sequence, optional
             If None (default), column headers use numeric subscripts (mu_1, sigma_1, ...).
-            If a dict (e.g. from DensityPlot), its keys are used (mu_x, sigma_x, ...).
+            If a dict (e.g. from MultiPlot), its keys are used (mu_x, sigma_x, ...).
             If a sequence, its elements are used in order.
 
         Returns

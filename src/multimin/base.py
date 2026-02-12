@@ -41,8 +41,8 @@ class MultiMinBase:
         short description taken from each method's docstring.
 
         Can be called on an instance (e.g. obj.describe()) or on the class
-        (e.g. mn.DensityPlot.describe()). Intended for discovery of available
-        functionality on any MultiMinBase subclass (e.g. DensityPlot, MoG).
+        (e.g. mn.MultiPlot.describe()). Intended for discovery of available
+        functionality on any MultiMinBase subclass (e.g. MultiPlot, MoG).
         """
         # Local import to avoid circular dependency
         from .util import Util
