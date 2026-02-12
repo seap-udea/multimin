@@ -311,7 +311,7 @@ class FitMoG(MultiMinBase):
         self.uparams = Util.t_if(self.minparams, self.scales, Util.f2u)
         self._initial_params_set_by_user = False
 
-    def set_initial_params(self, mus=None, sigmas=None, rhos=None):
+    def set_initial_params(self, mus=None, sigmas=None, rhos=None, from_mog=None):
         """
         Set initial values for the minimization parameters (means, standard deviations, correlations).
         Only the arguments provided are updated; the rest keep their current values.
@@ -327,6 +327,10 @@ class FitMoG(MultiMinBase):
         rhos : array-like, optional
             Initial correlation coefficients (upper triangle). Shape (ngauss, Ncorr) or (Ncorr,) to use the same for all.
             Ncorr = nvars*(nvars-1)/2.
+        from_mog : MixtureOfGaussians, optional
+            If provided, initialize parameters from this MoG object.
+            Must have same ngauss and nvars as check.
+            Any other provided arguments (mus, sigmas, rhos) will override values from from_mog.
 
         Returns
         -------
@@ -339,6 +343,27 @@ class FitMoG(MultiMinBase):
         >>> F.set_initial_params(mus=[[0.2, 0.3], [0.8, 0.7]], sigmas=[[0.1, 0.2], [0.1, 0.2]])
         >>> F.fit_data(data)
         """
+        if from_mog is not None:
+            if from_mog.ngauss != self.ngauss or from_mog.nvars != self.nvars:
+                raise ValueError(
+                    f"from_mog dimensions (ngauss={from_mog.ngauss}, nvars={from_mog.nvars}) "
+                    f"do not match FitMoG (ngauss={self.ngauss}, nvars={self.nvars})"
+                )
+            # Use parameters from the provided mog as base
+            # We want to use set_initial_params logic to properly broadcast/set minparams
+            # So we extract lists/arrays from from_mog
+            mus_mog = from_mog.mus
+            sigmas_mog = from_mog.sigmas
+            rhos_mog = from_mog.rhos
+
+            # If mus/sigmas/rhos are NOT provided in arguments, use from_mog
+            if mus is None:
+                mus = mus_mog
+            if sigmas is None:
+                sigmas = sigmas_mog
+            if rhos is None:
+                rhos = rhos_mog
+
         mus = np.asarray(mus, dtype=float) if mus is not None else None
         sigmas = np.asarray(sigmas, dtype=float) if sigmas is not None else None
         rhos = np.asarray(rhos, dtype=float) if rhos is not None else None
@@ -376,6 +401,18 @@ class FitMoG(MultiMinBase):
             off_mu = 0
             off_sig = self.nvars
             off_rho = self.nvars * 2
+
+        # Also update weights if from_mog is used?
+        # The user request only mentioned: "Cuando se pasa una mog como opción de la from_mog se fijan los parámetros iniciales del ajuste con los parámetros de esa mog."
+        # Usually weights are also parameters. The weights are the first 'ngauss' params in minparams (if ngauss > 1).
+        if from_mog is not None:
+            if self.ngauss > 1:
+                # Weights are at the beginning
+                # Normalize just in case
+                w = from_mog.weights
+                if from_mog.normalize_weights:
+                    w = w / w.sum()
+                self.minparams[0 : self.ngauss] = w
 
         if mus is not None:
             mus = _broadcast_2d(mus, (self.ngauss, self.nvars), "mus", "nvars")
@@ -1494,8 +1531,34 @@ class FitFunctionMoG(MultiMinBase):
         self.mog._str_params()
         return bounds
 
-    def set_initial_params(self, mus=None, sigmas=None, rhos=None):
+    def set_initial_params(self, mus=None, sigmas=None, rhos=None, from_mog=None):
         """Set initial values for the minimization parameters."""
+        if from_mog is not None:
+            if from_mog.ngauss != self.ngauss or from_mog.nvars != self.nvars:
+                raise ValueError(
+                    f"from_mog dimensions (ngauss={from_mog.ngauss}, nvars={from_mog.nvars}) "
+                    f"do not match FitFunctionMoG (ngauss={self.ngauss}, nvars={self.nvars})"
+                )
+            # Use parameters from the provided mog as base
+            mus_mog = from_mog.mus
+            sigmas_mog = from_mog.sigmas
+            rhos_mog = from_mog.rhos
+
+            # If mus/sigmas/rhos are NOT provided in arguments, use from_mog
+            if mus is None:
+                mus = mus_mog
+            if sigmas is None:
+                sigmas = sigmas_mog
+            if rhos is None:
+                rhos = rhos_mog
+
+            # Update weights if applicable (when ngauss > 1)
+            if self.ngauss > 1:
+                w = from_mog.weights
+                if from_mog.normalize_weights:
+                    w = w / w.sum()
+                self.minparams[0 : self.ngauss] = w
+
         mus = np.asarray(mus, dtype=float) if mus is not None else None
         sigmas = np.asarray(sigmas, dtype=float) if sigmas is not None else None
         rhos = np.asarray(rhos, dtype=float) if rhos is not None else None

@@ -279,6 +279,44 @@ class MixtureOfGaussians(MultiMinBase):
         self._set_domain(domain, self.nvars)
         self._Z_cache = None
 
+    def drop(self, index):
+        """
+        Drop one of the gaussians.
+        Ex. mog.drop(0)
+
+        Parameters
+        ----------
+        index : int
+            Index of the gaussian to be dropped.
+        """
+        if index < 0 or index >= self.ngauss:
+            raise ValueError(f"Index {index} out of range for ngauss={self.ngauss}")
+
+        print(f"Components before dropping: {self.ngauss}")
+        print(self.tabulate())
+
+        # Remove the gaussian
+        self.weights = np.delete(self.weights, index)
+        self.mus = np.delete(self.mus, index, axis=0)
+        self.Sigmas = np.delete(self.Sigmas, index, axis=0)
+        self.ngauss -= 1
+
+        # Check sigmas
+        self._check_sigmas()
+
+        # Update params
+        self._flatten_params()
+        self._flatten_stdcorr()
+
+        # Update weights
+        if self.normalize_weights:
+            self._normalize_weights(self.weights)
+
+        print(f"Dropped gaussian {index}")
+        print(self.tabulate())
+
+        self._Z_cache = None
+
     def update_params(self, weights=None, mus=None, sigmas=None, rhos=None):
         """Update MoG parameters in-place using FitMoG-like syntax.
 

@@ -18,6 +18,7 @@ Contains:
 
 import os
 import inspect
+import copy
 
 # Get package root directory
 ROOTDIR = os.path.dirname(os.path.abspath(__file__))
@@ -72,6 +73,10 @@ class MultiMinBase:
             lines.append(f"    {summary}")
             lines.append("")
         print("\n".join(lines))
+
+    def copy(self):
+        """Return a copy of the object."""
+        return copy.deepcopy(self)
 
     def __str__(self):
         """String representation of the object."""
