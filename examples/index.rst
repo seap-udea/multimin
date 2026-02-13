@@ -3,3 +3,5 @@ multimin_mog_tutorial.ipynb
 multimin_truncated_tutorial.ipynb
 multimin_asteroids_application.ipynb
 multimin_functions_tutorial.ipynb
+multimin_cmog.ipynb
+multimin_mog_gmm.ipynb

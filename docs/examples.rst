@@ -11,4 +11,5 @@ Tutorials and Examples
    examples/multimin_truncated_tutorial
    examples/multimin_asteroids_application
    examples/multimin_functions_tutorial
+   examples/multimin_cmog
    examples/multimin_mog_gmm

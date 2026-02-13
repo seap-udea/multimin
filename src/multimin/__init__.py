@@ -79,6 +79,9 @@ from .mog import MixtureOfGaussians
 # Fitting classes
 from .fitting import FitMoG, FitFunctionMoG
 
+# C-MoG module
+from . import cmog
+
 # =============================================================================
 # PUBLIC API
 # =============================================================================
@@ -106,4 +109,5 @@ __all__ = [
     "MixtureOfGaussians",
     "FitMoG",
     "FitFunctionMoG",
+    "cmog",
 ]

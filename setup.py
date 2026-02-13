@@ -143,7 +143,7 @@ setup(
         "Programming Language :: Python :: 3.11",
         "Operating System :: OS Independent",
     ],
-    version='0.10.3',
+    version="0.10.3",
     package_dir={"": "src"},
     packages=find_packages(where="src"),
     test_suite="pytest",
@@ -160,5 +160,6 @@ setup(
     ],
     python_requires=">=3.8",
     include_package_data=True,
-    package_data={"": ["data/*.*", "tests/*.*"]},
+    package_data={"": ["data/*.*", "tests/*.*", "lib/*.*"]},
+    scripts=["src/multimin/bin/imultimin"],
 )

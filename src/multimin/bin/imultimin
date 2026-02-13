@@ -1,0 +1,252 @@
+#!/usr/bin/env python3
+import sys
+import os
+import argparse
+import subprocess
+import platform
+
+
+def compile_cmog(gsl_location):
+    print("Compiling C-MoG extension...")
+
+    # Locate package directory
+    # multimin package is at src/multimin or site-packages/multimin
+    import multimin
+
+    package_dir = os.path.dirname(multimin.__file__)
+    lib_dir = os.path.join(package_dir, "lib")
+    source_file = os.path.join(lib_dir, "multimin.c")
+
+    if not os.path.exists(source_file):
+        print(f"Error: Source file not found at {source_file}")
+        # Try to look relative to file if running from source (dev mode)
+        # But this script is installed in bin...
+        sys.exit(1)
+
+    # Determine output filename
+    system = platform.system()
+    if system == "Darwin":
+        lib_name = "multimin.dylib"
+    else:
+        lib_name = "multimin.so"
+
+    output_file = os.path.join(lib_dir, lib_name)
+
+    # GSL paths
+    if gsl_location:
+        include_dir = os.path.join(gsl_location, "include")
+        lib_path = os.path.join(gsl_location, "lib")
+    else:
+        # Default to standard locations
+        include_dir = "/usr/local/include"
+        lib_path = "/usr/local/lib"
+
+    cmd = [
+        "gcc",
+        "-shared",
+        "-fPIC",
+        "-O3",
+        source_file,
+        "-o",
+        output_file,
+        f"-I{include_dir}",
+        f"-L{lib_path}",
+        "-lgsl",
+        "-lgslcblas",
+        "-lm",
+    ]
+
+    print(f"Running: {' '.join(cmd)}")
+
+    try:
+        subprocess.check_call(cmd)
+        print(f"Successfully compiled {output_file}")
+    except subprocess.CalledProcessError as e:
+        print(f"Compilation failed: {e}")
+        sys.exit(1)
+
+
+def verify_installation():
+    """Verify if multimin is installed and check for the shared library."""
+    print("Verifying MultiMin installation...")
+
+    try:
+        import multimin
+
+        print(f"✅ MultiMin package found: {multimin.__file__}")
+    except ImportError:
+        print("❌ MultiMin package NOT found.")
+        sys.exit(1)
+
+    package_dir = os.path.dirname(multimin.__file__)
+    lib_dir = os.path.join(package_dir, "lib")
+
+    # Check for library
+    system = platform.system()
+    if system == "Darwin":
+        lib_name = "multimin.dylib"
+    else:
+        lib_name = "multimin.so"
+
+    lib_path = os.path.join(lib_dir, lib_name)
+
+    if os.path.exists(lib_path):
+        print(f"✅ Shared library found: {lib_path}")
+    else:
+        print(f"❌ Shared library NOT found: {lib_path}")
+        print("\nRecommendation:")
+        print("  The C-optimized library is missing. Please compile it using:")
+        print("  imultimin --compile-cmog --gsl-location=/path/to/gsl")
+        print("\n  See documentation for more details.")
+        sys.exit(1)
+
+
+def install_gsl():
+    """Download and install GSL locally."""
+    print("Preparing to install GSL...")
+    print("WARNING: This process may take several minutes.")
+
+    try:
+        import multimin
+
+        package_dir = os.path.dirname(multimin.__file__)
+        lib_dir = os.path.join(package_dir, "lib")
+    except ImportError:
+        print("Error: Could not locate multimin package.")
+        sys.exit(1)
+
+    # Define paths
+    gsl_url = "https://ftp.wayne.edu/gnu/gsl/gsl-latest.tar.gz"
+    tarball_path = os.path.join(lib_dir, "gsl-latest.tar.gz")
+    extract_dir = os.path.join(lib_dir, "gsl_src")
+    install_prefix = os.path.join(lib_dir, "gsl")
+
+    # Check if already installed
+    # We check for the presence of the static library as a good indicator
+    gsl_lib_check = os.path.join(install_prefix, "lib", "libgsl.a")
+    if os.path.exists(gsl_lib_check):
+        print(f"✅ GSL seems to be already installed at {install_prefix}")
+        print("Skipping installation.")
+        print(f"\nTo compile multimin, run:")
+        print(f"imultimin --compile-cmog --gsl-location={install_prefix}")
+        return
+
+    # 1. Download
+    if os.path.exists(tarball_path):
+        print(f"GSL tarball found at {tarball_path}. Skipping download.")
+    else:
+        print(f"Downloading GSL from {gsl_url}...")
+        try:
+            # Use curl or wget if available, or python lib
+            # Let's use urllib for portability
+            import urllib.request
+
+            urllib.request.urlretrieve(gsl_url, tarball_path)
+        except Exception as e:
+            print(f"Download failed: {e}")
+            sys.exit(1)
+
+    # 2. Extract
+    print("Extracting tarball...")
+    try:
+        import tarfile
+
+        if os.path.exists(extract_dir):
+            import shutil
+
+            shutil.rmtree(extract_dir)
+        os.makedirs(extract_dir)
+
+        with tarfile.open(tarball_path, "r:gz") as tar:
+            target_dir = extract_dir
+            # tarball usually contains a single directory like gsl-2.8
+            # we want to extract contents into extract_dir or find the subdir
+            tar.extractall(path=extract_dir)
+
+        # Find the actual source directory (e.g. gsl-2.7.1)
+        subdirs = [
+            d
+            for d in os.listdir(extract_dir)
+            if os.path.isdir(os.path.join(extract_dir, d))
+        ]
+        if len(subdirs) != 1:
+            print(f"Error: Unexpected extraction structure: {subdirs}")
+            sys.exit(1)
+
+        src_dir = os.path.join(extract_dir, subdirs[0])
+
+    except Exception as e:
+        print(f"Extraction failed: {e}")
+        sys.exit(1)
+
+    # 3. Configure, Compile, Install
+    print(f"Configuring GSL (prefix={install_prefix})...")
+    cwd = os.getcwd()  # Save current dir
+    try:
+        os.chdir(src_dir)
+
+        # Configure
+        subprocess.check_call(["./configure", f"--prefix={install_prefix}"])
+
+        # Compile
+        print("Compiling GSL (running make -j4)...")
+        subprocess.check_call(["make", "-j4"])
+
+        # Install
+        print("Installing GSL...")
+        subprocess.check_call(["make", "install"])
+
+    except subprocess.CalledProcessError as e:
+        print(f"Build failed: {e}")
+        # Return to original dir before exit
+        os.chdir(cwd)
+        sys.exit(1)
+    finally:
+        os.chdir(cwd)
+
+    # 4. Cleanup
+    print("Cleaning up temporary files...")
+    if os.path.exists(tarball_path):
+        os.remove(tarball_path)
+    if os.path.exists(extract_dir):
+        import shutil
+
+        shutil.rmtree(extract_dir)
+
+    print("\n✅ GSL installed successfully!")
+    print(f"Installation path: {install_prefix}")
+    print("\nTo compile multimin, run:")
+    print(f"imultimin --compile-cmog --gsl-location={install_prefix}")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="MultiMin management utility")
+    parser.add_argument(
+        "--compile-cmog", action="store_true", help="Compile the C-MoG extension"
+    )
+    parser.add_argument(
+        "--gsl-location",
+        type=str,
+        help="Path to GSL installation (containing include/ and lib/)",
+    )
+    parser.add_argument(
+        "--verify", action="store_true", help="Verify installation and shared library"
+    )
+    parser.add_argument(
+        "--install-gsl", action="store_true", help="Download and install GSL locally"
+    )
+
+    args = parser.parse_args()
+
+    if args.compile_cmog:
+        compile_cmog(args.gsl_location)
+    elif args.verify:
+        verify_installation()
+    elif args.install_gsl:
+        install_gsl()
+    else:
+        parser.print_help()
+
+
+if __name__ == "__main__":
+    main()

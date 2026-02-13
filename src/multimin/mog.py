@@ -1252,7 +1252,9 @@ class MixtureOfGaussians(MultiMinBase):
             names = names[: self.nvars]
         return names
 
-    def get_function(self, print_code=True, decimals=6, type="python", properties=None):
+    def get_function(
+        self, print_code=True, decimals=6, type="python", properties=None, cmog=False
+    ):
         """
         Return the source code of ``mog(X)`` and an executable function (type='python'),
         or LaTeX code with parameters in \\begin{array} (type='latex').
@@ -1273,6 +1275,9 @@ class MixtureOfGaussians(MultiMinBase):
             If None (default), variable subscripts in parameters are numeric (mu_1, sigma_1, ...).
             If a dict (e.g. from MultiPlot), its keys are used as variable names (mu_x, sigma_x, ...).
             If a sequence, its elements are used in order. Length must match the number of variables.
+        cmog : bool, optional
+            If True and type='python', generate code using the C-optimized routines ``cmog.nmd_c``
+            and ``cmog.tnmd_c``. Default False.
 
         Returns
         -------
@@ -1297,102 +1302,207 @@ class MixtureOfGaussians(MultiMinBase):
             np.isfinite(bounds[j][0]) or np.isfinite(bounds[j][1])
             for j in range(self.nvars)
         )
-        if has_finite_domain:
-            lines = [
+
+        if cmog:
+            # C-optimized generation using batch functions
+            imports = [
                 "import numpy as np",
-                "from multimin import Util",
-                "",
-                "def mog(X):",
-                "",
+                "from multimin import Util, cmog",
             ]
-            if self.nvars == 1:
-                a0 = round(float(bounds[0][0]), decimals)
-                b0 = round(float(bounds[0][1]), decimals)
-                lines.append("    a = {}".format(a0))
-                lines.append("    b = {}".format(b0))
-            else:
-                a_parts = [
-                    str(round(float(bounds[j][0]), decimals))
-                    if np.isfinite(bounds[j][0])
-                    else "-np.inf"
-                    for j in range(self.nvars)
-                ]
-                b_parts = [
-                    str(round(float(bounds[j][1]), decimals))
-                    if np.isfinite(bounds[j][1])
-                    else "np.inf"
-                    for j in range(self.nvars)
-                ]
-                lines.append("    a = [{}]".format(", ".join(a_parts)))
-                lines.append("    b = [{}]".format(", ".join(b_parts)))
-            lines.append("")
-        else:
-            lines = ["from multimin import Util", "", "def mog(X):", ""]
-        univariate = self.nvars == 1
-        for n in range(self.ngauss):
-            i = n + 1
-            w = round(float(self.weights[n]), decimals)
-            mu = self.mus[n]
-            Sigma = self.Sigmas[n]
+            lines = imports + [""]
+
+            # Helper to format array literals with indentation
+            def fmt_arr_rows(arr, indent="    "):
+                def fmt_val(x):
+                    if np.isposinf(x):
+                        return "np.inf"
+                    elif np.isneginf(x):
+                        return "-np.inf"
+                    else:
+                        return f"{x:.{decimals}g}"
+
+                # arr is expected to be at least 1D
+                if arr.ndim == 1:
+                    # Single line
+                    return (
+                        indent
+                        + "np.array(["
+                        + ", ".join(fmt_val(x) for x in arr)
+                        + "], dtype=np.float64)"
+                    )
+                elif arr.ndim == 2:
+                    # One row per line
+                    rows = []
+                    rows.append(indent + "np.array([")
+                    for row in arr:
+                        row_str = ", ".join(fmt_val(x) for x in row)
+                        rows.append(indent + f"    [{row_str}],")
+                    rows.append(indent + "], dtype=np.float64)")
+                    return "\n".join(rows)
+                elif arr.ndim == 3:
+                    # For 3D sigmas (n_comps, k, k)
+                    # We can format this as a list of matrices
+                    rows = []
+                    rows.append(indent + "np.array([")
+                    for matrix in arr:
+                        rows.append(indent + "    [")
+                        for row in matrix:
+                            row_str = ", ".join(fmt_val(x) for x in row)
+                            rows.append(indent + f"        [{row_str}],")
+                        rows.append(indent + "    ],")
+                    rows.append(indent + "], dtype=np.float64)")
+                    return "\n".join(rows)
+                return str(arr)
+
+            # Weights (1D)
+            w_str_lines = fmt_arr_rows(np.array(self.weights), indent="    ")
+
+            # Mus (2D)
+            mus_str_lines = fmt_arr_rows(np.array(self.mus), indent="    ")
+
+            # Sigmas (3D)
+            sigmas_str_lines = fmt_arr_rows(np.array(self.Sigmas), indent="    ")
+
             if has_finite_domain:
-                Zk = self._normalization_constant(n)
-                Zk = round(float(Zk), decimals)
-            if univariate:
-                vname = var_names[0]
-                mu_val = round(float(mu.ravel()[0]), decimals)
-                var_val = round(float(Sigma.ravel()[0]), decimals)
-                if has_finite_domain:
-                    lines.append("    mu{}_{} = {}".format(i, vname, mu_val))
-                    lines.append("    sigma{}_{} = {}".format(i, vname, var_val))
-                    lines.append(
-                        "    n{} = Util.tnmd(X, mu{}_{}, sigma{}_{}, a, b)".format(
-                            i, i, vname, i, vname
-                        )
-                    )
-                else:
-                    sigma_val = round(float(np.sqrt(Sigma.ravel()[0])), decimals)
-                    lines.append("    mu{}_{} = {}".format(i, vname, mu_val))
-                    lines.append("    sigma{}_{} = {}".format(i, vname, sigma_val))
-                    lines.append(
-                        "    n{} = Util.nmd(X, mu{}_{}, sigma{}_{})".format(
-                            i, i, vname, i, vname
-                        )
-                    )
-            else:
-                mu_parts = [
-                    "mu{}_{} = {}".format(
-                        i, var_names[v], round(float(mu.ravel()[v]), decimals)
-                    )
-                    for v in range(self.nvars)
+                # Bounds
+                a_list = [
+                    float(bounds[j][0]) if np.isfinite(bounds[j][0]) else -np.inf
+                    for j in range(self.nvars)
                 ]
-                lines.extend("    " + p for p in mu_parts)
-                mu_list_str = ", ".join(
-                    "mu{}_{}".format(i, var_names[v]) for v in range(self.nvars)
+                b_list = [
+                    float(bounds[j][1]) if np.isfinite(bounds[j][1]) else np.inf
+                    for j in range(self.nvars)
+                ]
+                a_str = fmt_arr_rows(np.array(a_list), indent="    ")
+                b_str = fmt_arr_rows(np.array(b_list), indent="    ")
+
+                # Zs
+                Zs = np.array(
+                    [float(self._normalization_constant(n)) for n in range(self.ngauss)]
                 )
-                lines.append("    mu{} = [{}]".format(i, mu_list_str))
-                Sigma_str = self._fmt_py_literal(Sigma, decimals)
-                lines.append("    Sigma{} = {}".format(i, Sigma_str))
-                if has_finite_domain:
-                    lines.append("    Z{} = {}".format(i, Zk))
-                    lines.append(
-                        "    n{} = Util.tnmd(X, mu{}, Sigma{}, a, b, Z=Z{})".format(
-                            i, i, i, i
-                        )
-                    )
+                Zs_str = fmt_arr_rows(Zs, indent="    ")
+
+                # Define function with internal variables
+                lines.append("def mog(X):")
+                lines.append(f"    weights = {w_str_lines.strip()}")
+                lines.append(f"    mus = {mus_str_lines.strip()}")
+                lines.append(f"    Sigmas = {sigmas_str_lines.strip()}")
+                lines.append(f"    a = {a_str.strip()}")
+                lines.append(f"    b = {b_str.strip()}")
+                lines.append(f"    Zs = {Zs_str.strip()}")
+                lines.append(
+                    "    return cmog.tmog_c(X, weights, mus, Sigmas, a, b, Zs)"
+                )
+            else:
+                lines.append("def mog(X):")
+                lines.append(f"    weights = {w_str_lines.strip()}")
+                lines.append(f"    mus = {mus_str_lines.strip()}")
+                lines.append(f"    Sigmas = {sigmas_str_lines.strip()}")
+                lines.append("    return cmog.mog_c(X, weights, mus, Sigmas)")
+
+        else:
+            # Standard Python generation (loop over components)
+            if has_finite_domain:
+                imports = [
+                    "import numpy as np",
+                    "from multimin import Util",
+                ]
+            else:
+                imports = ["from multimin import Util"]
+
+            lines = imports + ["", "def mog(X):", ""]
+
+            if has_finite_domain:
+                if self.nvars == 1:
+                    a0 = round(float(bounds[0][0]), decimals)
+                    b0 = round(float(bounds[0][1]), decimals)
+                    lines.append("    a = {}".format(a0))
+                    lines.append("    b = {}".format(b0))
                 else:
-                    lines.append("    n{} = Util.nmd(X, mu{}, Sigma{})".format(i, i, i))
+                    a_parts = [
+                        str(round(float(bounds[j][0]), decimals))
+                        if np.isfinite(bounds[j][0])
+                        else "-np.inf"
+                        for j in range(self.nvars)
+                    ]
+                    b_parts = [
+                        str(round(float(bounds[j][1]), decimals))
+                        if np.isfinite(bounds[j][1])
+                        else "np.inf"
+                        for j in range(self.nvars)
+                    ]
+                    lines.append("    a = [{}]".format(", ".join(a_parts)))
+                    lines.append("    b = [{}]".format(", ".join(b_parts)))
+                lines.append("")
+
+            univariate = self.nvars == 1
+            for n in range(self.ngauss):
+                i = n + 1
+                w = round(float(self.weights[n]), decimals)
+                mu = self.mus[n]
+                Sigma = self.Sigmas[n]
+                if has_finite_domain:
+                    Zk = self._normalization_constant(n)
+                    Zk = round(float(Zk), decimals)
+                if univariate:
+                    vname = var_names[0]
+                    mu_val = round(float(mu.ravel()[0]), decimals)
+                    var_val = round(float(Sigma.ravel()[0]), decimals)
+                    if has_finite_domain:
+                        lines.append("    mu{}_{} = {}".format(i, vname, mu_val))
+                        lines.append("    sigma{}_{} = {}".format(i, vname, var_val))
+                        lines.append(
+                            "    n{} = Util.tnmd(X, mu{}_{}, sigma{}_{}, a, b)".format(
+                                i, i, vname, i, vname
+                            )
+                        )
+                    else:
+                        sigma_val = round(float(np.sqrt(Sigma.ravel()[0])), decimals)
+                        lines.append("    mu{}_{} = {}".format(i, vname, mu_val))
+                        lines.append("    sigma{}_{} = {}".format(i, vname, sigma_val))
+                        lines.append(
+                            "    n{} = Util.nmd(X, mu{}_{}, sigma{}_{})".format(
+                                i, i, vname, i, vname
+                            )
+                        )
+                else:
+                    mu_parts = [
+                        "mu{}_{} = {}".format(
+                            i, var_names[v], round(float(mu.ravel()[v]), decimals)
+                        )
+                        for v in range(self.nvars)
+                    ]
+                    lines.extend("    " + p for p in mu_parts)
+                    mu_list_str = ", ".join(
+                        "mu{}_{}".format(i, var_names[v]) for v in range(self.nvars)
+                    )
+                    lines.append("    mu{} = [{}]".format(i, mu_list_str))
+                    Sigma_str = self._fmt_py_literal(Sigma, decimals)
+                    lines.append("    Sigma{} = {}".format(i, Sigma_str))
+                    if has_finite_domain:
+                        lines.append("    Z{} = {}".format(i, Zk))
+                        lines.append(
+                            "    n{} = Util.tnmd(X, mu{}, Sigma{}, a, b, Z=Z{})".format(
+                                i, i, i, i
+                            )
+                        )
+                    else:
+                        lines.append(
+                            "    n{} = Util.nmd(X, mu{}, Sigma{})".format(i, i, i)
+                        )
+                lines.append("")
+            for n in range(self.ngauss):
+                i = n + 1
+                w = round(float(self.weights[n]), decimals)
+                lines.append("    w{} = {}".format(i, w))
             lines.append("")
-        for n in range(self.ngauss):
-            i = n + 1
-            w = round(float(self.weights[n]), decimals)
-            lines.append("    w{} = {}".format(i, w))
-        lines.append("")
-        # Return on multiple lines: w1*n1 + w2*n2 + ...
-        return_terms = ["    return (", "        w1*n1"]
-        for n in range(1, self.ngauss):
-            return_terms.append("        + w{}*n{}".format(n + 1, n + 1))
-        return_terms.append("    )")
-        lines.extend(return_terms)
+            # Return on multiple lines: w1*n1 + w2*n2 + ...
+            return_terms = ["    return (", "        w1*n1"]
+            for n in range(1, self.ngauss):
+                return_terms.append("        + w{}*n{}".format(n + 1, n + 1))
+            return_terms.append("    )")
+            lines.extend(return_terms)
+
         code = "\n".join(lines)
         if print_code:
             print(code)
@@ -1401,7 +1511,9 @@ class MixtureOfGaussians(MultiMinBase):
         try:
             exec(code, namespace)
             func = namespace["mog"]
-        except Exception:
+        except Exception as e:
+            if print_code:
+                print(f"Error executing generated code: {e}")
             func = None
         return code, func
 

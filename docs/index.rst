@@ -14,3 +14,4 @@
    :caption: API Reference
 
    multimin
+   cmog
