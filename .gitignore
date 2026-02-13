@@ -178,3 +178,7 @@ tmp
 .cursor*
 
 .agent
+!src/multimin/lib
+**/gsl*
+**/*.dylib
+**/*.so
