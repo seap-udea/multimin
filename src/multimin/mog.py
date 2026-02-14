@@ -824,6 +824,7 @@ class MixtureOfGaussians(MultiMinBase):
         grid_size=200,
         cmap="Spectral_r",
         colorbar=False,
+        marginals=False,
     ):
         """Plot only the PDF of the MoG.
 
@@ -847,6 +848,8 @@ class MixtureOfGaussians(MultiMinBase):
             Matplotlib colormap name (default ``'Spectral_r'``).
         colorbar : bool, optional
             Include a colorbar for the first density panel (default False).
+        marginals : bool, optional
+            Include marginal distributions on diagonal panels (default False).
 
         Returns
         -------
@@ -855,7 +858,7 @@ class MixtureOfGaussians(MultiMinBase):
         """
         self._check_params(self.params)
         properties = Util.props_to_properties(properties, self.nvars, ranges)
-        G = MultiPlot(properties, figsize=figsize)
+        G = MultiPlot(properties, figsize=figsize, marginals=marginals)
 
         G.mog_pdf(self, grid_size=grid_size, cmap=cmap, colorbar=colorbar)
 
@@ -1002,6 +1005,7 @@ class MixtureOfGaussians(MultiMinBase):
         figsize=2,
         sargs=None,
         hargs=None,
+        marginals=False,
     ):
         """
         Plot a sample of the MoG.
@@ -1025,6 +1029,8 @@ class MixtureOfGaussians(MultiMinBase):
             Dictionary with options for the scatter plot. Default: dict(s=0.5, edgecolor=None, color='b').
         hargs : dict, optional
             Dictionary with options for the hist2d function. Ex. hargs=dict(bins=50).
+        marginals : bool, optional
+            Include marginal distributions on diagonal panels (default False).
 
         Returns
         -------
@@ -1069,7 +1075,7 @@ class MixtureOfGaussians(MultiMinBase):
             sargs = dict(s=0.5, edgecolor=None, color="b")
 
         properties = Util.props_to_properties(properties, self.nvars, ranges)
-        G = MultiPlot(properties, figsize=figsize)
+        G = MultiPlot(properties, figsize=figsize, marginals=marginals)
         ymax = -1e100
         if hargs is not None:
             G.sample_hist(self.data, **hargs)

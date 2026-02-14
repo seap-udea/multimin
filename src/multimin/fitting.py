@@ -1043,6 +1043,7 @@ class FitMoG(MultiMinBase):
         sargs=None,
         pargs=True,
         cargs=None,
+        marginals=False,
     ):
         """
         Plot the result of the fitting procedure.
@@ -1072,6 +1073,8 @@ class FitMoG(MultiMinBase):
         cargs : dict, optional
             Dictionary with options for the contour plot (mog_contour).
             If None (default), contours are not plotted.
+        marginals : bool, optional
+            Include marginal distributions on diagonal panels (default False).
 
         Returns
         -------
@@ -1121,7 +1124,7 @@ class FitMoG(MultiMinBase):
 
         if self.nvars == 1:
             # Univariate: show fitted PDF; show sample as histogram (if hargs) and/or scatter (if sargs)
-            G = MultiPlot(properties, figsize=figsize)
+            G = MultiPlot(properties, figsize=figsize, marginals=marginals)
             ax = G.axs[0][0]
 
             if hargs is not None:
@@ -1175,7 +1178,7 @@ class FitMoG(MultiMinBase):
             self.fig = G.fig
             return G
         if self.nvars >= 2:
-            G = MultiPlot(properties, figsize=figsize)
+            G = MultiPlot(properties, figsize=figsize, marginals=marginals)
 
             # 1. Plot Scatter of Data (if requested)
             if sargs is not None:

@@ -48,6 +48,10 @@ def multimin_watermark(ax, frac=1 / 4, alpha=1):
         .transformed(ax.get_figure().dpi_scale_trans.inverted())
         .height
     )
+    # Check if this ax is a marginal plot (twinx)
+    # If so, we might want to skip adding watermark to avoid duplication or placement issues
+    # But usually watermark is added to the main axis.
+
     fig_factor = frac * axh
 
     # Options of the water mark
@@ -136,7 +140,14 @@ class MultiPlot(MultiMinBase):
 
     """
 
-    def __init__(self, properties, figsize=3, fontsize=10, direction="out"):
+    def __init__(
+        self,
+        properties,
+        figsize=3,
+        fontsize=10,
+        direction="out",
+        marginals=False,
+    ):
 
         # Basic attributes
         self.dproperties = properties
@@ -145,7 +156,8 @@ class MultiPlot(MultiMinBase):
 
         # Secondary attributes
         self.N = len(properties)
-        self.M = max(1, self.N - 1)  # 1 when univariate so we have one panel
+        self.marginals = marginals
+        self.M = max(1, self.N) if self.marginals else max(1, self.N - 1)
         self._univariate = self.N == 1
 
         # Optional properties
@@ -206,6 +218,25 @@ class MultiPlot(MultiMinBase):
                 self.axp[propj] = dict()
             for i in range(self.N):
                 propi = self.properties[i]
+
+                # If marginals are active
+                if self.marginals:
+                    if j > i:
+                        continue
+                    if propi not in self.axp.keys():
+                        self.axp[propi] = dict()
+                    if i == j:
+                        self.axp[propi][propi] = self.axs[i][i]
+                        continue
+                    # i > j: propi is y-axis, propj is x-axis (column j, row i)
+                    # We store it as axp[x-prop][y-prop]
+                    self.axp[propj][propi] = self.axs[i][j]
+                    # Also store symmetric key for convenience?
+                    # The original code did: self.axp[propj][propi] = self.axp[propi][propj] when i < j
+                    # But here we enter the loop with i and j.
+                    continue
+
+                # Default case (no marginals)
                 if i == j:
                     continue
                 if propi not in self.axp.keys():
@@ -272,16 +303,23 @@ class MultiPlot(MultiMinBase):
     def set_ranges(self):
         """
         Set ranges in panels according to ranges defined in dparameters.
-
-
         """
         if getattr(self, "_univariate", False):
             prop = self.properties[0]
             if self.dproperties[prop]["range"] is not None:
                 self.axs[0][0].set_xlim(self.dproperties[prop]["range"])
             return
+
         for i, propi in enumerate(self.properties):
             for j, propj in enumerate(self.properties):
+                # Marginals: set x-range on diagonal
+                if self.marginals and i == j:
+                    if self.dproperties[propi]["range"] is not None:
+                        self.axp[propi][propi].set_xlim(
+                            self.dproperties[propi]["range"]
+                        )
+                    continue
+
                 if j <= i:
                     continue
                 if self.dproperties[propi]["range"] is not None:
@@ -314,13 +352,27 @@ class MultiPlot(MultiMinBase):
         """
         opts = dict(fontsize=self.fs)
         opts.update(args)
-        for i, prop in enumerate(self.properties[:-1]):
+        for i, prop in enumerate(
+            self.properties[:-1] if not self.marginals else self.properties
+        ):
             label = self.dproperties[prop]["label"]
             self.axs[self.M - 1][i].set_xlabel(label, **opts)
-        for i, prop in enumerate(self.properties[1:]):
-            label = self.dproperties[prop]["label"]
-            self.axs[i][0].set_ylabel(label, rotation=90, labelpad=10, **opts)
 
+        # y-labels
+        if not self.marginals:
+            # Standard case: properties[1:] corresponds to rows 0..M-1
+            for i, prop in enumerate(self.properties[1:]):
+                label = self.dproperties[prop]["label"]
+                self.axs[i][0].set_ylabel(label, rotation=90, labelpad=10, **opts)
+        else:
+            # Marginals case: properties[1:] corresponds to rows 1..M-1
+            # Skip row 0 (top-left marginal) as requested
+            for i, prop in enumerate(self.properties[1:], 1):
+                label = self.dproperties[prop]["label"]
+                self.axs[i][0].set_ylabel(label, rotation=90, labelpad=10, **opts)
+
+        # Inner text labels (right side of rows)
+        # For marginals=True: Show horizontal labels (column headers) but hide vertical (row headers)
         for i in range(1, self.M):
             label = self.dproperties[self.properties[i]]["label"]
             self.axs[i - 1][i].text(
@@ -331,16 +383,19 @@ class MultiPlot(MultiMinBase):
                 transform=self.axs[i - 1][i].transAxes,
                 **opts,
             )
-            # 270 if you want rotation
-            self.axs[i - 1][i].text(
-                0.0,
-                0.5,
-                label,
-                rotation=270,
-                va="center",
-                transform=self.axs[i - 1][i].transAxes,
-                **opts,
-            )
+
+            # Vertical label (Row) - Hide for marginals=True
+            if not self.marginals:
+                # 270 if you want rotation
+                self.axs[i - 1][i].text(
+                    0.0,
+                    0.5,
+                    label,
+                    rotation=270,
+                    va="center",
+                    transform=self.axs[i - 1][i].transAxes,
+                    **opts,
+                )
 
         label = self.dproperties[self.properties[0]]["label"]
         if not self.single:
@@ -355,25 +410,26 @@ class MultiPlot(MultiMinBase):
                 **opts,
             )
 
-        label = self.dproperties[self.properties[-1]]["label"]
-        # 270 if you want rotation
-        self.axs[-1][-1].text(
-            1.05,
-            0.5,
-            label,
-            rotation=270,
-            ha="left",
-            va="center",
-            transform=self.axs[-1][-1].transAxes,
-            **opts,
-        )
+        if not self.marginals:
+            label = self.dproperties[self.properties[-1]]["label"]
+            # 270 if you want rotation
+            self.axs[-1][-1].text(
+                1.05,
+                0.5,
+                label,
+                rotation=270,
+                ha="left",
+                va="center",
+                transform=self.axs[-1][-1].transAxes,
+                **opts,
+            )
 
         self.tight_layout()
 
     def sample_hist(self, data, colorbar=False, **args):
         """
         Create a 2d-histograms of data on all panels of the MultiPlot.
-        Ex. G.sample_hist(data, bins=100, cmap='viridis')
+        Ex. G.sample_hist(data, bins=100, cmap='viridis', margs=dict(color='blue'))
 
         Parameters
         ----------
@@ -382,7 +438,9 @@ class MultiPlot(MultiMinBase):
         colorbar : bool, optional
             Include a colorbar? (default False).
         **args : dict
-            All arguments of hist2d method.
+            All arguments of hist2d method. Can include 'margs' dict
+            with arguments for marginal plots. If margs=None, marginals
+            are not drawn.
 
         Returns
         -------
@@ -397,12 +455,16 @@ class MultiPlot(MultiMinBase):
         ...     'I': {'label': r"$I$", 'range': None},
         ... }
         >>> G = mm.MultiPlot(properties, figsize=3)
-        >>> hargs = dict(bins=100, cmap='viridis')
+        >>> hargs = dict(bins=100, cmap='viridis', margs=dict(color='blue'))
         >>> hist = G.sample_hist(udata, **hargs)
 
 
         """
         self.data = data
+        
+        # Extract margs dict for marginal plots
+        margs = args.pop('margs', {})
+        
         opts = dict()
         opts.update(args)
 
@@ -444,6 +506,10 @@ class MultiPlot(MultiMinBase):
                 self._watermark_added = True
             return []
 
+        # Initialize twin axes storage if not exists
+        if not hasattr(self, '_twin_axes'):
+            self._twin_axes = {}
+        
         hist = []
         for i, propi in enumerate(self.properties):
             if self.dproperties[propi]["range"] is not None:
@@ -503,6 +569,33 @@ class MultiPlot(MultiMinBase):
                         color="w",
                     )
 
+            # Marginals for sample_hist
+            if self.marginals and margs is not None:
+                ax = self.axp[propi][propi]
+                if self.dproperties[propi]["range"] is not None:
+                    xmin, xmax = self.dproperties[propi]["range"]
+                    ax.set_xlim(xmin, xmax)
+
+                # Histogram on twin axis
+                # Reuse twin axis if already exists, otherwise create new one
+                if propi not in self._twin_axes:
+                    self._twin_axes[propi] = ax.twinx()
+                ax_hist = self._twin_axes[propi]
+                
+                # Default marginal histogram options
+                hargs_marg = dict(bins=opts.get("bins", 20), histtype="step", density=True, color="k")
+                # Update with user-provided margs
+                hargs_marg.update(margs)
+                
+                # Set range for 1D hist if dproperties has it
+                if self.dproperties[propi]["range"] is not None:
+                    hargs_marg["range"] = self.dproperties[propi]["range"]
+
+                ax_hist.hist(data[:, i], **hargs_marg)
+
+                ax_hist.yaxis.set_visible(False)
+                ax.tick_params(axis="y", left=False, right=False, labelleft=False)
+
         self.set_labels()
         self.set_ranges()
         self.set_tick_params()
@@ -510,17 +603,21 @@ class MultiPlot(MultiMinBase):
         multimin_watermark(self.axs[0][0], frac=1 / 4 * self.axs.shape[0])
         return hist
 
-    def sample_scatter(self, data, **args):
+    def sample_scatter(self, data, nbins=20, **args):
         """
         Scatter plot on all panels of the MultiPlot.
-        Ex. G.sample_scatter(data, s=0.2, color='r')
+        Ex. G.sample_scatter(data, s=0.2, color='r', margs=dict(color='b'))
 
         Parameters
         ----------
         data : numpy.ndarray
             Data to be histogramed (n=len(data)), numpy array (nxN).
+        nbins : int, optional
+            Number of bins for marginal histograms (default 20).
         **args : dict
-            All arguments of scatter method.
+            All arguments of scatter method. Can include 'margs' dict
+            with arguments for marginal plots. If margs=None, marginals
+            are not drawn.
 
         Returns
         -------
@@ -529,12 +626,19 @@ class MultiPlot(MultiMinBase):
 
         Examples
         --------
-        >>> sargs = dict(s=0.2, edgecolor='None', color='r')
+        >>> # With marginals (blue histogram)
+        >>> sargs = dict(s=0.2, edgecolor='None', color='r', margs=dict(color='b'))
+        >>> hist = G.sample_scatter(udata, **sargs)
+        >>> # Without marginals
+        >>> sargs = dict(s=0.2, edgecolor='None', color='r', margs=None)
         >>> hist = G.sample_scatter(udata, **sargs)
 
 
         """
         self.data = data
+        
+        # Extract margs dict for marginal plots
+        margs = args.pop('margs', {})
         # Univariate: scatter on a twin y-axis so data range is independent of PDF/density
         if getattr(self, "_univariate", False):
             ax = self.axs[0][0]
@@ -581,9 +685,46 @@ class MultiPlot(MultiMinBase):
         # Default zorder for scatter (foreground)
         if "zorder" not in args:
             args["zorder"] = 100
+        
+        # Initialize twin axes storage if not exists
+        if not hasattr(self, '_twin_axes'):
+            self._twin_axes = {}
 
         for i, propi in enumerate(self.properties):
             for j, propj in enumerate(self.properties):
+                # Marginals
+                if self.marginals and i == j:
+                    ax = self.axp[propi][propi]
+                    if self.dproperties[propi]["range"] is not None:
+                        xmin, xmax = self.dproperties[propi]["range"]
+                        ax.set_xlim(xmin, xmax)
+
+                    # Only draw marginals if margs is not None
+                    if margs is not None:
+                        # Histogram on twin axis to allow independent Y-scale from scatter plots
+                        # Reuse twin axis if already exists, otherwise create new one
+                        if propi not in self._twin_axes:
+                            self._twin_axes[propi] = ax.twinx()
+                        ax_hist = self._twin_axes[propi]
+                        
+                        # Default marginal histogram options
+                        marg_opts = dict(histtype="step", density=True, color="k", lw=1)
+                        marg_opts.update(margs)
+                        
+                        ax_hist.hist(
+                            data[:, i],
+                            bins=nbins,
+                            **marg_opts
+                        )
+
+                        # Hide Y-ticks for marginals (standard for corner plots)
+                        ax_hist.yaxis.set_visible(False)
+
+                        # Hide primary Y-axis ticks/labels as well (since it shares scale with row)
+                        ax.tick_params(axis="y", left=False, right=False, labelleft=False)
+
+                    continue
+
                 if j <= i:
                     continue
                 scatter += [
@@ -600,7 +741,7 @@ class MultiPlot(MultiMinBase):
     def mog_pdf(self, mog, grid_size=200, **args):
         """
         Plot the PDF of a MoG on all panels of the MultiPlot.
-        Ex. G.mog_pdf(mog, color='k', lw=2)
+        Ex. G.mog_pdf(mog, color='k', lw=2, margs=dict(color='blue'))
 
         Parameters
         ----------
@@ -610,7 +751,12 @@ class MultiPlot(MultiMinBase):
             Number of points for the grid (default 200).
         **args : dict
             Arguments for the plot function (e.g. color, linewidth).
+            Can include 'margs' dict with arguments for marginal plots.
+            If margs=None, marginals are not drawn.
         """
+        # Extract margs dict for marginal plots
+        margs = args.pop('margs', {})
+        
         opts = dict(color="k", lw=2)
         opts.update(args)
 
@@ -670,6 +816,10 @@ class MultiPlot(MultiMinBase):
                 self._watermark_added = True
             return
 
+        # Initialize twin axes storage if not exists
+        if not hasattr(self, '_twin_axes'):
+            self._twin_axes = {}
+        
         # Multivariate case
         w = np.asarray(mog.weights, dtype=float)
         w_sum = float(np.sum(w))
@@ -750,6 +900,57 @@ class MultiPlot(MultiMinBase):
                 if first_im is None:
                     first_im = (ax, im)
 
+            # Marginals for mog_pdf
+            if self.marginals and margs is not None:
+                ax = self.axp[propi][propi]
+                x_min, x_max = _get_range(i, propi, ax, 0)
+
+                # Grid for marginal
+                x = np.linspace(float(x_min), float(x_max), int(grid_size))
+
+                # Compute marginal PDF: sum(w_k * N(x | mu_ki, sigma_ki))
+                y = np.zeros_like(x)
+                # Need norm from scipy.stats
+                from scipy.stats import norm
+
+                # Iterate over Gaussian components
+                for k in range(mog.ngauss):
+                    # Weight
+                    w_k = (
+                        mog.weights[k] if mog.weights is not None else 1.0 / mog.ngauss
+                    )
+                    if mog.weights is not None:
+                        # normalize if needed, but usually weights are normalized in mog object
+                        pass
+
+                    # Parameters for variable i
+                    mu_ki = mog.mus[k, i]
+                    sigma_ki = mog.sigmas[k, i]
+
+                    y += w_k * norm.pdf(x, loc=mu_ki, scale=sigma_ki)
+
+                # Plot on twin axis
+                # Reuse twin axis if already exists, otherwise create new one
+                if propi not in self._twin_axes:
+                    self._twin_axes[propi] = ax.twinx()
+                ax_marg = self._twin_axes[propi]
+                
+                # Default marginal plot options
+                marg_opts = dict(color="k", lw=1)
+                # Update with user-provided margs
+                marg_opts.update(margs)
+
+                ax_marg.plot(x, y, **marg_opts)
+                
+                # Set y-axis to start at 0 (like histograms) to avoid offset
+                ax_marg.set_ylim(0, None)
+
+                ax_marg.yaxis.set_visible(False)
+                ax.tick_params(axis="y", left=False, right=False, labelleft=False)
+
+                # Update x-limits if needed (though usually set by _get_range logic or user)
+                ax.set_xlim(x_min, x_max)
+
         # Handle colorbar if requested (logic from original plot_pdf)
         # Note: colorbar arg was not explicitly in mog_pdf signature in previous snippet
         # but usage in plot_pdf(..., colorbar=False) suggests it might be passed in **args or needed.
@@ -785,7 +986,7 @@ class MultiPlot(MultiMinBase):
     def mog_contour(self, mog, grid_size=200, **args):
         """
         Plot the contours of a MoG on all panels of the MultiPlot.
-        Ex. G.mog_contour(mog, levels=5, cmap='Reds')
+        Ex. G.mog_contour(mog, levels=5, cmap='Reds', margs=dict(color='blue'))
 
         Parameters
         ----------
@@ -794,8 +995,13 @@ class MultiPlot(MultiMinBase):
         grid_size : int, optional
             Number of points for the grid (default 200).
         **args : dict
-            Arguments for contour function.
+            Arguments for contour function. Can include 'margs' dict
+            with arguments for marginal plots. If margs=None, marginals
+            are not drawn.
         """
+        # Extract margs dict for marginal plots
+        margs = args.pop('margs', {})
+        
         opts = dict(levels=5, cmap="Reds", legend=True)
         opts.update(args)
 
@@ -803,6 +1009,10 @@ class MultiPlot(MultiMinBase):
             # Contours don't make sense in 1D, maybe strict validation or ignore?
             return
 
+        # Initialize twin axes storage if not exists
+        if not hasattr(self, '_twin_axes'):
+            self._twin_axes = {}
+        
         # Decomposition handling
         decomp = args.pop("decomp", False)
 
@@ -928,6 +1138,79 @@ class MultiPlot(MultiMinBase):
 
                             label = rf"Comp {k + 1}: $\mu$=({mu_i:.2f}, {mu_j:.2f}), $\sigma$=({sig_i:.2f}, {sig_j:.2f}), $\rho$={rho_val:.2f}"
                             legend_labels.append(label)
+
+            # Marginals for mog_contour
+            if self.marginals and margs is not None:
+                ax = self.axp[propi][propi]
+                
+                # Get range for variable i
+                if self.dproperties[propi]["range"] is not None:
+                    x_min, x_max = self.dproperties[propi]["range"]
+                else:
+                    # Use same range logic as in mog_pdf
+                    bounds = getattr(mog, "_domain_bounds", None)
+                    if bounds is not None:
+                        lo, hi = bounds[i]
+                        if np.isfinite(lo) and np.isfinite(hi):
+                            x_min, x_max = float(lo), float(hi)
+                        else:
+                            mu_min = float(np.min(mog.mus[:, i]))
+                            mu_max = float(np.max(mog.mus[:, i]))
+                            sig_max = float(np.max(mog.sigmas[:, i]))
+                            nsig = 4.0
+                            x_min = mu_min - nsig * sig_max
+                            x_max = mu_max + nsig * sig_max
+                            if not np.isfinite(x_min) or not np.isfinite(x_max) or x_min == x_max:
+                                x_min, x_max = mu_min - 1.0, mu_max + 1.0
+                    else:
+                        mu_min = float(np.min(mog.mus[:, i]))
+                        mu_max = float(np.max(mog.mus[:, i]))
+                        sig_max = float(np.max(mog.sigmas[:, i]))
+                        nsig = 4.0
+                        x_min = mu_min - nsig * sig_max
+                        x_max = mu_max + nsig * sig_max
+                        if not np.isfinite(x_min) or not np.isfinite(x_max) or x_min == x_max:
+                            x_min, x_max = mu_min - 1.0, mu_max + 1.0
+
+                # Grid for marginal
+                x = np.linspace(float(x_min), float(x_max), int(grid_size))
+
+                # Compute marginal PDF: sum(w_k * N(x | mu_ki, sigma_ki))
+                y = np.zeros_like(x)
+                from scipy.stats import norm
+
+                # Iterate over Gaussian components
+                for k in range(mog.ngauss):
+                    # Weight
+                    w_k = mog.weights[k] if mog.weights is not None else 1.0 / mog.ngauss
+
+                    # Parameters for variable i
+                    mu_ki = mog.mus[k, i]
+                    sigma_ki = mog.sigmas[k, i]
+
+                    y += w_k * norm.pdf(x, loc=mu_ki, scale=sigma_ki)
+
+                # Plot on twin axis
+                # Reuse twin axis if already exists, otherwise create new one
+                if propi not in self._twin_axes:
+                    self._twin_axes[propi] = ax.twinx()
+                ax_marg = self._twin_axes[propi]
+                
+                # Default marginal plot options
+                marg_opts = dict(color="k", lw=1)
+                # Update with user-provided margs
+                marg_opts.update(margs)
+
+                ax_marg.plot(x, y, **marg_opts)
+                
+                # Set y-axis to start at 0 (like histograms) to avoid offset
+                ax_marg.set_ylim(0, None)
+
+                ax_marg.yaxis.set_visible(False)
+                ax.tick_params(axis="y", left=False, right=False, labelleft=False)
+
+                # Update x-limits
+                ax.set_xlim(x_min, x_max)
 
         if decomp and legend_handles and opts["legend"]:
             # Add legend to the right of G.axs[0][0]
