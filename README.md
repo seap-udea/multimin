@@ -474,16 +474,6 @@ If you use `MultiMin` in your research, please cite:
 
 For a detailed list of changes and new features, see [WHATSNEW.md](WHATSNEW.md).
 
-## Authors and Licensing
-
-This project is developed by the Solar, Earth and Planetary Physics Group (SEAP) at Universidad de Antioquia, Medellín, Colombia. The main developer is Prof. **Jorge I. Zuluaga** - jorge.zuluaga@udea.edu.co. 
-
-Other beta testers and contributors:
-
-- **Juanita A. Agudelo** - juanita.agudelo@udea.edu.co. Testing of the initial versions of the package in the context of NEAs research. The idea of developíng the functionalities of truncated multinormals were inspared by questions that referees made to Juanita during the presentation of her undergraduate thesis.
-
-This project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0) - see the [LICENSE](LICENSE) file for details.
-
 ## AI usage disclosure
 
 MultiMin originated as a research initiative by its author, focusing on Near Earth Asteroids (NEAs) and exoplanets. Initially a set of practical routines, it has grown into the current comprehensive package. The development of generative artificial intelligence has further supported and strengthened its evolution. All example notebooks are crafted by humans, except for the one benchmarking `MultiMin` against scikit-learn's GMM, which was created by an AI agent using **[Cursor](https://cursor.com/)**. Nonetheless, the majority of the package's code remains authored by the original developer, complemented by guidance and support from programming agents in **[Cursor](https://cursor.com/)** and **[Antigravity](https://antigravity.google/)**. Importantly, all key architectural and design decisions have been made entirely by humans.
@@ -531,3 +521,15 @@ We welcome contributions! If you're interested in contributing to MultiMin, plea
 4. Submit a pull request
 
 Please read the [CONTRIBUTING.md](CONTRIBUTING.md) file for more information.
+
+## Authors and Licensing
+
+This project is developed by the Solar, Earth and Planetary Physics Group (SEAP) at Universidad de Antioquia, Medellín, Colombia. The main developer is Prof. **Jorge I. Zuluaga** - jorge.zuluaga@udea.edu.co. 
+
+Other beta testers and contributors:
+
+- **Juanita A. Agudelo** - juanita.agudelo@udea.edu.co. Testing of the initial versions of the package in the context of NEAs research. The idea of developíng the functionalities of truncated multinormals were inspared by questions that referees made to Juanita during the presentation of her undergraduate thesis.
+
+This project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0) - see the [LICENSE](LICENSE) file for details.
+
+
