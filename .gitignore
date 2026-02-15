@@ -174,10 +174,9 @@ src/multimin/tests/data/
 **/bench
 dev
 tmp
-.github
 .cursor*
 
-.agent
+.agent/
 !src/multimin/lib
 **/gsl*
 **/*.dylib
