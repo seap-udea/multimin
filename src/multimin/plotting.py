@@ -600,7 +600,9 @@ class MultiPlot(MultiMinBase):
         self.set_ranges()
         self.set_tick_params()
         self.tight_layout()
-        multimin_watermark(self.axs[0][0], frac=1 / 4 * self.axs.shape[0])
+        if not getattr(self, "_watermark_added", False):
+            multimin_watermark(self.axs[0][0], frac=1 / 4 * self.axs.shape[0])
+            self._watermark_added = True
         return hist
 
     def sample_scatter(self, data, nbins=20, **args):
@@ -735,7 +737,9 @@ class MultiPlot(MultiMinBase):
         self.set_ranges()
         self.set_tick_params()
         self.tight_layout()
-        multimin_watermark(self.axs[0][0], frac=1 / 4 * self.axs.shape[0])
+        if not getattr(self, "_watermark_added", False):
+            multimin_watermark(self.axs[0][0], frac=1 / 4 * self.axs.shape[0])
+            self._watermark_added = True
         return scatter
 
     def mog_pdf(self, mog, grid_size=200, **args):
@@ -1227,4 +1231,6 @@ class MultiPlot(MultiMinBase):
         self.set_ranges()
         self.set_tick_params()
         self.tight_layout()
-        multimin_watermark(self.axs[0][0], frac=1 / 4 * self.axs.shape[0])
+        if not getattr(self, "_watermark_added", False):
+            multimin_watermark(self.axs[0][0], frac=1 / 4 * self.axs.shape[0])
+            self._watermark_added = True

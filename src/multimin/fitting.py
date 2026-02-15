@@ -1208,7 +1208,9 @@ class FitMoG(MultiMinBase):
             G.set_ranges()
 
             G.fig.tight_layout()
-            multimin_watermark(G.axs[0][0])
+            if not getattr(G, "_watermark_added", False):
+                multimin_watermark(G.axs[0][0])
+                G._watermark_added = True
             self.fig = G.fig
             return G
 
