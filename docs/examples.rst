@@ -13,3 +13,4 @@ Tutorials and Examples
    examples/multimin_functions_tutorial
    examples/multimin_cmog
    examples/multimin_mog_gmm
+   examples/multimin_density_plot_tutorial
