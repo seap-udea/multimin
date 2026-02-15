@@ -155,7 +155,7 @@ G=F.plot_fit(
 )
 ```
 
-![Example of a fitted multivariate MoG visualized with `MultiPlot`.\label{fig:fit3d}](https://raw.githubusercontent.com/seap-udea/multimin/master/gallery/paper_mog_fit_result_3d.png)
+![Example of a fitted multivariate MoG visualized with `MultiPlot`.\label{fig:fit3d}](https://raw.githubusercontent.com/seap-udea/multimin/master/examples/gallery/paper_mog_fit_result_3d.png)
 
 Fit quality diagnostics for multivariate fits are available via a Kolmogorov–Smirnov (K–S) distance computed on $S=-2\log p(\tilde{x})$ (observed vs. synthetic samples) and an optional Q–Q plot:
 
@@ -165,7 +165,7 @@ ks_dist = stats["ks_dist"]
 r2_identity = stats["r2_identity"]
 ```
 
-![Q–Q plot and K–S distance for a multivariate MoG fit.\label{fig:qqmog}](https://raw.githubusercontent.com/seap-udea/multimin/master/gallery/paper_mog_plot_qq.png)
+![Q–Q plot and K–S distance for a multivariate MoG fit.\label{fig:qqmog}](https://raw.githubusercontent.com/seap-udea/multimin/master/examples/gallery/paper_mog_plot_qq.png)
 
 In addition to fitting samples, `MultiMin` includes an experimental workflow to fit *single-valued functions* (univariate or multivariate) by matching a MoG-based model to $(X, F(X))$ pairs. In the univariate function-fitting setting this is formulated as a nonlinear least-squares problem (minimizing squared residuals between the observed function values and the model prediction on the mesh), and the package reports diagnostics such as $R^2$ that are useful for model selection and automated fitting loops.
 
@@ -186,7 +186,7 @@ fig = Ff.plot_fit(dargs=dict())
 stats_f = Ff.quality_of_fit()
 ```
 
-![Example of a complex spectral line and a MoG-based fit using `FitFunctionMoG`.\label{fig:complexline}](https://raw.githubusercontent.com/seap-udea/multimin/master/gallery/paper_functions_adaptive_fit_complex_line.png)
+![Example of a complex spectral line and a MoG-based fit using `FitFunctionMoG`.\label{fig:complexline}](https://raw.githubusercontent.com/seap-udea/multimin/master/examples/gallery/paper_functions_adaptive_fit_complex_line.png)
 
 ## Semi-analytical descriptions and accelerated evaluators
 
