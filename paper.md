@@ -144,8 +144,15 @@ data = mog_true.rvs(5000)
 
 # Fit and plot
 F = mn.FitMoG(data=data, ngauss=2)
-F.fit_data(progress="text")
-G = F.plot_fit(properties=["x", "y", "z"], figsize=3)
+F.fit_data()
+G=F.plot_fit(
+    properties=["x","y","z"],
+    pargs=dict(cmap='Spectral_r'),
+    sargs=dict(s=0.2,edgecolor='None',color='w',nbins=30),
+    cargs=dict(levels=50,zorder=+300,alpha=0.3),
+    figsize=3,
+    marginals=True
+)
 ```
 
 ![Example of a fitted multivariate MoG visualized with `MultiPlot`.\label{fig:fit3d}](https://raw.githubusercontent.com/seap-udea/multimin/master/gallery/paper_mog_fit_result_3d.png)
@@ -164,7 +171,7 @@ In addition to fitting samples, `MultiMin` includes an experimental workflow to 
 
 ## Univariate spectral-line fitting
  
-A practical example of the function-fitting workflow is the decomposition of a complex univariate spectral line profile into a small number of Gaussian components. The spectrum used in this example is shipped with `MultiMin` (`complex-line.txt`) and is based on the multi-component synthetic spectra used in the context of GaußPy+ [@riener2019gausspyplus]. It can be loaded via `mn.Util.get_data` and `numpy.loadtxt` and then fitted as:
+A practical example of the function-fitting workflow is the decomposition of a complex univariate spectral line profile into a small number of Gaussian components. The spectrum used in this example is shipped with `MultiMin` (`complex-line.txt`) and is based on the multi-component synthetic spectra used in the context of GaussPy+ [@riener2019gausspyplus]. It can be loaded via `mn.Util.get_data` and `numpy.loadtxt` and then fitted as:
 
 ```python
 import numpy as np
@@ -197,10 +204,36 @@ $$f(\mathbf{x}) = w_1 \, \mathcal{N}(\mathbf{x}; \boldsymbol{\mu}_1, \mathbf{\Si
 
 where
 
-$$w_1 = 0.496763$$
-$$\boldsymbol{\mu}_1 = \left( \begin{array}{c} 0.977029 \\ 0.528189 \\ -0.558262 \end{array}\right)$$
-$$\mathbf{\Sigma}_1 = \left( \begin{array}{ccc} 1.122005 & -0.330481 & 0.197538 \\ -0.330481 & 2.302636 & -1.664074 \\ 0.197538 & -1.664074 & 4.275116 \end{array}\right)$$
+$$w_1 = 0.4909$$
+$$\boldsymbol{\mu}_1 = \left( \begin{array}{c} 0.9577 \\ 0.5176 \\ -0.4634 \end{array}\right)$$
+$$\mathbf{\Sigma}_1 = \left( \begin{array}{ccc} 1.0805 & -0.3353 & 0.2666 \\ -0.3353 & 2.3655 & -1.716 \\ 0.2666 & -1.716 & 4.4798 \end{array}\right)$$
+
+$$w_2 = 0.5091$$
+$$\boldsymbol{\mu}_2 = \left( \begin{array}{c} 1.0192 \\ -0.481 \\ 0.6188 \end{array}\right)$$
+$$\mathbf{\Sigma}_2 = \left( \begin{array}{ccc} 0.6319 & 0.1054 & -0.0236 \\ 0.1054 & 0.0604 & -0.0145 \\ -0.0236 & -0.0145 & 11.0725 \end{array}\right)$$
+
+Here the normal distribution is defined as:
+
+$$\mathcal{N}(\mathbf{x}; \boldsymbol{\mu}, \mathbf{\Sigma}) = \frac{1}{\sqrt{(2\pi)^{{k}} \det \mathbf{\Sigma}}} \exp\left[-\frac{1}{2}(\mathbf{x}-\boldsymbol{\mu})^{\top} \mathbf{\Sigma}^{{-1}} (\mathbf{x}-\boldsymbol{\mu})\right]$$
 ```
+
+This is the way as it is rendered:
+
+$$f(\mathbf{x}) = w_1 \, \mathcal{N}(\mathbf{x}; \boldsymbol{\mu}_1, \mathbf{\Sigma}_1) + w_2 \, \mathcal{N}(\mathbf{x}; \boldsymbol{\mu}_2, \mathbf{\Sigma}_2)$$
+
+where
+
+$$w_1 = 0.4909$$
+$$\boldsymbol{\mu}_1 = \left( \begin{array}{c} 0.9577 \\ 0.5176 \\ -0.4634 \end{array}\right)$$
+$$\mathbf{\Sigma}_1 = \left( \begin{array}{ccc} 1.0805 & -0.3353 & 0.2666 \\ -0.3353 & 2.3655 & -1.716 \\ 0.2666 & -1.716 & 4.4798 \end{array}\right)$$
+
+$$w_2 = 0.5091$$
+$$\boldsymbol{\mu}_2 = \left( \begin{array}{c} 1.0192 \\ -0.481 \\ 0.6188 \end{array}\right)$$
+$$\mathbf{\Sigma}_2 = \left( \begin{array}{ccc} 0.6319 & 0.1054 & -0.0236 \\ 0.1054 & 0.0604 & -0.0145 \\ -0.0236 & -0.0145 & 11.0725 \end{array}\right)$$
+
+Here the normal distribution is defined as:
+
+$$\mathcal{N}(\mathbf{x}; \boldsymbol{\mu}, \mathbf{\Sigma}) = \frac{1}{\sqrt{(2\pi)^{{k}} \det \mathbf{\Sigma}}} \exp\left[-\frac{1}{2}(\mathbf{x}-\boldsymbol{\mu})^{\top} \mathbf{\Sigma}^{{-1}} (\mathbf{x}-\boldsymbol{\mu})\right]$$
 
 These expressions can be incorporated into scientific publications to provide a semi-analytical representation of the fitted distribution.
 
@@ -209,12 +242,7 @@ These expressions can be incorporated into scientific publications to provide a 
 Optionally, the generated Python code can target C-optimized batch evaluators exposed through `ctypes` for fast evaluation on large grids:
 
 ```python
-code_str, f_fast = F.mog.get_function(type="python", cmog=False, print_code=False)
-
-try:
-    code_str_c, f_fast_c = F.mog.get_function(type="python", cmog=True, print_code=False)
-except Exception:
-    f_fast_c = None
+code_str_c, f_fast_c = F.mog.get_function(type="python", cmog=True, print_code=False)
 ```
 
 When the optional C backend is available, `cmog=True` routes evaluation through `ctypes` wrappers around compiled batch evaluators. In `examples/multimin_cmog.ipynb`, a representative micro-benchmark shows a speedup for point-wise evaluation (same fitted MoG, same machine/kernel):
@@ -231,7 +259,7 @@ When the optional C backend is available, `cmog=True` routes evaluation through 
 
 ![Comparison figure produced by the `MultiMin` notebooks, contrasting mixture-model workflows.\label{fig:gmmcompare}](https://raw.githubusercontent.com/seap-udea/multimin/master/examples/gallery/gmmcompare_comparison_sklearn_multimin.png)
 
-**GaußPy+.** GaußPy+ is a specialized automated Gaussian decomposition package for emission-line spectra, with substantial algorithmic machinery for noise estimation, quality control, and (optionally) spatially coherent refitting in large surveys [@riener2019gausspyplus]. `MultiMin` is not a drop-in replacement for that end-to-end pipeline; however, for the core task of fitting a spectrum with multiple Gaussian components, the `FitFunctionMoG` workflow produces comparable decompositions in representative cases (e.g., the complex-line example included with this package and shown in \autoref{fig:complexline}), while providing a unified API that also extends to multivariate MoG fitting with shared diagnostics (e.g., K–S / Q–Q tests).
+**GaussPy+.** GaussPy+ is a specialized automated Gaussian decomposition package for emission-line spectra, with substantial algorithmic machinery for noise estimation, quality control, and (optionally) spatially coherent refitting in large surveys [@riener2019gausspyplus]. `MultiMin` is not a drop-in replacement for that end-to-end pipeline; however, for the core task of fitting a spectrum with multiple Gaussian components, the `FitFunctionMoG` workflow produces comparable decompositions in representative cases (e.g., the complex-line example included with this package and shown in \autoref{fig:complexline}), while providing a unified API that also extends to multivariate MoG fitting with shared diagnostics (e.g., K–S / Q–Q tests).
 
 # Research impact statement
 
