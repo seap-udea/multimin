@@ -78,6 +78,9 @@ def main():
     examples_dir = os.path.join(root_dir, "examples")
     docs_examples_dir = os.path.join(root_dir, "docs", "examples")
     rst_file = os.path.join(root_dir, "docs", "examples.rst")
+    excluded = {
+        "paper-codes.ipynb",
+    }
 
     # Ensure docs/examples exists
     if os.path.exists(docs_examples_dir):
@@ -91,8 +94,12 @@ def main():
         with open(index_file, "r") as f:
             priority_order = [line.strip() for line in f if line.strip()]
 
-    # Collect all notebooks
-    all_notebooks = glob.glob(os.path.join(examples_dir, "*.ipynb"))
+    # Collect all notebooks (excluding internal/CI notebooks)
+    all_notebooks = [
+        f
+        for f in glob.glob(os.path.join(examples_dir, "*.ipynb"))
+        if os.path.basename(f) not in excluded
+    ]
     notebook_map = {os.path.basename(f): f for f in all_notebooks}
 
     # Determine final order
