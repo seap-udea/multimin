@@ -42,6 +42,28 @@ These are the main features of `MultiMin`:
 - PyPI project page: [https://pypi.org/project/multimin/](https://pypi.org/project/multimin/).
 - Github repo: [https://github.com/seap-udea/multimin](https://github.com/seap-udea/multimin)
 
+## Citation
+
+The numerical tools and codes provided in this package have been developed and tested over several years of scientific research.
+
+If you use `MultiMin` in your research, please cite:
+
+```bibtex
+@software{multimin2026,
+  author = {Zuluaga, Jorge I.},
+  title = {MultiMin: Multivariate Gaussian fitting},
+  year = {2026},
+  url = {https://github.com/seap-udea/multimin}
+}
+
+@unpublished{zuluaga2026multimin_joss,
+  author = {Zuluaga, Jorge I.},
+  title = {MultiMin: Mixture-of-Gaussians fitting and visualization for multivariate data and single-valued functions},
+  year = {2026},
+  note = {Submitted to the Journal of Open Source Software (JOSS)},
+}
+```
+
 ## Installation
 
 ### From PyPI
@@ -454,21 +476,6 @@ See [examples/multimin_truncated_tutorial.ipynb](examples/multimin_truncated_tut
 `MultiMin`, on the other hand, was developed with features specifically designed to provide a simplified numerical and analytical description of real physical systems (see for instance [this notebook](https://github.com/seap-udea/multimin/blob/main/examples/multimin_asteroids_application.ipynb)). Additionally, `MultiMin` extends MoG tools to single-valued functions, a capability with numerous specific applications in physics, astronomy, and other sciences (see for instance [this notebook](https://github.com/seap-udea/multimin/blob/main/examples/multimin_functions_tutorial.ipynb)).
 
 For a comparison between `MultiMin` and `scikit-learn` GMM, please refer to [this notebook](https://github.com/seap-udea/multimin/blob/main/examples/multimin_mog_gmm.ipynb).
-
-## Citation
-
-The numerical tools and codes provided in this package have been developed and tested over several years of scientific research.
-
-If you use `MultiMin` in your research, please cite:
-
-```bibtex
-@software{multimin2026,
-  author = {Zuluaga, Jorge I.},
-  title = {MultiMin: Multivariate Gaussian fitting},
-  year = {2026},
-  url = {https://github.com/seap-udea/multimin}
-}
-```
 
 ## What's New
 

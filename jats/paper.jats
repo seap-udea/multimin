@@ -221,8 +221,8 @@ a Creative Commons Attribution 4.0 International License (CC BY
   ]]></tex-math>
   <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:msub><mml:mi>𝒩</mml:mi><mml:mi>k</mml:mi></mml:msub><mml:mo stretchy="false" form="prefix">(</mml:mo><mml:mover><mml:mi>x</mml:mi><mml:mo accent="true">̃</mml:mo></mml:mover><mml:mo>;</mml:mo><mml:mover><mml:mi>μ</mml:mi><mml:mo accent="true">̃</mml:mo></mml:mover><mml:mo>,</mml:mo><mml:mi mathvariant="normal">Σ</mml:mi><mml:mo stretchy="false" form="postfix">)</mml:mo><mml:mo>=</mml:mo><mml:mfrac><mml:mn>1</mml:mn><mml:msqrt><mml:mrow><mml:mo stretchy="false" form="prefix">(</mml:mo><mml:mn>2</mml:mn><mml:mi>π</mml:mi><mml:msup><mml:mo stretchy="false" form="postfix">)</mml:mo><mml:mi>k</mml:mi></mml:msup><mml:mi>det</mml:mi><mml:mo>&#8289;</mml:mo><mml:mi>𝚺</mml:mi></mml:mrow></mml:msqrt></mml:mfrac><mml:mi>exp</mml:mi><mml:mo>&#8289;</mml:mo><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:mi>−</mml:mi><mml:mfrac><mml:mn>1</mml:mn><mml:mn>2</mml:mn></mml:mfrac><mml:mo stretchy="false" form="prefix">(</mml:mo><mml:mover><mml:mi>x</mml:mi><mml:mo accent="true">̃</mml:mo></mml:mover><mml:mo>−</mml:mo><mml:mover><mml:mi>μ</mml:mi><mml:mo accent="true">̃</mml:mo></mml:mover><mml:msup><mml:mo stretchy="false" form="postfix">)</mml:mo><mml:mi>⊤</mml:mi></mml:msup><mml:msup><mml:mi mathvariant="normal">Σ</mml:mi><mml:mrow><mml:mi>−</mml:mi><mml:mn>1</mml:mn></mml:mrow></mml:msup><mml:mo stretchy="false" form="prefix">(</mml:mo><mml:mover><mml:mi>x</mml:mi><mml:mo accent="true">̃</mml:mo></mml:mover><mml:mo>−</mml:mo><mml:mover><mml:mi>μ</mml:mi><mml:mo accent="true">̃</mml:mo></mml:mover><mml:mo stretchy="false" form="postfix">)</mml:mo><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow><mml:mo>,</mml:mo></mml:mrow></mml:math></alternatives></disp-formula>
   let <inline-formula><alternatives>
-  <tex-math><![CDATA[T\subset\{l,\dots,m\}]]></tex-math>
-  <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:mi>T</mml:mi><mml:mo>⊂</mml:mo><mml:mo stretchy="false" form="prefix">{</mml:mo><mml:mi>l</mml:mi><mml:mo>,</mml:mo><mml:mi>…</mml:mi><mml:mo>,</mml:mo><mml:mi>m</mml:mi><mml:mo stretchy="false" form="postfix">}</mml:mo></mml:mrow></mml:math></alternatives></inline-formula>
+  <tex-math><![CDATA[T=\{l,\dots,m\}\in\{1,\dots,k\}]]></tex-math>
+  <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:mi>T</mml:mi><mml:mo>=</mml:mo><mml:mo stretchy="false" form="prefix">{</mml:mo><mml:mi>l</mml:mi><mml:mo>,</mml:mo><mml:mi>…</mml:mi><mml:mo>,</mml:mo><mml:mi>m</mml:mi><mml:mo stretchy="false" form="postfix">}</mml:mo><mml:mo>∈</mml:mo><mml:mo stretchy="false" form="prefix">{</mml:mo><mml:mn>1</mml:mn><mml:mo>,</mml:mo><mml:mi>…</mml:mi><mml:mo>,</mml:mo><mml:mi>k</mml:mi><mml:mo stretchy="false" form="postfix">}</mml:mo></mml:mrow></mml:math></alternatives></inline-formula>
   be the set of truncated coordinates and let
   <inline-formula><alternatives>
   <tex-math><![CDATA[a_i<b_i]]></tex-math>
@@ -386,12 +386,11 @@ a Creative Commons Attribution 4.0 International License (CC BY
     <list-item>
       <p><bold>Optional acceleration
       (<monospace>cmog</monospace>)</bold>: when the compiled library is
-      available,
-      <monospace>MixtureOfGaussians.get_function(type=&quot;python&quot;, cmog=True)</monospace>
-      generates callables that route evaluation through
-      <monospace>ctypes</monospace> wrappers around optimized batch
-      evaluators, enabling fast likelihood/PDF evaluation on large grids
-      without changing the high-level user code.</p>
+      available, <monospace>MultiMin</monospace> generates callables
+      that route evaluation through <monospace>ctypes</monospace>
+      wrappers around optimized batch evaluators, enabling fast
+      likelihood/PDF evaluation on large grids without changing the
+      high-level user code.</p>
     </list-item>
   </list>
   <p>Across the API, defaults are chosen to keep common workflows short
@@ -401,7 +400,7 @@ a Creative Commons Attribution 4.0 International License (CC BY
   and bounds, detailed optimizer options, and fully customizable
   plotting). A complete documentation site with narrative examples and
   the full API reference is provided at
-  <monospace>https://multimin.readthedocs.io</monospace>.</p>
+  <ext-link ext-link-type="uri" xlink:href="https://multimin.readthedocs.io">https://multimin.readthedocs.io</ext-link>.</p>
 </sec>
 <sec id="code-examples">
   <title>Code examples</title>
@@ -453,8 +452,8 @@ G=F.plot_fit(
   <p>Fit quality diagnostics for multivariate fits are available via a
   Kolmogorov–Smirnov (K–S) distance computed on
   <inline-formula><alternatives>
-  <tex-math><![CDATA[S=-2\log p(\tilde{x})]]></tex-math>
-  <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:mi>S</mml:mi><mml:mo>=</mml:mo><mml:mi>−</mml:mi><mml:mn>2</mml:mn><mml:mi>log</mml:mi><mml:mo>&#8289;</mml:mo><mml:mi>p</mml:mi><mml:mo stretchy="false" form="prefix">(</mml:mo><mml:mover><mml:mi>x</mml:mi><mml:mo accent="true">̃</mml:mo></mml:mover><mml:mo stretchy="false" form="postfix">)</mml:mo></mml:mrow></mml:math></alternatives></inline-formula>
+  <tex-math><![CDATA[S=-2\log \mathcal{L}(\tilde{x})]]></tex-math>
+  <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:mi>S</mml:mi><mml:mo>=</mml:mo><mml:mi>−</mml:mi><mml:mn>2</mml:mn><mml:mi>log</mml:mi><mml:mo>&#8289;</mml:mo><mml:mi>ℒ</mml:mi><mml:mo stretchy="false" form="prefix">(</mml:mo><mml:mover><mml:mi>x</mml:mi><mml:mo accent="true">̃</mml:mo></mml:mover><mml:mo stretchy="false" form="postfix">)</mml:mo></mml:mrow></mml:math></alternatives></inline-formula>
   (observed vs. synthetic samples) and an optional Q–Q plot:</p>
   <code language="python">stats = F.quality_of_fit(data=data, n_sim=5000, plot_qq=True, figsize=5)
 ks_dist = stats[&quot;ks_dist&quot;]
@@ -464,22 +463,22 @@ r2_identity = stats[&quot;r2_identity&quot;]</code>
     fit.<styled-content id="figU003Aqqmog"></styled-content></p></caption>
     <graphic mimetype="image" mime-subtype="png" xlink:href="https://raw.githubusercontent.com/seap-udea/multimin/master/examples/gallery/paper_mog_plot_qq.png" />
   </fig>
-  <p>In addition to fitting samples, <monospace>MultiMin</monospace>
-  includes an experimental workflow to fit <italic>single-valued
-  functions</italic> (univariate or multivariate) by matching a
-  MoG-based model to <inline-formula><alternatives>
-  <tex-math><![CDATA[(X, F(X))]]></tex-math>
-  <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:mo stretchy="false" form="prefix">(</mml:mo><mml:mi>X</mml:mi><mml:mo>,</mml:mo><mml:mi>F</mml:mi><mml:mo stretchy="false" form="prefix">(</mml:mo><mml:mi>X</mml:mi><mml:mo stretchy="false" form="postfix">)</mml:mo><mml:mo stretchy="false" form="postfix">)</mml:mo></mml:mrow></mml:math></alternatives></inline-formula>
-  pairs. In the univariate function-fitting setting this is formulated
-  as a nonlinear least-squares problem (minimizing squared residuals
-  between the observed function values and the model prediction on the
-  mesh), and the package reports diagnostics such as
-  <inline-formula><alternatives>
-  <tex-math><![CDATA[R^2]]></tex-math>
-  <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:msup><mml:mi>R</mml:mi><mml:mn>2</mml:mn></mml:msup></mml:math></alternatives></inline-formula>
-  that are useful for model selection and automated fitting loops.</p>
-  <sec id="univariate-spectral-line-fitting">
-    <title>Univariate spectral-line fitting</title>
+  <sec id="univariate-mix-of-gaussian-fitting">
+    <title>Univariate mix-of-gaussian fitting</title>
+    <p>In addition to fitting samples, <monospace>MultiMin</monospace>
+    includes an experimental workflow to fit <italic>single-valued
+    functions</italic> (univariate or multivariate) by matching a
+    MoG-based model to <inline-formula><alternatives>
+    <tex-math><![CDATA[(X, F(X))]]></tex-math>
+    <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:mo stretchy="false" form="prefix">(</mml:mo><mml:mi>X</mml:mi><mml:mo>,</mml:mo><mml:mi>F</mml:mi><mml:mo stretchy="false" form="prefix">(</mml:mo><mml:mi>X</mml:mi><mml:mo stretchy="false" form="postfix">)</mml:mo><mml:mo stretchy="false" form="postfix">)</mml:mo></mml:mrow></mml:math></alternatives></inline-formula>
+    pairs. In the univariate function-fitting setting this is formulated
+    as a nonlinear least-squares problem (minimizing squared residuals
+    between the observed function values and the model prediction on the
+    mesh), and the package reports diagnostics such as
+    <inline-formula><alternatives>
+    <tex-math><![CDATA[R^2]]></tex-math>
+    <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:msup><mml:mi>R</mml:mi><mml:mn>2</mml:mn></mml:msup></mml:math></alternatives></inline-formula>
+    that are useful for model selection and automated fitting loops.</p>
     <p>A practical example of the function-fitting workflow is the
     decomposition of a complex univariate spectral line profile into a
     small number of Gaussian components. The spectrum used in this
@@ -554,7 +553,11 @@ print(latex_str)</code>
       <p>Optionally, the generated Python code can target C-optimized
       batch evaluators exposed through <monospace>ctypes</monospace> for
       fast evaluation on large grids:</p>
-      <code language="python">code_str_c, f_fast_c = F.mog.get_function(type=&quot;python&quot;, cmog=True, print_code=False)</code>
+      <code language="python">code_str_c, f_fast_c = F.mog.get_function(
+  type=&quot;python&quot;, 
+  cmog=True, 
+  print_code=False
+)</code>
       <p>When the optional C backend is available,
       <monospace>cmog=True</monospace> routes evaluation through
       <monospace>ctypes</monospace> wrappers around compiled batch
@@ -600,10 +603,11 @@ print(latex_str)</code>
   space: it prioritizes scientific interpretability, bounded (truncated)
   domains, and reproducible diagnostics/figures as first-class
   outputs.</p>
-  <p><bold>scikit-learn.</bold> <monospace>scikit-learn</monospace>
-  provides a widely used <monospace>GaussianMixture</monospace>
-  implementation oriented toward machine-learning workflows (e.g.,
-  clustering and density estimation pipelines)
+  <p><bold>Comparison with scikit-learn.</bold>
+  <monospace>scikit-learn</monospace> provides a widely used
+  <monospace>GaussianMixture</monospace> implementation oriented toward
+  machine-learning workflows (e.g., clustering and density estimation
+  pipelines)
   (<xref alt="Pedregosa et al., 2011" rid="ref-sklearn" ref-type="bibr">Pedregosa
   et al., 2011</xref>). <monospace>MultiMin</monospace> can be used for
   similar density-estimation tasks, but emphasizes an explicit,
@@ -620,10 +624,11 @@ print(latex_str)</code>
     workflows.<styled-content id="figU003Agmmcompare"></styled-content></p></caption>
     <graphic mimetype="image" mime-subtype="png" xlink:href="https://raw.githubusercontent.com/seap-udea/multimin/master/examples/gallery/gmmcompare_comparison_sklearn_multimin.png" />
   </fig>
-  <p><bold>GaussPy+.</bold> GaussPy+ is a specialized automated Gaussian
-  decomposition package for emission-line spectra, with substantial
-  algorithmic machinery for noise estimation, quality control, and
-  (optionally) spatially coherent refitting in large surveys
+  <p><bold>Comparison with GaussPy+.</bold> GaussPy+ is a specialized
+  automated Gaussian decomposition package for emission-line spectra,
+  with substantial algorithmic machinery for noise estimation, quality
+  control, and (optionally) spatially coherent refitting in large
+  surveys
   (<xref alt="Riener et al., 2019" rid="ref-riener2019gausspyplus" ref-type="bibr">Riener
   et al., 2019</xref>). <monospace>MultiMin</monospace> is not a drop-in
   replacement for that end-to-end pipeline; however, for the core task
