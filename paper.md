@@ -66,7 +66,7 @@ $$
 (\tilde{x}-\tilde{\mu})
 \right],
 $$
-let $T\subset\{l,\dots,m\}$ be the set of truncated coordinates and let $a_i<b_i$ be the bounds for each $i\in T$. The truncation region is
+let $T=\{l,\dots,m\}\in\{1,\dots,k\}$ be the set of truncated coordinates and let $a_i<b_i$ be the bounds for each $i\in T$. The truncation region is
 $$
 A_T = \left\{
 \tilde{x}\in\mathbb{R}^k:\ a_i \le \tilde{x}_i \le b_i\ \ \forall i\in T
@@ -115,9 +115,9 @@ and the package minimizes $\mathrm{NLL}$ (or its normalized variant) with `scipy
 - **Fitting (`fitting`)**: `FitMoG` performs classical maximum-likelihood estimation by minimizing the negative log-likelihood with `scipy.optimize.minimize`, using a flattened parameter vector that is mapped to physical parameters (weights, means, covariance structure) and optionally constrained through bounds. Truncated variables are handled consistently through the same `domain` definition used by `MixtureOfGaussians`. For single-valued functions, `FitFunctionMoG` fits a MoG basis to $(X, F(X))$ pairs via nonlinear least squares, using an analytically updated global normalization at each objective evaluation and offering higher-level modes (e.g., adaptive routines guided by peak finding and smoothing utilities from SciPy).
 - **Visualization (`plotting`)**: `MultiPlot` provides a consistent grid layout for scatter/histogram/PDF/contour overlays, with a single “properties” specification controlling labels and ranges across panels. The plotting API is intentionally “thin” and Pythonic: most methods accept standard Matplotlib-style keyword arguments (plus structured dictionaries such as `sargs`, `hargs`, `dargs`, and `margs`) so users can tune aesthetics without rewriting plotting logic. Optional marginal panels can be enabled when needed.
 - **Utilities (`util`, `base`)**: small helpers provide robust I/O (e.g., `Util.get_data` for packaged example datasets), numerical/statistical helpers (`Stats`), and lightweight base functionality shared by the main classes.
-- **Optional acceleration (`cmog`)**: when the compiled library is available, `MixtureOfGaussians.get_function(type="python", cmog=True)` generates callables that route evaluation through `ctypes` wrappers around optimized batch evaluators, enabling fast likelihood/PDF evaluation on large grids without changing the high-level user code.
+- **Optional acceleration (`cmog`)**: when the compiled library is available, `MultiMin` generates callables that route evaluation through `ctypes` wrappers around optimized batch evaluators, enabling fast likelihood/PDF evaluation on large grids without changing the high-level user code.
 
-Across the API, defaults are chosen to keep common workflows short (a few lines from raw arrays to a fitted model and a figure), while exposing many optional parameters to support controlled scientific use cases (fixed domains, constrained covariances, custom initialization and bounds, detailed optimizer options, and fully customizable plotting). A complete documentation site with narrative examples and the full API reference is provided at `https://multimin.readthedocs.io`.
+Across the API, defaults are chosen to keep common workflows short (a few lines from raw arrays to a fitted model and a figure), while exposing many optional parameters to support controlled scientific use cases (fixed domains, constrained covariances, custom initialization and bounds, detailed optimizer options, and fully customizable plotting). A complete documentation site with narrative examples and the full API reference is provided at [https://multimin.readthedocs.io](https://multimin.readthedocs.io).
 
 # Code examples
 
@@ -157,7 +157,7 @@ G=F.plot_fit(
 
 ![Example of a fitted multivariate MoG visualized with `MultiPlot`.\label{fig:fit3d}](https://raw.githubusercontent.com/seap-udea/multimin/master/examples/gallery/paper_mog_fit_result_3d.png)
 
-Fit quality diagnostics for multivariate fits are available via a Kolmogorov–Smirnov (K–S) distance computed on $S=-2\log p(\tilde{x})$ (observed vs. synthetic samples) and an optional Q–Q plot:
+Fit quality diagnostics for multivariate fits are available via a Kolmogorov–Smirnov (K–S) distance computed on $S=-2\log \mathcal{L}(\tilde{x})$ (observed vs. synthetic samples) and an optional Q–Q plot:
 
 ```python
 stats = F.quality_of_fit(data=data, n_sim=5000, plot_qq=True, figsize=5)
@@ -167,10 +167,10 @@ r2_identity = stats["r2_identity"]
 
 ![Q–Q plot and K–S distance for a multivariate MoG fit.\label{fig:qqmog}](https://raw.githubusercontent.com/seap-udea/multimin/master/examples/gallery/paper_mog_plot_qq.png)
 
+## Univariate mix-of-gaussian fitting
+ 
 In addition to fitting samples, `MultiMin` includes an experimental workflow to fit *single-valued functions* (univariate or multivariate) by matching a MoG-based model to $(X, F(X))$ pairs. In the univariate function-fitting setting this is formulated as a nonlinear least-squares problem (minimizing squared residuals between the observed function values and the model prediction on the mesh), and the package reports diagnostics such as $R^2$ that are useful for model selection and automated fitting loops.
 
-## Univariate spectral-line fitting
- 
 A practical example of the function-fitting workflow is the decomposition of a complex univariate spectral line profile into a small number of Gaussian components. The spectrum used in this example is shipped with `MultiMin` (`complex-line.txt`) and is based on the multi-component synthetic spectra used in the context of GaussPy+ [@riener2019gausspyplus]. It can be loaded via `mn.Util.get_data` and `numpy.loadtxt` and then fitted as:
 
 ```python
@@ -222,7 +222,11 @@ These expressions can be incorporated into scientific publications to provide a 
 Optionally, the generated Python code can target C-optimized batch evaluators exposed through `ctypes` for fast evaluation on large grids:
 
 ```python
-code_str_c, f_fast_c = F.mog.get_function(type="python", cmog=True, print_code=False)
+code_str_c, f_fast_c = F.mog.get_function(
+  type="python", 
+  cmog=True, 
+  print_code=False
+)
 ```
 
 When the optional C backend is available, `cmog=True` routes evaluation through `ctypes` wrappers around compiled batch evaluators. In `examples/multimin_cmog.ipynb`, a representative micro-benchmark shows a speedup for point-wise evaluation (same fitted MoG, same machine/kernel):
@@ -235,11 +239,11 @@ When the optional C backend is available, `cmog=True` routes evaluation through 
 
 `MultiMin` overlaps with existing Gaussian-mixture tooling, but targets a different point in the design space: it prioritizes scientific interpretability, bounded (truncated) domains, and reproducible diagnostics/figures as first-class outputs.
 
-**scikit-learn.** `scikit-learn` provides a widely used `GaussianMixture` implementation oriented toward machine-learning workflows (e.g., clustering and density estimation pipelines) [@sklearn]. `MultiMin` can be used for similar density-estimation tasks, but emphasizes an explicit, report-friendly parameterization (weights, means, standard deviations/correlations/covariances), publication-ready multivariate visualization via `MultiPlot`, and domain-aware (partially truncated) likelihoods. The repository includes a notebook-level comparison between `MultiMin` and `scikit-learn` GMM (see \autoref{fig:gmmcompare}).
+**Comparison with scikit-learn.** `scikit-learn` provides a widely used `GaussianMixture` implementation oriented toward machine-learning workflows (e.g., clustering and density estimation pipelines) [@sklearn]. `MultiMin` can be used for similar density-estimation tasks, but emphasizes an explicit, report-friendly parameterization (weights, means, standard deviations/correlations/covariances), publication-ready multivariate visualization via `MultiPlot`, and domain-aware (partially truncated) likelihoods. The repository includes a notebook-level comparison between `MultiMin` and `scikit-learn` GMM (see \autoref{fig:gmmcompare}).
 
 ![Comparison figure produced by the `MultiMin` notebooks, contrasting mixture-model workflows.\label{fig:gmmcompare}](https://raw.githubusercontent.com/seap-udea/multimin/master/examples/gallery/gmmcompare_comparison_sklearn_multimin.png)
 
-**GaussPy+.** GaussPy+ is a specialized automated Gaussian decomposition package for emission-line spectra, with substantial algorithmic machinery for noise estimation, quality control, and (optionally) spatially coherent refitting in large surveys [@riener2019gausspyplus]. `MultiMin` is not a drop-in replacement for that end-to-end pipeline; however, for the core task of fitting a spectrum with multiple Gaussian components, the `FitFunctionMoG` workflow produces comparable decompositions in representative cases (e.g., the complex-line example included with this package and shown in \autoref{fig:complexline}), while providing a unified API that also extends to multivariate MoG fitting with shared diagnostics (e.g., K–S / Q–Q tests).
+**Comparison with GaussPy+.** GaussPy+ is a specialized automated Gaussian decomposition package for emission-line spectra, with substantial algorithmic machinery for noise estimation, quality control, and (optionally) spatially coherent refitting in large surveys [@riener2019gausspyplus]. `MultiMin` is not a drop-in replacement for that end-to-end pipeline; however, for the core task of fitting a spectrum with multiple Gaussian components, the `FitFunctionMoG` workflow produces comparable decompositions in representative cases (e.g., the complex-line example included with this package and shown in \autoref{fig:complexline}), while providing a unified API that also extends to multivariate MoG fitting with shared diagnostics (e.g., K–S / Q–Q tests).
 
 # Research impact statement
 

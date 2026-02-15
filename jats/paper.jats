@@ -518,23 +518,8 @@ stats_f = Ff.quality_of_fit()</code>
     can be generated as follows:</p>
     <code language="python">latex_str, _ = F.mog.get_function(type=&quot;latex&quot;, print_code=False, decimals=4)
 print(latex_str)</code>
-    <p>and produces LaTeX directly (excerpt):</p>
-    <preformat>$$f(\mathbf{x}) = w_1 \, \mathcal{N}(\mathbf{x}; \boldsymbol{\mu}_1, \mathbf{\Sigma}_1) + w_2 \, \mathcal{N}(\mathbf{x}; \boldsymbol{\mu}_2, \mathbf{\Sigma}_2)$$
-
-where
-
-$$w_1 = 0.4909$$
-$$\boldsymbol{\mu}_1 = \left( \begin{array}{c} 0.9577 \\ 0.5176 \\ -0.4634 \end{array}\right)$$
-$$\mathbf{\Sigma}_1 = \left( \begin{array}{ccc} 1.0805 &amp; -0.3353 &amp; 0.2666 \\ -0.3353 &amp; 2.3655 &amp; -1.716 \\ 0.2666 &amp; -1.716 &amp; 4.4798 \end{array}\right)$$
-
-$$w_2 = 0.5091$$
-$$\boldsymbol{\mu}_2 = \left( \begin{array}{c} 1.0192 \\ -0.481 \\ 0.6188 \end{array}\right)$$
-$$\mathbf{\Sigma}_2 = \left( \begin{array}{ccc} 0.6319 &amp; 0.1054 &amp; -0.0236 \\ 0.1054 &amp; 0.0604 &amp; -0.0145 \\ -0.0236 &amp; -0.0145 &amp; 11.0725 \end{array}\right)$$
-
-Here the normal distribution is defined as:
-
-$$\mathcal{N}(\mathbf{x}; \boldsymbol{\mu}, \mathbf{\Sigma}) = \frac{1}{\sqrt{(2\pi)^{{k}} \det \mathbf{\Sigma}}} \exp\left[-\frac{1}{2}(\mathbf{x}-\boldsymbol{\mu})^{\top} \mathbf{\Sigma}^{{-1}} (\mathbf{x}-\boldsymbol{\mu})\right]$$</preformat>
-    <p>This is the way as it is rendered:</p>
+    <p>The <monospace>latex_str</monospace> output is formatted as
+    follows:</p>
     <p><disp-formula><alternatives>
     <tex-math><![CDATA[f(\mathbf{x}) = w_1 \, \mathcal{N}(\mathbf{x}; \boldsymbol{\mu}_1, \mathbf{\Sigma}_1) + w_2 \, \mathcal{N}(\mathbf{x}; \boldsymbol{\mu}_2, \mathbf{\Sigma}_2)]]></tex-math>
     <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:mi>f</mml:mi><mml:mo stretchy="false" form="prefix">(</mml:mo><mml:mi>𝐱</mml:mi><mml:mo stretchy="false" form="postfix">)</mml:mo><mml:mo>=</mml:mo><mml:msub><mml:mi>w</mml:mi><mml:mn>1</mml:mn></mml:msub><mml:mspace width="0.167em"></mml:mspace><mml:mi>𝒩</mml:mi><mml:mo stretchy="false" form="prefix">(</mml:mo><mml:mi>𝐱</mml:mi><mml:mo>;</mml:mo><mml:msub><mml:mi>𝛍</mml:mi><mml:mn>1</mml:mn></mml:msub><mml:mo>,</mml:mo><mml:msub><mml:mi>𝚺</mml:mi><mml:mn>1</mml:mn></mml:msub><mml:mo stretchy="false" form="postfix">)</mml:mo><mml:mo>+</mml:mo><mml:msub><mml:mi>w</mml:mi><mml:mn>2</mml:mn></mml:msub><mml:mspace width="0.167em"></mml:mspace><mml:mi>𝒩</mml:mi><mml:mo stretchy="false" form="prefix">(</mml:mo><mml:mi>𝐱</mml:mi><mml:mo>;</mml:mo><mml:msub><mml:mi>𝛍</mml:mi><mml:mn>2</mml:mn></mml:msub><mml:mo>,</mml:mo><mml:msub><mml:mi>𝚺</mml:mi><mml:mn>2</mml:mn></mml:msub><mml:mo stretchy="false" form="postfix">)</mml:mo></mml:mrow></mml:math></alternatives></disp-formula></p>

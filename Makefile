@@ -2,10 +2,11 @@
 # multimin Makefile
 ##################################################################
 
-.PHONY: help install install-dev show test verify clean build docs push release env gallery
+.PHONY: help install install-dev show test verify clean build docs push release env gallery paper-pdf
 
 NOTEBOOKS := examples/*.ipynb
 GALLERY_TIMEOUT ?= 1200
+DOCKER_PLATFORM ?=
 
 RELMODE=release
 PYTHON ?= python3
@@ -25,6 +26,7 @@ help:
 	@echo ""
 	@echo "  docs         - Build documentation (installs docs requirements)"
 	@echo "  gallery     - Run example notebooks to regenerate images in examples/gallery"
+	@echo "  paper-pdf    - Build JOSS draft PDF (paper.pdf) via Docker"
 	@echo "  push         - Commit (all files) and push current branch"
 	@echo "  release      - Release a new version (usage: make release RELMODE=release VERSION=x.y.z)"
 	@echo "  env          - Create local dev environment (.multimin) and contrib directory"
@@ -101,6 +103,16 @@ docs:
 	@./bin/prepare_docs.sh
 
 	cd docs && $(PYTHON) -m sphinx.cmd.build -M html "." "_build"
+
+paper-pdf:
+	@echo "Building paper.pdf using openjournals/inara (JOSS)..."
+	@docker run --rm \
+		$(if $(DOCKER_PLATFORM),--platform $(DOCKER_PLATFORM),) \
+		--volume "$(PWD):/data" \
+		--user "$$(id -u):$$(id -g)" \
+		--env JOURNAL=joss \
+		openjournals/inara
+	@echo "Done. Output: paper.pdf"
 
 push:
 	@echo "Committing tracked changes (if any)..."
