@@ -17,7 +17,6 @@
 [![NumPy](https://img.shields.io/badge/Powered%20by-NumPy-blue)](https://numpy.org/)
 [![Antigravity](https://img.shields.io/badge/Build%20with-Antigravity-FF6B6B)](https://antigravity.google/)
 [![Cursor](https://img.shields.io/badge/Build%20with-Cursor-000000)](https://cursor.com/)
-[![Visual Studio Code](https://img.shields.io/badge/Build%20with-VS%20Code-007ACC)](https://code.visualstudio.com/)
 [![Gemini](https://img.shields.io/badge/AI-Gemini%203%20Pro-8E75B2)](https://gemini.google.com/)
 [![ChatGPT](https://img.shields.io/badge/AI-ChatGPT%205.2-74aa9c)](https://chatgpt.com/)
 [![Sonet](https://img.shields.io/badge/AI-Sonet%204.5-D97757)](https://claude.com/)
@@ -485,17 +484,9 @@ Other beta testers and contributors:
 
 This project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0) - see the [LICENSE](LICENSE) file for details.
 
-## Development and AI Co-authorship
+## Development and AI contributions
 
-MultiMin began as a research project by its author in the field of Near Earth Asteroids (NEAs) and exoplanets. It evolved from a collection of useful routines into the core of the package it is today.
-
-Its current form has been significantly enhanced by the emergence of generative artificial intelligence, which allowed the author to "vibe code" some of the package's most complex components (such as the selection of initial conditions for fits, the plotting of PDFs in the original corner plots, the $\LaTeX$ representation of the mixture of gaussians, or the `adaptive` and `noisy` modes of `FitFunctionMoG.plot_fit`). The example notebooks are entirely human-made, with the exception of the one that compares `MultiMin` with `scikit-learn` GMM that was developed by the AI agent in **[Cursor](https://cursor.com/)**.
-
-In this sense, this package belongs to a new generation of tools that count artificial intelligences among their co-authors. The author is not ashamed to declare this. To the contrary, it would be naive to think that this assistance is not important. Few experienced developers today (as the author thinks about himself) are rejecting the incredible power these tools provide. To the contrary, many are embracing them as a way to enhance their productivity and creativity.
-
-However, the author must also state that a significant fraction of the package's code is of his own authorship, not to mention the many hours of interaction and guidance with programming agents in **[Cursor](https://cursor.com/)**, **[Antigravity](https://antigravity.google/)**, and **[Visual Studio Code](https://code.visualstudio.com/)**. It should also be noted that the architectural and design decisions are entirely human.
-
-Ah! The logo was designed with **[Nano Banana](https://nanobanana.ai/)** using as inputs the manuscript drafts of the papers that describe the package.
+MultiMin began as a research project by its author in the field of Near Earth Asteroids (NEAs) and exoplanets. It evolved from a collection of useful routines into the core of the package it is today. Its current form has been enhanced by the emergence of generative artificial intelligence. The example notebooks are entirely human-made, with the exception of the one that compares `MultiMin` with `scikit-learn` GMM that was developed by the AI agent in **[Cursor](https://cursor.com/)**. Despite this, the author must also state that a significant fraction of the package's code is of his own authorship, not to mention the interaction and guidance with programming agents in **[Cursor](https://cursor.com/)** and **[Antigravity](https://antigravity.google/)**. It should also be noted that the architectural and design decisions are entirely human.
 
 ## Other installation methods
 

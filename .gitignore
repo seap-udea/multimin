@@ -182,3 +182,5 @@ tmp
 **/gsl*
 **/*.dylib
 **/*.so
+
+docs/paper
